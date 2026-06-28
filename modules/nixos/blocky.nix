@@ -2,10 +2,10 @@
   flake.modules.nixos.blocky =
     { lib, config, ... }:
     let
-      cfg = config.soyo.services.blocky;
+      cfg = config.lanAppliance.services.blocky;
     in
     {
-      options.soyo.services.blocky = {
+      options.lanAppliance.services.blocky = {
         enable = lib.mkEnableOption "Blocky DNS";
         lanInterface = lib.mkOption { type = lib.types.str; };
         # The rich policy stays host-local; the shared aspect owns service wiring.

@@ -2,7 +2,7 @@ let
   reservations = import ./reservations.nix;
 in
 {
-  soyo.services.dhcp = {
+  lanAppliance.services.dhcp = {
     enable = true;
     interface = "enp1s0";
     routerAddress = "10.0.0.1";

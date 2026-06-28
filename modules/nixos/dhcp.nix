@@ -2,12 +2,12 @@
   flake.modules.nixos.dhcp =
     { lib, config, ... }:
     let
-      cfg = config.soyo.services.dhcp;
+      cfg = config.lanAppliance.services.dhcp;
       leaseDir = builtins.dirOf cfg.leaseFile;
       reservationLines = map (r: "${r.mac},${r.ip},${r.name},infinite") cfg.reservations;
     in
     {
-      options.soyo.services.dhcp = {
+      options.lanAppliance.services.dhcp = {
         enable = lib.mkEnableOption "dnsmasq DHCP";
         interface = lib.mkOption { type = lib.types.str; };
         routerAddress = lib.mkOption { type = lib.types.str; };

@@ -1,5 +1,5 @@
 {
-  soyo.services.remoteUnlock = {
+  lanAppliance.services.remoteUnlock = {
     enable = true;
     interface = "enp1s0";
     lanAddress = "10.0.0.9/24";

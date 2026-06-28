@@ -31,7 +31,7 @@ let
   );
 in
 {
-  soyo.services.blocky = {
+  lanAppliance.services.blocky = {
     enable = true;
     lanInterface = "enp1s0";
     settings = {

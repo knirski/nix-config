@@ -2,10 +2,10 @@
   flake.modules.nixos.remote-unlock =
     { lib, config, ... }:
     let
-      cfg = config.soyo.services.remoteUnlock;
+      cfg = config.lanAppliance.services.remoteUnlock;
     in
     {
-      options.soyo.services.remoteUnlock = {
+      options.lanAppliance.services.remoteUnlock = {
         enable = lib.mkEnableOption "systemd-initrd remote unlock";
         interface = lib.mkOption { type = lib.types.str; };
         lanAddress = lib.mkOption { type = lib.types.str; };
