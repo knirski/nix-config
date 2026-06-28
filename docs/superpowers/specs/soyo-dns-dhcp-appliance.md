@@ -33,7 +33,6 @@ Does not cover:
 ## Non-Goals
 
 - making Soyo the internet gateway, firewall, or Wi-Fi controller
-- impermanence or stateless-root
 - ZFS or a heavier filesystem
 - relying on router DHCP as the normal recovery path
 - building a generic framework for every future machine class before the first host exists
@@ -56,7 +55,18 @@ This repo doubles as a way to learn idiomatic Nix and NixOS from basics. This is
 - when a concept first appears, explain it briefly in the docs and link a canonical source: [nix.dev](https://nix.dev), the [NixOS manual](https://nixos.org/manual/nixos/stable/), the [Nixpkgs manual](https://nixos.org/manual/nixpkgs/stable/), [Home Manager manual](https://nix-community.github.io/home-manager/), [`flake.parts`](https://flake.parts), and the relevant [search.nixos.org](https://search.nixos.org/options) option
 - prefer clear idiomatic patterns over clever ones; readability is part of the deliverable
 
-The explicit-role-module layout (over dendritic) and Home Manager adoption support this: both keep the config legible and teach mainstream idioms.
+This repo deliberately leans into radical-modern Nix as a learning vehicle: a dendritic flake (every file an aspect module, auto-imported), impermanence from day one, and declarative hardware via `nixos-facter`. The dendritic pattern and impermanence trade some flat-file legibility for higher learning value; the docs compensate by explaining the aspect→host wiring and the persisted-path inventory explicitly. Home Manager is the one deliberately mainstream idiom in the mix.
+
+**Beginner-friendly documentation is a first-class deliverable, not a by-product.** Precisely because the chosen stack (dendritic flake, `import-tree`, impermanence with blank-snapshot rollback, `nixos-facter`, agenix, TPM/Secure Boot) sits well above a beginner's starting point, the repo must ship a guided learning path that a Nix novice can actually follow:
+
+- a **design-journey narrative** that derives the design from basics: start from the simplest thing that could work and present the important transient steps that led here, showing what was tried, what was rejected, and *why* at each fork (flake → flake-parts → dendritic; mutable root → impermanence → blank-snapshot rollback + `preservation`; `nixos-generate-config` → `nixos-facter`; rustic/kopia → restic; deploy-rs → native `nixos-rebuild`; lanzaboote → Limine; AdGuard → Blocky + dnsmasq). The reader should see the design as a sequence of motivated choices, not a finished monolith; each step links to the matching Appendix entry
+- a single entry-point document (e.g. `docs/learning/README.md`) with an explicit reading order, from "what is a flake" through to the appliance's advanced pieces, mapped onto the M1–M4 roadmap so concepts arrive one at a time
+- a short glossary of the non-obvious terms this repo leans on (flake-parts, aspect module, dendritic, `import-tree`, impermanence, subvolume, PCR, keyslot, DoH, reservation)
+- per-concept explainer notes: each new concept gets a few sentences of plain-language "what it is / why we use it here" plus a link to the canonical source, written for someone who has not seen it before
+- the dendritic indirection in particular must be documented so a reader can answer "given `hosts/soyo`, what is actually turned on and where does it come from?" without already knowing the pattern
+- worked, copy-pasteable command sequences in the operator runbooks (install, update, recovery), not just prose
+
+The success test: a competent engineer new to Nix can read the learning docs in order and understand both *what* the appliance does and *why each modern choice was made*, without prior NixOS exposure.
 
 ## Key Decisions
 
@@ -64,8 +74,10 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 
 | Area | Decision |
 |---|---|
-| Flake organization | `flake-parts` with explicit role modules (not full dendritic) |
-| Filesystem | LUKS2 + Btrfs with zstd, subvolumes; no impermanence, no ZFS |
+| Flake organization | `flake-parts` + dendritic: `import-tree` auto-imports aspect modules into `flake.modules.nixos.*`; hosts assemble by toggling aspects |
+| Filesystem | LUKS2 + Btrfs (zstd, subvolumes); impermanent root from day one; durable state under `/persist`, `/nix`, snapshots; no ZFS |
+| Impermanence | `preservation` for the persisted-path inventory; root rolled back to a blank Btrfs snapshot in systemd initrd each boot |
+| Hardware facts | `nixos-facter` (committed `facter.json`), not `nixos-generate-config` |
 | Swap | `zramSwap`, no on-disk swap |
 | Kernel | Pinned LTS (Linux 6.12) for the out-of-tree `yt6801` NIC module; userspace tracks unstable; switch to in-tree when yt6801 mainlines |
 | DNS | Blocky (forwarding/caching + ad-block) on port 53 |
@@ -76,7 +88,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 | Network backend | `systemd-networkd` (server-scoped, not in base) |
 | Bootloader | Limine (in-tree nixpkgs module, CI-tested, no extra flake input) |
 | Boot / unlock | TPM2 auto-unlock (primary), phased: PCR-7 convenience first, then Limine Secure Boot with PCR 0+2+7 (Microsoft keys kept); break-glass via local console, LAN initrd SSH, or direct-link rescue (laptop + Ethernet) |
-| Backups | restic to Synology DS423+, local Btrfs snapshots, GitHub for config |
+| Backups | restic to Synology DS423+ (first-class `services.restic.backups`), local Btrfs snapshots, GitHub for config |
 | Health checking | self-heal + ntfy OnFailure + Synology Uptime Kuma probe |
 | Redundancy | single disk, no RAID; verified backups are the resilience story |
 | Updates | manual but easy `nixos-unstable`; unattended out of scope |
@@ -84,12 +96,17 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 ## Chosen Tooling
 
 - `flake-parts` — modular flake outputs and per-class module composition
+- `import-tree` — dendritic auto-import: every file under the module tree becomes a flake-parts module contributing to `flake.modules.nixos.*` / `flake.modules.homeManager.*`
+- `nixos-facter` — declarative hardware detection; a committed `facter.json` replaces the generated `hardware-configuration.nix`
 - `disko` — declarative GPT, LUKS2, Btrfs layout
+- `preservation` — explicit persisted-path inventory on top of a root rolled back to a blank snapshot each boot (a newer, more principled alternative to `impermanence`). Note: neither is in nixpkgs; `impermanence` is the more battle-tested, example-everywhere choice. The maturity argument (the same one that picks `restic` over `rustic`) was considered and **consciously overridden** here by the radical-modern learning goal — `preservation` is the deliberate teaching choice, with fewer examples accepted as part of the learning cost
 - `agenix` — encrypted secrets, including password hashes
+- `agenix-rekey` — optional operator-side rekey helper kept as the migration path once multi-host secret churn justifies moving beyond plain `agenix`
 - Home Manager — declarative per-user environment and dotfiles
-- `restic` — encrypted, deduplicated off-host backups to the Synology DS423+
+- `restic` — encrypted, deduplicated off-host backups to the Synology DS423+ via the first-class `services.restic.backups` NixOS module
 - `btrbk` — scheduled local Btrfs snapshots
 - `nixos-anywhere` — alternative remote provisioning over SSH
+- `deploy-rs` — multi-host remote deployment (deploy checks, magic-rollback); **deferred to M4** — M1/M2 use the first-class native `nixos-rebuild --target-host`, which needs no extra input for a single host
 - `treefmt-nix` — repo-wide formatting
 - `deadnix` — unused-binding analysis
 - `systemd-networkd` — runtime network manager
@@ -99,13 +116,17 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 - `sbctl` — Secure Boot key management for Limine Phase 2
 - Blocky — forwarding/caching DNS with local records, chosen for ad/tracker blocking
 - dnsmasq — DHCP and lease-aware local reverse lookup
+- Prometheus `node_exporter` — lightweight host metrics
+- Prometheus dnsmasq exporter — DHCP and dnsmasq metrics
 
 ## Filesystem Choice
 
-`LUKS2` with `Btrfs` inside the encrypted container, `zstd` compression, subvolume mounts.
+`LUKS2` + `Btrfs` (zstd, subvolumes) inside the encrypted container, with an impermanent root achieved by **rolling the root subvolume back to a blank snapshot on every boot** rather than a tmpfs root.
 
-- snapshots and subvolumes without ZFS-level operational weight
-- `disko` models it cleanly
+- root is a real Btrfs subvolume, but a `root-blank` readonly snapshot is taken once at install; a systemd-initrd service deletes the live `root` and restores it from `root-blank` before mount, so undeclared state disappears on reboot
+- this is the "erase your darlings" idiom on Btrfs; preferred over tmpfs root because it has no RAM ceiling on root contents and keeps a uniform Btrfs layout that `disko` models cleanly
+- durable state is anchored in subvolumes under `/persist` and reintroduced into normal runtime paths via the `preservation` module
+- snapshots and subvolumes give point-in-time recovery without ZFS-level operational weight
 - Btrfs is in-tree on any kernel and needs no DKMS; ZFS is out-of-tree, and the host already carries one out-of-tree module (the NIC) — a second for the filesystem is undesirable
 
 ## Repository Structure
@@ -114,17 +135,18 @@ A multi-host flake from day one.
 
 ### Flake Organization
 
-Built on `flake-parts`, with explicit host composition and role modules rather than the full dendritic pattern:
+Built on `flake-parts` with the **dendritic pattern**, adopted deliberately as a radical-modern learning target:
 
 - `flake-parts` gives modular outputs (formatter, checks, dev shell, Home Manager) instead of one monolithic `flake.nix`
-- hosts compose by explicit `imports` of role modules (`base`, `server`, `desktop`) and service modules, so each host file plainly lists what it is
-- shared behavior lives in role and service modules that hosts opt into
+- `import-tree` auto-imports every `.nix` file under the module tree as a flake-parts module; each file is one *aspect* and contributes to a shared namespace (`flake.modules.nixos.<aspect>`, `flake.modules.homeManager.<aspect>`)
+- a host is assembled by listing the aspects it turns on, not by `imports` of file paths; shared behavior lives in the aspect modules
+- legibility — which matters most during recovery — is preserved by documentation: the host file enumerates its aspects, and the docs explain the aspect→host wiring rather than relying on flat imports
 
-The dendritic pattern was evaluated and not adopted; see the appendix.
+The dendritic pattern's earlier rejection (see appendix) is explicitly reversed: the learning goal now outweighs the legibility cost, and the docs mitigate that cost.
 
 ### Top Level
 
-- `flake.nix` — thin, on `flake-parts`; declares inputs (`flake-parts`, `home-manager`, `disko`, `agenix`); composes per-host `nixosConfigurations.<hostname>` from role/service modules with Home Manager as a NixOS module; exposes formatter, checks, dev shell, and any update/deploy helper apps
+- `flake.nix` — thin, on `flake-parts` with `import-tree`; declares inputs (`flake-parts`, `import-tree`, `nixos-facter-modules`, `home-manager`, `disko`, `preservation`, `agenix`, `agenix-rekey`); composes per-host `nixosConfigurations.<hostname>` by toggling aspect modules, with Home Manager as a NixOS module; exposes formatter, checks, dev shell, and any update/deploy helper apps (`deploy-rs` added at M4 for multi-host)
 - `hosts/` — one directory per machine
 - `modules/` — reusable NixOS modules by responsibility
 - `secrets/` — agenix secret files and recipient mapping
@@ -133,32 +155,42 @@ The dendritic pattern was evaluated and not adopted; see the appendix.
 
 ### Proposed Module Layout
 
-- `modules/base/default.nix` — common defaults shared across hosts
-- `modules/nixos/server/default.nix` — server-only defaults
-- `modules/nixos/services/blocky.nix` — DNS
-- `modules/nixos/services/dnsmasq-dhcp.nix` — DHCP
-- `modules/nixos/services/remote-unlock.nix` — shared initrd unlock building blocks
-- `modules/nixos/services/maintenance.nix` — `nix.gc`, store optimisation, scrub, journald/boot-entry limits, `smartd`, free-space monitoring, ntfy notifications, time sync
-- `modules/nixos/services/backup.nix` — restic jobs, snapshot scheduling, repo-secret wiring
-- `modules/nixos/users/default.nix` — user policy and secret-backed passwords
-- `modules/home/base.nix` — shared headless Home Manager profile
+`import-tree ./modules` auto-imports every file under `modules/` as a flake-parts module. Two kinds live there:
+
+- *flake-parts modules* under `modules/parts/`, which build flake outputs:
+  - `modules/parts/perSystem.nix` — `systems`, `treefmt`, formatter, `checks`, dev shell
+  - `modules/parts/soyo.nix` — **the host assembler**: builds `flake.nixosConfigurations.soyo` by toggling aspects (`with config.flake.modules.nixos; [ … ]`), importing the input modules (disko, preservation, agenix, home-manager, facter), and importing the host-data files from `hosts/soyo/`. Home Manager is wired here (it needs `config.flake.modules.homeManager.base`).
+- *aspect modules*, each defining `flake.modules.nixos.<aspect>` (or `flake.modules.homeManager.<aspect>`) that a host opts into. Paths are organisational; the namespace, not the directory, is what hosts reference:
+  - `modules/nixos/base.nix` — common defaults shared across hosts
+  - `modules/nixos/server.nix` — server-only defaults
+  - `modules/nixos/users.nix` — user policy and the agenix secret inventory
+  - `modules/nixos/persistence.nix` — the `preservation` mechanism, the blank-snapshot rollback service, agenix identity path, and teaching comments around persisted state
+  - `modules/nixos/remote-unlock.nix` — shared initrd unlock building blocks
+  - `modules/nixos/blocky.nix` — Blocky DNS aspect (full settings passthrough)
+  - `modules/nixos/dhcp.nix` — dnsmasq DHCP aspect
+  - `modules/nixos/maintenance.nix` — `nix.gc`, store optimisation, scrub, journald/boot-entry limits, `smartd`, free-space monitoring, ntfy notifications, time sync
+  - `modules/nixos/backup.nix` — restic jobs, snapshot scheduling, repo-secret wiring
+  - `modules/nixos/observability.nix` — lightweight on-box exporters; heavy dashboards and storage stay off-box
+  - `modules/home/base.nix` — shared headless Home Manager aspect
 
 ### Soyo Host Layout
 
-- `hosts/soyo/default.nix` — assembles the host
-- `hosts/soyo/hardware-configuration.nix` — generated hardware facts
-- `hosts/soyo/boot.nix` — kernel, firmware, systemd initrd, TPM2 auto-unlock, Limine (Secure Boot in Phase 2)
-- `hosts/soyo/disko.nix` — GPT, EFI, LUKS2 (with TPM2 crypttab option), Btrfs subvolumes
+The assembler is the flake-parts module `modules/parts/soyo.nix` (it must read `config.flake.modules.*`, which a plain `hosts/soyo/default.nix` cannot). `hosts/soyo/` therefore holds **only** machine facts and host-specific data/values that the assembler imports; reusable behavior lives in the aspect modules above.
+
+- `hosts/soyo/facter.json` — committed `nixos-facter` hardware report (replaces `hardware-configuration.nix`)
+- `hosts/soyo/boot.nix` — kernel, firmware, systemd initrd, TPM2 auto-unlock, Limine (Secure Boot in Phase 2), zram
+- `hosts/soyo/disko.nix` — GPT, EFI, LUKS2 (with TPM2 crypttab option), Btrfs subvolumes incl. `root` (+ the `root-blank` snapshot taken at install)
+- `hosts/soyo/persistence.nix` — the persisted-path inventory for system and user state (sets `preservation.preserveAt."/persist"`)
 - `hosts/soyo/networking.nix` — static LAN addressing and firewall
 - `hosts/soyo/initrd-unlock.nix` — initrd SSH and network: the static LAN address plus a second dedicated direct-link rescue address, for break-glass unlock
 - `hosts/soyo/reservations.nix` — single source of truth: `{ name; mac; ip; }` list, imported by both `dhcp.nix` and `dns.nix`; plaintext (MAC/IP are not secrets)
 - `hosts/soyo/dns.nix` — Soyo Blocky policy and forward A records from `reservations.nix` (reverse/PTR is dnsmasq's job)
 - `hosts/soyo/dhcp.nix` — DHCP ranges, router options, and `dhcp-host` reservations from `reservations.nix`
-- `hosts/soyo/users.nix` — host-specific user assembly if needed
-- `hosts/soyo/home.nix` — Soyo Home Manager additions on the shared profile
-- `hosts/soyo/backup.nix` — Soyo backup paths, schedule, Synology target
+- `hosts/soyo/users.nix` — host-specific user assembly (root + krzysiek, password secrets)
+- `hosts/soyo/backup.nix` — Soyo backup paths, schedule, Synology target (restic)
+- `hosts/soyo/observability.nix` — Soyo exporter settings and LAN-facing metrics bindings
 
-This separates machine facts from reusable service behavior, so a future laptop reuses base and user modules without inheriting server networking or unlock logic.
+Home Manager additions are wired in the assembler (which can reach `config.flake.modules.homeManager.base`); there is no `hosts/soyo/home.nix`. This separates machine facts from reusable service behavior, so a future laptop reuses the base and user aspects without inheriting server networking or unlock logic.
 
 ## Host Role
 
@@ -200,21 +232,80 @@ Decision: pin a kernel the `yt6801` module builds against and load it via `boot.
 
 ## Disk Layout
 
-`disko`: one GPT disk, one EFI System Partition, one LUKS2 partition, one Btrfs filesystem inside it.
+`disko`: one GPT disk, one EFI System Partition, one LUKS2 partition, one Btrfs filesystem inside it. Root is a Btrfs subvolume that is wiped to a blank state every boot, not a tmpfs.
 
 Subvolumes and mount intent:
 
-- `root` — OS root
+- `root` — `/`, the live root subvolume; rolled back to `root-blank` on every boot
+- `root-blank` — a readonly snapshot of an empty `root`, taken once at install; the initrd restores `root` from it before mount
 - `nix` — `/nix`
-- `persist` — state that must survive rollbacks and reinstalls, including the dnsmasq lease database so leases and reservation state survive reboots/rebuilds (no duplicate-IP handouts)
-- `log` — persistent journald and related logs
+- `persist` — the durable anchor for files and directories reintroduced into the wiped root, including the dnsmasq lease database so leases and reservation state survive reboots/rebuilds (no duplicate-IP handouts)
 - `snapshots` — local snapshot target
 
-No impermanence in the first version; persistent directories are tracked explicitly and mounted from `persist`.
+The rollback runs as a `boot.initrd.systemd.services` unit, ordered `After` the LUKS device opens and `Before` `sysroot.mount`. Gotcha confirmed across reference implementations (Misterio77/nix-config `ephemeral-btrfs.nix`, Electrostasy/dots `restore-root.nix`, the misterio entry in `nix-community/nur-combined`): the live `root` cannot be deleted with a plain `btrfs subvolume delete` once **nested subvolumes** exist under it (systemd creates some, e.g. under `/var/lib`; services with `DynamicUser`/`ProtectSystem` create more). The rollback must enumerate and delete nested subvolumes first (recursive delete / a delete loop) before snapshotting `root` from `root-blank`, or the wipe fails and the unit blocks boot. Persistent state is then reintroduced into normal Linux paths from `persist` via an explicit inventory. The baseline intentionally uses impermanence from the beginning, so state completeness is part of correctness, not a later cleanup exercise.
 
 ### Swap
 
 `zramSwap`, no on-disk swap. With 16 GB RAM the box rarely needs swap; zram keeps any swap in the compressed memory path and avoids swap-on-Btrfs and swap-on-LUKS complications, so the disko layout needs no swap device.
+
+## Impermanence Baseline
+
+Impermanence is part of the baseline Soyo design. This repo explicitly optimises for learning value, so root starts ephemeral and the persisted-path inventory becomes a first-class artifact rather than an operational afterthought.
+
+### What It Means Here
+
+The rough shape is:
+
+- the root subvolume is wiped at boot by restoring it from a blank Btrfs snapshot (`root-blank`) in systemd initrd, rather than mounting a tmpfs root
+- a dedicated `persist` subvolume remains the durable anchor
+- selected state is bind-mounted or otherwise restored from `persist` into standard runtime paths
+- declarative config still comes from the flake; only non-derivable state survives across boots
+
+The implementation uses the `preservation` module for the persisted-path wiring (a newer, more principled alternative to `nix-community/impermanence`), but the code and docs must also explain the underlying mechanism: blank-snapshot rollback of root, early durable mounts, then explicit restoration of the state that should survive. The host SSH key that agenix needs is part of that early restoration (see Secrets and Users).
+
+### Minimum Persistent Inventory
+
+At minimum, this baseline needs an explicit persisted-path inventory for:
+
+- DHCP and service state under `/var/lib`, especially the dnsmasq lease database
+- persistent logs under `/var/log` if they remain part of the operational model
+- `/var/lib/nixos`, so declarative users and groups keep stable numeric IDs across reboots
+- machine identity such as `/etc/machine-id`
+- SSH host keys and any other long-lived host identity not already handled elsewhere
+- real user data under `/home`
+- any service databases or application state added later in M4
+
+Deliberately **not** persisted: `/etc/{passwd,group,shadow,gshadow,subuid,subgid}`. With `users.mutableUsers = false` and `hashedPasswordFile` (agenix), NixOS regenerates these declaratively from config at every activation, so persisting them would only risk drift. `/var/lib/nixos` (the UID/GID map) is what must persist for stable IDs.
+
+The important point is that impermanence does **not** remove state management; it makes that inventory stricter and more visible.
+
+### Benefits
+
+Impermanence is attractive here for real reasons:
+
+- it forces an explicit inventory of state that must survive reboot
+- it makes accidental local drift less likely, because undeclared writes disappear on reboot
+- it sharpens the boundary between declarative system config and runtime data
+- it is a strong learning tool for understanding which files NixOS services actually need to keep
+- it can make rebuild-and-recover workflows feel cleaner once the persisted set is correct
+
+For a learning repo, that discipline is valuable: missing persistence usually fails loudly instead of remaining hidden as historical machine state.
+
+### Trade-Offs
+
+Using impermanence from the beginning is valuable for learning, but it comes with real cost for the LAN's only DNS/DHCP appliance:
+
+- every critical service must be checked for hidden writes outside the persisted set
+- the break-glass and power-loss paths need another full validation pass
+- install, recovery, backup, and restore docs all become more complex
+- mistakes are more likely to show up as boot-time or first-request failures rather than ordinary configuration drift
+
+That is the core trade-off:
+
+- **benefit** — better state discipline and a clearer picture of what the configuration really covers
+- **cost** — a more failure-sensitive bring-up, with more ways to miss a required path and break a critical appliance at boot or after reboot
+
+For this repo, that cost is accepted deliberately in exchange for the higher learning rate.
 
 ## Secrets and Users
 
@@ -225,6 +316,21 @@ agenix, not sops-nix.
 - `secrets/secrets.nix` maps secrets to recipients
 - encrypted password hashes: `secrets/root-password.age`, `secrets/krzysiek-password.age`
 - recipients: the operator key (management machine) and the Soyo host key (after install)
+
+Impermanence ordering caveat: agenix decrypts at boot using the Soyo host SSH key, but under the wiped-root baseline `/etc/ssh` is empty until `preservation` reintroduces it — so relying on the default `/etc/ssh/ssh_host_ed25519_key` path risks agenix running before the key is in place and failing to decrypt the password hashes, leaving the box unusable.
+
+Researched fix (well-attested across `ryantm/agenix` reference docs, `oddlama/nix-config`, `MatthewCroughan/nixcfg`, `Arcanyx-org/NiXium`): point agenix directly at the durable copy instead of depending on the bind-mount ordering —
+
+- `age.identityPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];`
+- mark the persist filesystem `neededForBoot = true` so it is mounted before stage-2 activation runs
+
+The persisted-path inventory, `age.identityPaths`, and `neededForBoot` are therefore part of M1 correctness, not an M2 concern.
+
+Baseline phasing matters here:
+
+- M1/M2 use standard `agenix` wiring with an explicit `secrets/secrets.nix` recipient map and `age.secrets.<name>.file`
+- do not mix `agenix-rekey`'s `rekeyFile` flow into the first production cut; it is a later migration path once a second host exists or secret-recipient churn becomes noisy enough to justify it
+- keep `agenix-rekey` available in the operator toolchain so that migration path is documented and ready, not improvised later
 
 ### User Model
 
@@ -250,11 +356,11 @@ Off-host, offline backup for material that cannot be regenerated from repo state
 The admin user's shell and dotfiles are declarative via Home Manager — an explicit learning goal and the canonical way operator tooling is defined.
 
 - runs as a NixOS module inside each `nixosConfiguration`, so one `nixos-rebuild` applies system and user state
-- `modules/home/base.nix` holds the headless profile (shell, prompt, git, editor, CLI tools); `hosts/soyo/home.nix` layers Soyo additions
+- `modules/home/base.nix` holds the headless profile (shell, prompt, git, editor, CLI tools) as `flake.modules.homeManager.base`; the host assembler (`modules/parts/soyo.nix`) wires it in and layers any Soyo additions
 - headless only: no desktop, GUI, or theming
 - manages config/dotfiles, not real user data (documents, app databases) — that is a backup concern
 
-Because dotfiles are declarative and in GitHub, they need no NAS backup. Real data under the user's home is class 3 and backed up explicitly (see Data and Backup Strategy).
+Because dotfiles are declarative and in GitHub, they need no NAS backup. Real data under the user's home is class 3, must be declared in the persisted-path inventory once introduced, and is then backed up explicitly (see Data and Backup Strategy).
 
 ## Networking Model
 
@@ -413,7 +519,7 @@ Assumes Soyo boots the installer USB, the live environment has internet, and Git
 1. boot the installer from USB
 2. connect to the network
 3. fetch the flake from GitHub
-4. confirm hardware facts and target disk identifiers
+4. run `nixos-facter` to generate/confirm `hosts/soyo/facter.json`, and confirm target disk identifiers
 5. run the `disko` disk setup from the flake
 6. install from the fetched flake
 7. reboot into the installed system
@@ -442,9 +548,9 @@ Plain manual installation at the console remains a last-resort fallback.
 
 An intentionally small toolchain.
 
-Required: `nixos-anywhere` (alternative remote install), `agenix` (secret create/edit/rekey), `treefmt-nix` (formatting), `deadnix` (dead-code lint).
+Required: `nixos-anywhere` (alternative remote install), `agenix` (secret create/edit/rekey), `treefmt-nix` (formatting), `deadnix` (dead-code lint). Day-2 remote deploys use native `nixos-rebuild --target-host` — local build on the workstation, closure copied, remote activation (no `--build-host`, so the N150 never builds) — first-class, no extra input.
 
-Optional: `nh` (rebuild/cleanup convenience) — the canonical documented workflow must still work with plain `nix` and `nixos-rebuild`.
+Optional: `agenix-rekey` (future migration path beyond plain `agenix`), `deploy-rs` (M4 multi-host deploy orchestration), `nh` (rebuild/cleanup convenience) — the canonical documented workflow must still work with plain `nix` and `nixos-rebuild`.
 
 Expose the required tools in a dev shell and wire formatting/linting into `nix flake check` where practical.
 
@@ -454,6 +560,7 @@ Third-party/off-box services (distinct from on-Soyo Future Services). Optional o
 
 - GitHub Actions — CI for formatting, linting, host build checks; improves review without entering the runtime dependency chain
 - Tailscale — post-boot remote admin; secondary to the LAN and local-console recovery paths
+- Grafana Cloud with Grafana Alloy, or an external Prometheus/Grafana pair — optional off-box metrics storage, dashboards, and alerting
 - Cachix (conditional) — binary cache if the repo later benefits, especially with CI builds or more hosts; only if its free-tier/visibility terms fit
 
 No hosted service is required for: first boot, remote unlock, local power-loss recovery, secret decryption on target, or ordinary LAN DNS/DHCP.
@@ -489,7 +596,8 @@ Easy path to the newest `nixos-unstable`:
 
 - `flake.lock` is the authoritative pin
 - a documented command/wrapper updates the `nixpkgs` input
-- supports `dry`, `test`, `switch` deployment
+- M1/M2 remote deploys use native `nixos-rebuild --target-host` (local build on the workstation, remote activation); `deploy-rs` (deploy checks wired into `nix flake check`) is deferred to M4 multi-host
+- local break-glass path remains `nixos-rebuild test|switch`
 - rollback documented alongside update
 - the kernel is deliberately pinned to an LTS for `yt6801` (see Kernel and NIC Driver), independent of the `nixpkgs` bump; a userspace update must not silently move the kernel, and after each update the `yt6801` module is confirmed built and `enp1s0` up
 
@@ -523,6 +631,16 @@ ntfy is self-reported and cannot fire for total failure (panic, dead PSU, hung k
 
 The Uptime Kuma watcher is NAS-side, documented as an operator step, not in the flake (like the off-site backup). A LAN-local watcher cannot report a whole-house outage where both boxes are down; that is accepted, with an optional external dead-man's switch if wanted later.
 
+### Metrics
+
+Soyo should expose metrics, but it should not become its own metrics stack.
+
+- on-box exporters stay lightweight: Blocky's Prometheus endpoint, `node_exporter` for host metrics, and the Prometheus dnsmasq exporter for lease/DNS statistics
+- scrape, storage, dashboards, and long-retention alerting stay off-box
+- the preferred modern off-box path is either Grafana Cloud with Grafana Alloy or an external Prometheus/Grafana stack on the NAS or another host
+
+That split preserves appliance focus: Soyo publishes a small metrics surface, while every heavier observability responsibility lives in an independent failure domain.
+
 ## Data and Backup Strategy
 
 First-class, on a 3-2-1 intent: live data on Soyo, a local point-in-time copy, and an off-host copy on the Synology DS423+, with GitHub as the independent off-host copy of all declarative config.
@@ -533,7 +651,7 @@ Classify everything on disk and treat each by its recovery model:
 
 1. Declarative config — flake, NixOS modules, Home Manager dotfiles → rebuild from GitHub; no NAS copy
 2. Secrets and recovery material — agenix secrets, operator key, host key, LUKS header → encrypted in repo plus offline backups (see Secrets and Users)
-3. Real persistent data — non-derivable data on `persist` and real (non-HM-managed) data under the user's home → restore from backup: restic to the Synology, plus local Btrfs snapshots
+3. Real persistent data — non-derivable data declared in the persisted-path inventory (system paths restored from `persist`, plus real non-HM-managed user data) → restore from backup: restic to the Synology, plus local Btrfs snapshots
 4. Derivable/disposable — `/nix`, caches, short-lived logs → regenerated by rebuild; no backup
 
 Discipline: anything not reproducible from GitHub and not in classes 1–2 is class 3 and must be backed up.
@@ -549,10 +667,10 @@ Discipline: anything not reproducible from GitHub and not in classes 1–2 is cl
 - encrypted and deduplicated at rest, so it is safe on a shared NAS
 - repo password is an agenix secret
 - transport is SSH/SFTP to a dedicated NAS backup user
-- scheduled (e.g. daily) with a documented retention/`prune` policy
-- sourced from a stable snapshot where practical for consistency
+- scheduled (e.g. daily) with a documented retention/`prune` policy; the module wires the `systemd` timer, pruning, and `OnFailure` → ntfy
+- sourced from a stable Btrfs snapshot where practical for consistency
 
-Backed-up paths live in an easy-to-edit host-local list so the operator can add data locations as the role grows.
+Tooling note: `restic` is chosen over `rustic` and `kopia` specifically because it is the only one of the three with a first-class NixOS module (`services.restic.backups`); `rustic`/`kopia` would mean hand-rolling systemd timers for no integration gain. `rustic`'s restic-compatible repo format stays a documented escape hatch if the client ever needs to change. Backed-up paths live in an easy-to-edit host-local list so the operator can add data locations as the role grows.
 
 ### NAS-Side and Off-Site
 
@@ -664,7 +782,7 @@ Structured so a future gaming laptop adds without restructuring the tree:
 
 ### Base Is Role-Neutral
 
-The rule that keeps a laptop drop-in: `modules/base` and `modules/home/base.nix` stay ruthlessly role-neutral. Anything differing between a server appliance and a gaming laptop is forbidden in base and lives in a role module or host. Base must not assume:
+The rule that keeps a laptop drop-in: `modules/nixos/base.nix` and `modules/home/base.nix` stay ruthlessly role-neutral. Anything differing between a server appliance and a gaming laptop is forbidden in base and lives in a role module or host. Base must not assume:
 
 - a network backend — `systemd-networkd` is a server choice (server module/host); a laptop uses NetworkManager
 - a swap policy — `zramSwap`/no on-disk swap is a server choice; a laptop needs a real swap partition for hibernate, decided per host in disko
@@ -672,14 +790,14 @@ The rule that keeps a laptop drop-in: `modules/base` and `modules/home/base.nix`
 
 ### Planned Module Paths for a Laptop
 
-Additive, not a restructuring:
+Additive, not a restructuring — new aspect modules and a new host dir:
 
-- `modules/nixos/desktop/` — Wayland, GPU/NVIDIA, audio, gaming
-- `modules/home/desktop.nix` — layered on `modules/home/base.nix`
-- `hosts/laptop/` — its own `boot.nix`, `disko.nix`, `networking.nix`
+- `modules/nixos/desktop.nix` — Wayland, GPU/NVIDIA, audio, gaming aspect(s)
+- `modules/home/desktop.nix` — Home Manager aspect layered on `modules/home/base.nix`
+- `hosts/laptop/` — its own `facter.json`, `boot.nix`, `disko.nix`, `networking.nix`
 - a new agenix host key, recipient, and rekey for any secrets it needs
 
-The laptop reuses `modules/base`, `modules/nixos/users`, `modules/home/base.nix`, the backup module, and the disko pattern unchanged; it just does not import DNS, DHCP, or remote-unlock modules.
+The laptop reuses the base, users, and `modules/home/base.nix` aspects, the backup aspect, and the disko pattern unchanged; it simply doesn't toggle on the DNS, DHCP, or remote-unlock aspects.
 
 The first implementation adopts Home Manager as a small headless server profile only — no desktop, GUI, or theming.
 
@@ -688,7 +806,7 @@ The first implementation adopts Home Manager as a small headless server profile 
 Soyo is likely to grow into a small home server (e.g. Jellyfin) with the Synology DS423+ kept as storage. Anticipated, not implemented in the first version. This section is intentionally detailed as a planning reference for later phases (M4), not first-implementation scope; the rules below keep the door open without building ahead of need:
 
 - compute on Soyo, storage on Synology — services run on Soyo; bulk data (media) stays on the DS423+ over NFS, keeping Soyo's disk small
-- prefer native NixOS modules (e.g. `services.jellyfin`); fall back to a container only where no native module exists; each service its own opt-in module under `modules/nixos/services/`
+- prefer native NixOS modules (e.g. `services.jellyfin`); fall back to a container only where no native module exists; each service its own opt-in aspect at `modules/nixos/<name>.nix` (exposing `flake.modules.nixos.<name>`), toggled on per host
 - use the Intel N150 iGPU (QuickSync via `renderD128`/VAAPI) for hardware transcoding
 - give each service a local `home.arpa` Blocky record, with a reverse proxy (e.g. Caddy) and internal TLS once there is more than one web service
 - back up service state (databases, config) as class 3 via restic; media on the Synology is the NAS's backup job
@@ -740,27 +858,28 @@ These do not change the design direction.
 
 A small, focused custom flake that borrows patterns from established NixOS repos without forking any large personal repo.
 
-Borrow: `flake-parts` with explicit legible host composition; multi-host layout with thin host dirs; `nixos-anywhere` install; `disko` layout; `agenix` secret lifecycle; systemd-native server/initrd patterns; TPM2 auto-unlock via `systemd-cryptenroll` hardened by Limine Secure Boot; headless Home Manager on a shared base; declarative `restic` backups.
+Borrow: `flake-parts` with the dendritic pattern (`import-tree`, aspect modules) and thin host dirs; declarative hardware via `nixos-facter`; `nixos-anywhere` install; `disko` layout; `preservation` with a blank-snapshot rollback and a documented persisted-path inventory; plain `agenix` for the first production secret lifecycle, with `agenix-rekey` documented as the later migration path; native `nixos-rebuild --target-host` for routine remote activation (`deploy-rs` deferred to M4); systemd-native server/initrd patterns; TPM2 auto-unlock via `systemd-cryptenroll` hardened by Limine Secure Boot; headless Home Manager on a shared base; declarative `restic` backups via `services.restic.backups`.
 
-Avoid: desktop policy; broad self-hosting stacks; impermanence by default; ZFS; legacy initrd shell hacks; over-automation of unattended updates.
+Avoid: desktop policy; broad self-hosting stacks; ZFS; legacy initrd shell hacks; over-automation of unattended updates.
 
 ## Deliverables for the Implementation Phase
 
-1. New `flake.nix` on `flake-parts` with `disko`, `agenix`, `home-manager` inputs
-2. Module tree with shared base, server, service, user, and Home Manager modules, composed explicitly per host
+1. New `flake.nix` on `flake-parts` + `import-tree` with `nixos-facter-modules`, `disko`, `preservation`, `agenix`, and `home-manager` inputs, plus optional operator tooling such as `agenix-rekey` (`deploy-rs` added at M4)
+2. Dendritic aspect-module tree (base, server, service, user, Home Manager aspects in `flake.modules.*`), with each host toggling the aspects it uses
 3. `hosts/soyo` host assembly
 4. Boot config pinning Linux 6.12 LTS and loading the out-of-tree `yt6801` module, with the documented switch to in-tree when it mainlines
-5. Encrypted Btrfs `disko` definition
+5. Encrypted Btrfs `disko` definition with `root`/`root-blank` subvolumes and an initrd blank-snapshot rollback for the impermanent root
 6. Limine config plus TPM2 auto-unlock: Phase 1 enrolls `systemd-cryptenroll` against PCR 7 with a passphrase fallback; Phase 2 enables Limine Secure Boot (`secureBoot.enable`, `sbctl` keys with Microsoft keys kept) and re-enrolls the TPM against PCR 0+2+7, with documented rollback/recovery steps
-7. agenix secret layout and example password-hash onboarding
+7. agenix secret layout and example password-hash onboarding, with the future `agenix-rekey` migration path documented but not required for M1/M2
 8. Blocky and dnsmasq modules
 9. systemd initrd break-glass unlock module: LAN address plus direct-link rescue address, with local console also available
-10. Headless Home Manager profile for the admin user
-11. Backup module: restic to the Synology plus scheduled Btrfs snapshots
-12. ntfy failure-notification wiring for systemd units, restic, and `smartd`
-13. Update/deploy workflow leaning on `nh` and `nixos-rebuild`, thin scripts only where they add value
-14. Operator docs for install, update, validation, backup/restore, and outage recovery
-15. Learning-oriented documentation: modules commented with the idiom and the *why*, and per-concept notes that explain the Nix/NixOS concepts used, each linked to a canonical source (nix.dev, NixOS/Nixpkgs/Home Manager manuals, `flake.parts`, search.nixos.org)
+10. Headless Home Manager profile for the admin user, with user persistence declared explicitly
+11. Backup aspect: restic to the Synology via `services.restic.backups`, plus scheduled Btrfs snapshots
+12. Observability module: Blocky metrics retained, plus `node_exporter` and dnsmasq exporter on Soyo, with explicit documentation that Grafana/Alloy or Prometheus/Grafana stays off-box
+13. ntfy failure-notification wiring for systemd units, restic, and `smartd`
+14. Update/deploy workflow on native `nixos-rebuild` (`--target-host` for remote: local build + remote activation; `test|switch` locally), with `nh` only as local convenience; `deploy-rs` deferred to M4
+15. Operator docs for install, update, validation, backup/restore, and outage recovery
+16. Learning-oriented documentation (first-class, see Learning Goals): a design-journey narrative deriving the design from basics through its important transient steps and rejected alternatives, a guided entry-point doc with an explicit reading order mapped to M1–M4, a glossary of the repo's non-obvious terms, per-concept explainer notes each linked to a canonical source (nix.dev, NixOS/Nixpkgs/Home Manager manuals, `flake.parts`, search.nixos.org), an explicit explanation of the dendritic aspect→host wiring, and modules commented with the idiom and the *why*
 
 ## Implementation Roadmap
 
@@ -770,22 +889,24 @@ Before touching hardware, rehearse the host build and disk layout in a VM (`nixo
 
 ### M1 — Bootable appliance (MVP)
 
-- flake-parts skeleton with base + server + service role modules
-- `disko`: LUKS2 + Btrfs subvolumes on the `ata-PELADN_512GB_...` disk
+- flake-parts + `import-tree` dendritic skeleton with base + server + service aspects; `nixos-facter` hardware report committed
+- `disko`: LUKS2 + Btrfs with `root`/`root-blank` subvolumes on the `ata-PELADN_512GB_...` disk
+- impermanent root via the initrd blank-snapshot rollback + `preservation`, with an explicit persisted-path inventory for host identity (incl. the agenix host key before decryption), declarative users, logs, and DHCP state
 - pinned Linux 6.12 LTS + out-of-tree `yt6801` module; `systemd-networkd` static LAN on `enp1s0`
 - Blocky (ad-block, DoT upstream, `bootstrapDns`) + dnsmasq (DHCP, reverse zone, `home.arpa` search domain)
 - TPM Phase-1 auto-unlock (PCR 7, passphrase fallback), systemd initrd, Limine; initrd LAN + direct-link rescue addresses
 - `root` + `krzysiek` users, key-only SSH policy
 
-Outcome: serves DNS/DHCP on the LAN and unlocks unattended on power loss. Validate: `enp1s0` up, leases handed out, DNS resolves and filters, `soyo.home.arpa`, TPM auto-unlock across a reboot.
+Outcome: serves DNS/DHCP on the LAN, restores the declared durable state after reboot, and unlocks unattended on power loss. Validate: `enp1s0` up, leases handed out, DNS resolves and filters, `soyo.home.arpa`, persisted identities survive reboot, TPM auto-unlock across a reboot.
 
 ### M2 — Durability and operations (production cut-line)
 
 - agenix: password hashes, restic repo password, ntfy token; offline backup of operator key and LUKS header
-- backups: restic to the Synology + `btrbk` snapshots + a tested restore drill
+- backups: restic to the Synology via `services.restic.backups` + `btrbk` snapshots + a tested restore drill
 - maintenance defaults: `nix.gc`, scrub, journald cap, `smartd`, free-space monitoring
 - reliability: ntfy `OnFailure` notifications; Synology Uptime Kuma probe
-- headless Home Manager profile; documented update workflow
+- observability: Blocky metrics, `node_exporter`, dnsmasq exporter, and an off-box scraper/dashboard path
+- headless Home Manager profile; documented native `nixos-rebuild --target-host` deploy workflow (deploy-rs deferred to M4)
 
 Outcome: backed up, observable, recoverable. Validate: restore drill, forced-failure ntfy, probe reports DNS down when powered off.
 
@@ -799,6 +920,7 @@ Outcome: signed boot, cmdline-injection closed, auto-unlock surviving updates. V
 ### M4 — Expansion (later)
 
 - gaming laptop host (`hosts/laptop`, desktop modules)
+- `deploy-rs` for multi-host remote deployment (deploy checks, magic-rollback) once a second host justifies it over native `nixos-rebuild --target-host`
 - future services on Soyo (Jellyfin etc.) over NFS to the Synology
 - off-site NAS replication; RAID1 if a second disk slot exists
 
@@ -823,9 +945,9 @@ Decision: **Blocky + dnsmasq** — a git-authoritative flake, DHCP robustness, a
 
 ### Flake organization: dendritic pattern
 
-The dendritic pattern (every file a flake-parts module, aspect-oriented across classes, auto-imported with `import-tree`) is purpose-built for sharing across host classes. Not chosen because it is a generic framework built before the second host exists (against a non-goal), adds a large novel concept atop the Home Manager learning goal, and reduces legibility via auto-import and aspect scattering — and legibility matters most for recovery.
+The dendritic pattern (every file a flake-parts module, aspect-oriented across classes, auto-imported with `import-tree`) is purpose-built for sharing across host classes. It was initially rejected as a generic framework built before the second host exists, a large novel concept atop the Home Manager learning goal, and a legibility cost via auto-import and aspect scattering — and legibility matters most for recovery.
 
-Decision: **flake-parts with explicit role modules.** Revisit if host count grows enough that aspect-oriented sharing outweighs the legibility loss; explicit role modules keep that path open.
+Decision (revised): **adopt the dendritic pattern.** With the project reframed around learning radical-modern Nix, the pattern's educational value now outweighs the legibility cost, and that cost is mitigated by documenting the aspect→host wiring. The original counter-arguments are acknowledged as the price paid: recovery legibility leans on docs rather than flat imports, and the second host doesn't exist yet — accepted deliberately for the learning goal.
 
 ### Bootloader and Secure Boot: Limine vs lanzaboote
 

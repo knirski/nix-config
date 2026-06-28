@@ -17,7 +17,7 @@ and its docs must teach (see "Learning docs" below).
 2. **Guest services are opt-in and resource-isolated** — systemd `MemoryMax`,
    `CPUQuota`, lowered `Nice`/`IOWeight`. Limits constrain, not guarantee; a
    genuinely heavy workload belongs on another host, not Soyo.
-3. **`modules/base` and `modules/home/base.nix` stay role-neutral** — no network
+3. **`modules/nixos/base.nix` and `modules/home/base.nix` stay role-neutral** — no network
    backend, no swap policy, no GUI/display assumptions. Role-specific config
    lives in a role module or the host.
 4. **Kernel is pinned to Linux 6.12 LTS** for the out-of-tree `yt6801` NIC
@@ -33,17 +33,29 @@ and its docs must teach (see "Learning docs" below).
    PCR 0+2+7 with Limine Secure Boot. Never bind PCR 9 (kernel image) or PCR 8
    (store paths) — they break unattended auto-unlock. Always keep the passphrase
    keyslot as fallback.
-8. **flake-parts + explicit role modules.** Not the dendritic pattern. Hosts
-   compose by explicit `imports`; each host file plainly lists what it is.
-9. **Reproducible + recoverable.** Everything declarative; persistent state is
-   tracked under the `persist` subvolume and backed up (restic → Synology). No
-   impermanence. Do not break TPM auto-unlock or the break-glass paths
-   (local console, LAN initrd SSH, direct-link rescue).
+8. **flake-parts + the dendritic pattern.** `import-tree ./modules` auto-imports
+   every file as a flake-parts module; aspects expose `flake.modules.nixos.<aspect>`
+   (and `flake.modules.homeManager.<aspect>`). Hosts assemble by toggling aspects
+   (`with config.flake.modules.nixos; [ … ]`) in the host assembler module, not by
+   sibling `imports` of aspect files. The assembler is a flake-parts module
+   (`modules/parts/soyo.nix`); `hosts/soyo/` holds hardware/data only.
+9. **Reproducible + recoverable.** Everything declarative. Root is impermanent:
+   wiped to a blank Btrfs snapshot (`root`/`root-blank`) in systemd initrd each
+   boot, durable state only under `/persist` via the `preservation` module; the
+   persisted-path inventory is part of the design. Hardware is declarative via
+   `nixos-facter` (`hosts/soyo/facter.json`), not `nixos-generate-config`. Do not
+   break TPM auto-unlock or the break-glass paths (local console, LAN initrd SSH,
+   direct-link rescue). The agenix host key is read from `/persist` before
+   decryption (`age.identityPaths`); `/persist` is `neededForBoot`.
+10. **Backups via `restic`** (`services.restic.backups` — the first-class module;
+    not rustic/kopia) plus local `btrbk` snapshots. Day-2 remote deploy is native
+    `nixos-rebuild --target-host` (local build, remote activation); `deploy-rs` is
+    deferred to M4.
 
 ## Anti-goals (keep off Soyo)
 
 - local LLM inference (no usable GPU, fixed 16 GB) — API-based agents are fine
-- ZFS, impermanence, NetworkManager on the server
+- ZFS, NetworkManager on the server
 - WAN-inbound services — reach in via Tailscale
 - CPU-bursty workloads (game servers, CI runners, heavy DBs)
 
@@ -51,7 +63,8 @@ and its docs must teach (see "Learning docs" below).
 
 1. Prefer a native NixOS module (e.g. `services.jellyfin`); a container only
    where no module exists.
-2. Own module under `modules/nixos/services/<name>.nix`, opt-in per host.
+2. Own aspect module under `modules/nixos/<name>.nix` exposing
+   `flake.modules.nixos.<name>`, toggled on per host in the assembler.
 3. Resource-isolate it (invariant 2).
 4. Give it a `home.arpa` name via Blocky; put a reverse proxy (Caddy, internal
    TLS) in front once there is more than one web service.
@@ -60,10 +73,11 @@ and its docs must teach (see "Learning docs" below).
 
 ## Adding a host
 
-- `hosts/<name>/` with its own `boot.nix`, `disko.nix`, `networking.nix`.
-- Reuse `modules/base`, `modules/nixos/users`, `modules/home/base.nix`, the
-  backup module, the disko pattern. Do **not** import server-only modules
-  (DNS, DHCP, remote-unlock) on a non-server host.
+- `hosts/<name>/` with its own `facter.json`, `boot.nix`, `disko.nix`,
+  `networking.nix`; a host assembler in `modules/parts/<name>.nix`.
+- Reuse the `base`, `users`, `home.base`, and `backup` aspects and the disko
+  pattern. Do **not** toggle on server-only aspects (DNS, DHCP, remote-unlock)
+  for a non-server host.
 - New agenix host key + recipient + rekey for any secrets it needs.
 
 ## Learning docs (required output)
