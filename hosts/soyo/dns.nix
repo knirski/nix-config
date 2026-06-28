@@ -81,8 +81,9 @@ in
         # NoAds may block these Huawei test domains; route around it via the
         # non-ad-filtering encrypted fallback.
         "hwcloudtest.cn" = "https://dns.quad9.net/dns-query";
-        # LAN reverse zone -> dnsmasq, which owns lease-aware PTR.
-        "0.0.10.in-addr.arpa" = "127.0.0.1:5353";
+        # LAN reverse zone -> dnsmasq, which owns lease-aware PTR. dnsmasq is
+        # bound to the LAN interface, not loopback, so forward to that address.
+        "0.0.10.in-addr.arpa" = "10.0.0.9:5353";
       };
 
       blocking = {

@@ -43,6 +43,7 @@
           # create them under /var/lib), or `btrfs subvolume delete root` fails.
           ${pkgs.btrfs-progs}/bin/btrfs subvolume list -o /mnt/root \
             | ${pkgs.coreutils}/bin/cut -f9 -d' ' \
+            | ${pkgs.coreutils}/bin/tac \
             | while read -r sub; do
                 ${pkgs.btrfs-progs}/bin/btrfs subvolume delete "/mnt/$sub"
               done
