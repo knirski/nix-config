@@ -9,7 +9,7 @@
 #   - forward A records are generated from reservations.nix (single source);
 #     reverse/PTR is dnsmasq's job (Blocky forwards the reverse zone to it)
 #
-# Not yet imported by a flake — M1 wires this into the host.
+# M1 wires this policy through modules/nixos/blocky.nix.
 #
 # Docs: https://0xerr0r.github.io/blocky/ | https://www.joindns4.eu/
 #       https://search.nixos.org/options?query=services.blocky
@@ -23,16 +23,17 @@ let
   # values -> multi-A). Map both <name> and <name>.home.arpa.
   names = lib.unique (map (r: r.name) reservations);
   ipsFor = n: lib.concatStringsSep "," (map (r: r.ip) (lib.filter (r: r.name == n) reservations));
-  hostMappings = lib.listToAttrs (lib.concatMap
-    (n: [
+  hostMappings = lib.listToAttrs (
+    lib.concatMap (n: [
       (lib.nameValuePair n (ipsFor n))
       (lib.nameValuePair "${n}.home.arpa" (ipsFor n))
-    ])
-    names);
+    ]) names
+  );
 in
 {
-  services.blocky = {
+  lanAppliance.services.blocky = {
     enable = true;
+    lanInterface = "enp1s0";
     settings = {
       ports = {
         dns = 53;
@@ -54,8 +55,20 @@ in
       # Static-IP bootstrap so the DoH hostnames and blocklist URLs resolve at
       # boot, before any name resolution exists.
       bootstrapDns = [
-        { upstream = "https://noads.joindns4.eu/dns-query"; ips = [ "86.54.11.13" "86.54.11.213" ]; }
-        { upstream = "https://dns.quad9.net/dns-query"; ips = [ "9.9.9.9" "149.112.112.112" ]; }
+        {
+          upstream = "https://noads.joindns4.eu/dns-query";
+          ips = [
+            "86.54.11.13"
+            "86.54.11.213"
+          ];
+        }
+        {
+          upstream = "https://dns.quad9.net/dns-query";
+          ips = [
+            "9.9.9.9"
+            "149.112.112.112"
+          ];
+        }
       ];
 
       customDNS = {
@@ -68,14 +81,17 @@ in
         # NoAds may block these Huawei test domains; route around it via the
         # non-ad-filtering encrypted fallback.
         "hwcloudtest.cn" = "https://dns.quad9.net/dns-query";
-        # LAN reverse zone -> dnsmasq, which owns lease-aware PTR.
-        "0.0.10.in-addr.arpa" = "127.0.0.1:5353";
+        # LAN reverse zone -> dnsmasq, which owns lease-aware PTR. dnsmasq is
+        # bound to the LAN interface, not loopback, so forward to that address.
+        "0.0.10.in-addr.arpa" = "10.0.0.9:5353";
       };
 
       blocking = {
         denylists = {
           # Polish-specific ads/trackers; auto-refreshed, no manual upkeep.
-          pl = [ "https://blocklist.sefinek.net/generated/v1/127.0.0.1/other/polish-blocklists/MajkiIT/hostfile.fork.txt" ];
+          pl = [
+            "https://blocklist.sefinek.net/generated/v1/127.0.0.1/other/polish-blocklists/MajkiIT/hostfile.fork.txt"
+          ];
           # Disable browser DoH that would bypass this resolver. The Firefox
           # canary makes Firefox fall back to system DNS. (Inline list.)
           doh-bypass = [
@@ -84,13 +100,23 @@ in
             ''
           ];
         };
-        allowlists.pl = [ "whiomplatform.hwcloudtest.cn" "*.hwcloudtest.cn" ];
-        clientGroupsBlock.default = [ "pl" "doh-bypass" ];
+        allowlists.pl = [
+          "whiomplatform.hwcloudtest.cn"
+          "*.hwcloudtest.cn"
+        ];
+        clientGroupsBlock.default = [
+          "pl"
+          "doh-bypass"
+        ];
         blockType = "zeroIp";
         blockTTL = "1h";
         loading = {
           refreshPeriod = "24h";
-          downloads = { timeout = "90s"; readTimeout = "90s"; attempts = 5; };
+          downloads = {
+            timeout = "90s";
+            readTimeout = "90s";
+            attempts = 5;
+          };
         };
       };
 
@@ -102,10 +128,4 @@ in
     };
   };
 
-  # Blocky owns :53.
-  services.resolved.enable = false;
-
-  networking.firewall.allowedUDPPorts = [ 53 ];
-  networking.firewall.allowedTCPPorts = [ 53 ];
-  networking.firewall.interfaces.enp1s0.allowedTCPPorts = [ 4000 ];
 }
