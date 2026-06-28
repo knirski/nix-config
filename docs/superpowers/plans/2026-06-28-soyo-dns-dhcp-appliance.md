@@ -650,10 +650,10 @@ Expected: FAIL (the rollback unit does not exist yet).
   flake.modules.nixos.remote-unlock =
     { lib, config, ... }:
     let
-      cfg = config.soyo.services.remoteUnlock;
+      cfg = config.lanAppliance.services.remoteUnlock;
     in
     {
-      options.soyo.services.remoteUnlock = {
+      options.lanAppliance.services.remoteUnlock = {
         enable = lib.mkEnableOption "systemd-initrd remote unlock";
         interface = lib.mkOption { type = lib.types.str; };
         lanAddress = lib.mkOption { type = lib.types.str; };
@@ -685,7 +685,7 @@ Expected: FAIL (the rollback unit does not exist yet).
 ```nix
 # hosts/soyo/initrd-unlock.nix
 {
-  soyo.services.remoteUnlock = {
+  lanAppliance.services.remoteUnlock = {
     enable = true;
     interface = "enp1s0";
     lanAddress = "10.0.0.9/24";
@@ -770,7 +770,7 @@ git commit -m "feat: add disk layout, impermanent root, and phase-1 boot path"
 - Modify: `modules/parts/soyo.nix`
 
 **Interfaces:**
-- Produces: `flake.modules.nixos.{blocky,dhcp}`; options `soyo.services.blocky.{enable,metricsInterface,settings}` and `soyo.services.dhcp.{enable,interface,routerAddress,dnsServer,searchDomain,leaseFile,dhcpRanges,reservations}`.
+- Produces: `flake.modules.nixos.{blocky,dhcp}`; options `lanAppliance.services.blocky.{enable,lanInterface,settings}` and `lanAppliance.services.dhcp.{enable,interface,routerAddress,dnsServer,searchDomain,leaseFile,dhcpRanges,reservations}`.
 
 - [ ] **Step 1: Prove DNS and DHCP are not wired yet**
 
@@ -788,12 +788,12 @@ Expected: return `false`.
   flake.modules.nixos.blocky =
     { lib, config, ... }:
     let
-      cfg = config.soyo.services.blocky;
+      cfg = config.lanAppliance.services.blocky;
     in
     {
-      options.soyo.services.blocky = {
+      options.lanAppliance.services.blocky = {
         enable = lib.mkEnableOption "Blocky DNS";
-        metricsInterface = lib.mkOption { type = lib.types.str; };
+        lanInterface = lib.mkOption { type = lib.types.str; };
         # Full Blocky settings come from host data so the appliance's real
         # upstreams/bootstrapDns/blocklists/customDNS are preserved verbatim.
         settings = lib.mkOption {
@@ -811,7 +811,7 @@ Expected: return `false`.
         services.resolved.enable = false;
         networking.firewall.allowedTCPPorts = [ 53 ];
         networking.firewall.allowedUDPPorts = [ 53 ];
-        networking.firewall.interfaces.${cfg.metricsInterface}.allowedTCPPorts = [ 4000 ];
+        networking.firewall.interfaces.${cfg.lanInterface}.allowedTCPPorts = [ 4000 ];
       };
     };
 }
@@ -825,12 +825,12 @@ Expected: return `false`.
   flake.modules.nixos.dhcp =
     { lib, config, ... }:
     let
-      cfg = config.soyo.services.dhcp;
+      cfg = config.lanAppliance.services.dhcp;
       leaseDir = builtins.dirOf cfg.leaseFile;
       reservationLines = map (r: "${r.mac},${r.ip},${r.name},infinite") cfg.reservations;
     in
     {
-      options.soyo.services.dhcp = {
+      options.lanAppliance.services.dhcp = {
         enable = lib.mkEnableOption "dnsmasq DHCP";
         interface = lib.mkOption { type = lib.types.str; };
         routerAddress = lib.mkOption { type = lib.types.str; };
@@ -897,7 +897,7 @@ let
   reservations = import ./reservations.nix;
 in
 {
-  soyo.services.dhcp = {
+  lanAppliance.services.dhcp = {
     enable = true;
     interface = "enp1s0";
     routerAddress = "10.0.0.1";
@@ -922,9 +922,9 @@ in
 -    settings = {
 +{ lib, ... }:
 +...
-+  soyo.services.blocky = {
++  lanAppliance.services.blocky = {
 +    enable = true;
-+    metricsInterface = "enp1s0";
++    lanInterface = "enp1s0";
 +    settings = {
        ports = { dns = 53; http = "10.0.0.9:4000"; };
        # ... keep upstreams, bootstrapDns, customDNS, conditional, blocking, caching unchanged ...
@@ -1093,7 +1093,7 @@ git commit -m "feat: add agenix-managed operator secrets"
 
 **Interfaces:**
 - Consumes: `config.age.secrets.{restic-password,ntfy-token}.path`.
-- Produces: `flake.modules.nixos.{backup,maintenance,observability}`; options `soyo.services.backup.*`, `soyo.services.maintenance.{ntfyTopicUrl,ntfyTokenFile}`, `soyo.services.observability.*`. The shared `ntfy-notify@` template and `OnFailure` wiring live in the maintenance aspect.
+- Produces: `flake.modules.nixos.{backup,maintenance,observability}`; options `lanAppliance.services.backup.*`, `lanAppliance.services.maintenance.{ntfyTopicUrl,ntfyTokenFile}`, `lanAppliance.services.observability.*`. The shared `ntfy-notify@` template and `OnFailure` wiring live in the maintenance aspect.
 
 - [ ] **Step 1: Prove the operational services do not exist yet**
 
@@ -1108,10 +1108,10 @@ Expected: return an empty attribute set `{ }`.
   flake.modules.nixos.backup =
     { lib, config, ... }:
     let
-      cfg = config.soyo.services.backup;
+      cfg = config.lanAppliance.services.backup;
     in
     {
-      options.soyo.services.backup = {
+      options.lanAppliance.services.backup = {
         enable = lib.mkEnableOption "restic and btrbk backups";
         paths = lib.mkOption { type = lib.types.listOf lib.types.str; };
         repository = lib.mkOption { type = lib.types.str; };
@@ -1152,10 +1152,10 @@ Expected: return an empty attribute set `{ }`.
   flake.modules.nixos.maintenance =
     { pkgs, lib, config, ... }:
     let
-      cfg = config.soyo.services.maintenance;
+      cfg = config.lanAppliance.services.maintenance;
     in
     {
-      options.soyo.services.maintenance = {
+      options.lanAppliance.services.maintenance = {
         ntfyTopicUrl = lib.mkOption { type = lib.types.str; };
         ntfyTokenFile = lib.mkOption {
           type = lib.types.nullOr lib.types.path;
@@ -1247,10 +1247,10 @@ Expected: return an empty attribute set `{ }`.
   flake.modules.nixos.observability =
     { lib, config, ... }:
     let
-      cfg = config.soyo.services.observability;
+      cfg = config.lanAppliance.services.observability;
     in
     {
-      options.soyo.services.observability = {
+      options.lanAppliance.services.observability = {
         enable = lib.mkEnableOption "lightweight metrics exporters";
         interface = lib.mkOption { type = lib.types.str; };
         listenAddress = lib.mkOption {
@@ -1287,21 +1287,21 @@ Expected: return an empty attribute set `{ }`.
 # hosts/soyo/backup.nix
 { config, ... }:
 {
-  soyo.services.backup = {
+  lanAppliance.services.backup = {
     enable = true;
     repository = "sftp:backup@10.0.0.10:/volume1/restic/soyo";
     paths = [ "/persist" ];
   };
 
-  soyo.services.maintenance.ntfyTopicUrl = "https://ntfy.sh/soyo-lan";
-  soyo.services.maintenance.ntfyTokenFile = config.age.secrets.ntfy-token.path;
+  lanAppliance.services.maintenance.ntfyTopicUrl = "https://ntfy.sh/soyo-lan";
+  lanAppliance.services.maintenance.ntfyTokenFile = config.age.secrets.ntfy-token.path;
 }
 ```
 
 ```nix
 # hosts/soyo/observability.nix
 {
-  soyo.services.observability = {
+  lanAppliance.services.observability = {
     enable = true;
     interface = "enp1s0";
     listenAddress = "10.0.0.9";
@@ -1658,4 +1658,4 @@ git commit -m "feat: harden soyo boot with secure boot plan"
 
 **Type consistency**
 - One host (`soyo`), one LAN IP (`10.0.0.9`), one rescue IP (`192.168.254.2/30`), one pool (`10.0.0.50-10.0.0.199`), one LUKS mapper (`crypted`), one root/blank pair (`root`/`root-blank`).
-- Option namespaces consistent: `soyo.services.{blocky,dhcp,remoteUnlock,backup,maintenance,observability}`; aspect namespace `flake.modules.nixos.<aspect>`.
+- Option namespaces consistent: `lanAppliance.services.{blocky,dhcp,remoteUnlock,backup,maintenance,observability}`; aspect namespace `flake.modules.nixos.<aspect>`.
