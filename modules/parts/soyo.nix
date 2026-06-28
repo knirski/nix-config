@@ -11,8 +11,12 @@
         base
         server
         users
+        persistence
+        remote-unlock
       ])
       ++ [
+        inputs.disko.nixosModules.disko
+        inputs.agenix.nixosModules.default
         inputs.home-manager.nixosModules.home-manager
         (
           { ... }:
@@ -23,16 +27,14 @@
           }
         )
         ../../hosts/soyo/users.nix
+        ../../hosts/soyo/disko.nix
+        ../../hosts/soyo/boot.nix
+        ../../hosts/soyo/persistence.nix
+        ../../hosts/soyo/initrd-unlock.nix
         inputs.nixos-facter-modules.nixosModules.facter
         { facter.reportPath = ../../hosts/soyo/facter.json; }
         ../../hosts/soyo/networking.nix
         {
-          # Temporary scaffold so the early host evaluates under `nix flake check`.
-          # Task 4 replaces this with the real disko + Limine boot path.
-          boot.loader.grub.enable = false;
-          fileSystems."/".device = "none";
-          fileSystems."/".fsType = "tmpfs";
-
           networking.hostName = "soyo";
           system.stateVersion = "26.05";
         }
