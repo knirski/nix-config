@@ -1659,13 +1659,3 @@ git commit -m "feat: harden soyo boot with secure boot plan"
 **Type consistency**
 - One host (`soyo`), one LAN IP (`10.0.0.9`), one rescue IP (`192.168.254.2/30`), one pool (`10.0.0.50-10.0.0.199`), one LUKS mapper (`crypted`), one root/blank pair (`root`/`root-blank`).
 - Option namespaces consistent: `soyo.services.{blocky,dhcp,remoteUnlock,backup,maintenance,observability}`; aspect namespace `flake.modules.nixos.<aspect>`.
-
-## Execution Handoff
-
-Plan complete and saved to `docs/superpowers/plans/2026-06-28-soyo-dns-dhcp-appliance.md`. Two execution options:
-
-**1. Subagent-Driven (recommended)** — fresh subagent per task, two-stage review between tasks, fast iteration.
-
-**2. Inline Execution** — execute tasks in this session via executing-plans, batch execution with checkpoints.
-
-**Which approach?**
