@@ -7,7 +7,7 @@
     {
       options.soyo.services.blocky = {
         enable = lib.mkEnableOption "Blocky DNS";
-        metricsInterface = lib.mkOption { type = lib.types.str; };
+        lanInterface = lib.mkOption { type = lib.types.str; };
         # The rich policy stays host-local; the shared aspect owns service wiring.
         settings = lib.mkOption {
           type = lib.types.attrs;
@@ -22,9 +22,13 @@
         };
 
         services.resolved.enable = false;
-        networking.firewall.allowedTCPPorts = [ 53 ];
-        networking.firewall.allowedUDPPorts = [ 53 ];
-        networking.firewall.interfaces.${cfg.metricsInterface}.allowedTCPPorts = [ 4000 ];
+        networking.firewall.interfaces.${cfg.lanInterface} = {
+          allowedTCPPorts = [
+            53
+            4000
+          ];
+          allowedUDPPorts = [ 53 ];
+        };
       };
     };
 }

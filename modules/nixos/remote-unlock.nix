@@ -10,6 +10,7 @@
         interface = lib.mkOption { type = lib.types.str; };
         lanAddress = lib.mkOption { type = lib.types.str; };
         rescueAddress = lib.mkOption { type = lib.types.str; };
+        gatewayAddress = lib.mkOption { type = lib.types.str; };
         sshHostKeys = lib.mkOption { type = lib.types.listOf lib.types.str; };
         authorizedKeys = lib.mkOption { type = lib.types.listOf lib.types.str; };
       };
@@ -32,7 +33,7 @@
             cfg.lanAddress
             cfg.rescueAddress
           ];
-          routes = [ { Gateway = "10.0.0.1"; } ];
+          routes = [ { Gateway = cfg.gatewayAddress; } ];
         };
       };
     };

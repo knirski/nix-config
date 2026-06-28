@@ -28,6 +28,7 @@
           set -euo pipefail
           mkdir -p /mnt
           mount -o subvol=/ /dev/mapper/crypted /mnt
+          trap 'umount /mnt || true' EXIT
 
           # Canonical bootstrap: root-blank is the readonly empty snapshot taken
           # ONCE at install (see docs/install-soyo.md). Guard before destroying
@@ -35,7 +36,6 @@
           if [ ! -e /mnt/root-blank ]; then
             echo "rollback-root: /root-blank missing — create it at install:" >&2
             echo "  btrfs subvolume snapshot -r /mnt/root /mnt/root-blank" >&2
-            umount /mnt
             exit 1
           fi
 
@@ -51,6 +51,7 @@
           ${pkgs.btrfs-progs}/bin/btrfs subvolume delete /mnt/root
           ${pkgs.btrfs-progs}/bin/btrfs subvolume snapshot /mnt/root-blank /mnt/root
           umount /mnt
+          trap - EXIT
         '';
       };
     };

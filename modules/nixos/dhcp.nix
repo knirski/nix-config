@@ -60,7 +60,7 @@
           "d ${leaseDir} 0750 dnsmasq dnsmasq -"
         ];
 
-        networking.firewall.allowedUDPPorts = [ 67 ];
+        networking.firewall.interfaces.${cfg.interface}.allowedUDPPorts = [ 67 ];
       };
     };
 }

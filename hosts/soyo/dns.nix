@@ -33,7 +33,7 @@ in
 {
   soyo.services.blocky = {
     enable = true;
-    metricsInterface = "enp1s0";
+    lanInterface = "enp1s0";
     settings = {
       ports = {
         dns = 53;
