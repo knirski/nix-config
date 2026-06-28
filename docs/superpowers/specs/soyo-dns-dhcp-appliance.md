@@ -69,7 +69,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 | Swap | `zramSwap`, no on-disk swap |
 | Kernel | Pinned LTS (Linux 6.12) for the out-of-tree `yt6801` NIC module; userspace tracks unstable; switch to in-tree when yt6801 mainlines |
 | DNS | Blocky (forwarding/caching + ad-block) on port 53 |
-| DNS upstream | DNS-over-TLS to public resolvers, static-IP `bootstrapDns` |
+| DNS upstream | DoH to DNS4EU NoAds (general filtering) + Quad9 fallback; one local Polish blocklist; static-IP `bootstrapDns` |
 | DHCP + local PTR | dnsmasq, reverse zone conditionally forwarded from Blocky |
 | Secrets | agenix, hashed passwords, offline key/LUKS-header backup |
 | User environment | Home Manager as a NixOS module, headless profile |
@@ -306,9 +306,9 @@ Unicast DNS has no native single-label resolution: a bare `soyo` resolves only i
 
 Blocky is the client-facing DNS server on port 53 — a forwarding/caching resolver with blocking, not recursive. It answers from cache and local records and forwards the rest.
 
-Responsibilities: upstream forwarding + caching, local host records, ad/tracker filtering on a modest maintainable baseline, and local naming.
+Responsibilities: upstream forwarding + caching, local host records, ad/tracker filtering, and local naming.
 
-Upstream is DNS-over-TLS to public resolvers (e.g. Quad9, Cloudflare): private from the ISP, declarative, with upstream DNSSEC validation. As the LAN's only resolver, Blocky sets a static-IP `bootstrapDns` to reach upstreams and fetch blocklists at boot before name resolution exists; DoT also needs correct time at startup (NTP by IP, see Time). Keep the blocklist policy small rather than a large fragile third-party collection.
+Upstream is DoH (encrypted, private from the ISP) to **DNS4EU NoAds** as primary — it filters general ads/trackers/malware upstream, so we maintain almost nothing — with **Quad9** DoH as a privacy-respecting, malware-filtering fallback. Local blocking is kept to a single auto-refreshing **Polish** blocklist for the niche the upstream misses; it applies to every answer, including failover. This split (general filtering upstream, one local list) is the low-maintenance baseline; avoid accumulating a large fragile third-party collection. As the LAN's only resolver, Blocky sets a static-IP `bootstrapDns` to reach the DoH upstreams and fetch the blocklist at boot before name resolution exists; DoH also needs correct time at startup (NTP by IP, see Time).
 
 ### Client DoH/DoT Bypass
 

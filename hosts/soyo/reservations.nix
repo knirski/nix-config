@@ -13,6 +13,8 @@
 # mDNS/Avahi is out of scope; the appliance serves unicast DNS.)
 #
 # Each entry: { name = "<hostname>"; mac = "aa:bb:cc:dd:ee:ff"; ip = "10.0.0.x"; }
+# A multihomed host (several interfaces active at once) gets one entry per
+# interface — same name, different IP — and then resolves to all its IPs (multi-A).
 #
 # Docs:
 #   - dnsmasq dhcp-host: https://thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
@@ -23,17 +25,16 @@
   { name = "orbi-satellite-2"; mac = "38:94:ed:25:16:46"; ip = "10.0.0.3"; }
 
   # Soyo itself. It uses a static IP (set in networking), not DHCP; this entry
-  # mirrors the previous config and drives its A/PTR records.
+  # drives its A/PTR records.
   { name = "soyo"; mac = "00:e0:4c:73:83:5a"; ip = "10.0.0.9"; }
 
   # Other devices
   { name = "twins"; mac = "00:00:c0:1d:5f:9d"; ip = "10.0.0.10"; }
   { name = "drukarka"; mac = "38:b1:db:39:fd:f6"; ip = "10.0.0.11"; }
 
-  # czworaczki has two interfaces with separate reservations. The previous
-  # Blocky config resolved the name `czworaczki` to .12 only. dns.nix must
-  # decide forward-A handling for the duplicate name (e.g. A -> .12 only, or
-  # both as round-robin); PTR for each IP is unambiguous.
+  # czworaczki is multihomed: two ethernet interfaces, both active on the LAN
+  # at once, each with its own reservation. The name resolves to both IPs
+  # (multi-A); each IP has its own PTR back to `czworaczki`.
   { name = "czworaczki"; mac = "90:09:d0:36:bb:a9"; ip = "10.0.0.12"; }
   { name = "czworaczki"; mac = "90:09:d0:36:bb:aa"; ip = "10.0.0.13"; }
 ]
