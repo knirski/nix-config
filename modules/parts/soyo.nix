@@ -23,6 +23,9 @@
           }
         )
         ../../hosts/soyo/users.nix
+        inputs.nixos-facter-modules.nixosModules.facter
+        { facter.reportPath = ../../hosts/soyo/facter.json; }
+        ../../hosts/soyo/networking.nix
         {
           # Temporary scaffold so the early host evaluates under `nix flake check`.
           # Task 4 replaces this with the real disko + Limine boot path.
