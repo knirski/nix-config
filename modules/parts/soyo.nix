@@ -13,6 +13,8 @@
         users
         persistence
         remote-unlock
+        blocky
+        dhcp
       ])
       ++ [
         inputs.disko.nixosModules.disko
@@ -31,6 +33,8 @@
         ../../hosts/soyo/boot.nix
         ../../hosts/soyo/persistence.nix
         ../../hosts/soyo/initrd-unlock.nix
+        ../../hosts/soyo/dns.nix
+        ../../hosts/soyo/dhcp.nix
         inputs.nixos-facter-modules.nixosModules.facter
         { facter.reportPath = ../../hosts/soyo/facter.json; }
         ../../hosts/soyo/networking.nix

@@ -9,7 +9,7 @@
 #   - forward A records are generated from reservations.nix (single source);
 #     reverse/PTR is dnsmasq's job (Blocky forwards the reverse zone to it)
 #
-# Not yet imported by a flake — M1 wires this into the host.
+# M1 wires this policy through modules/nixos/blocky.nix.
 #
 # Docs: https://0xerr0r.github.io/blocky/ | https://www.joindns4.eu/
 #       https://search.nixos.org/options?query=services.blocky
@@ -31,8 +31,9 @@ let
   );
 in
 {
-  services.blocky = {
+  soyo.services.blocky = {
     enable = true;
+    metricsInterface = "enp1s0";
     settings = {
       ports = {
         dns = 53;
@@ -126,10 +127,4 @@ in
     };
   };
 
-  # Blocky owns :53.
-  services.resolved.enable = false;
-
-  networking.firewall.allowedUDPPorts = [ 53 ];
-  networking.firewall.allowedTCPPorts = [ 53 ];
-  networking.firewall.interfaces.enp1s0.allowedTCPPorts = [ 4000 ];
 }
