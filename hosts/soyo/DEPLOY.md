@@ -18,6 +18,7 @@
 # Clone the config
 git clone https://github.com/knirski/nix-config
 cd nix-config
+export NIX_CONFIG="experimental-features = nix-command flakes"
 ```
 
 ## 2. Partition and format
@@ -28,7 +29,17 @@ Wipes the target disk and creates the LUKS + Btrfs layout from `disko.nix`:
 sudo nix --extra-experimental-features 'nix-command flakes' run github:nix-community/disko -- --mode disko hosts/soyo/disko.nix
 ```
 
-`/mnt` is now mounted with `root` at `/mnt`, `nix` at `/mnt/nix`, `persist` at `/mnt/persist`, and `/boot` at `/mnt/boot`.
+Verify the mounts are in place:
+
+```bash
+mount | grep /mnt
+# Expected: /dev/mapper/crypted on /mnt (btrfs, ...)
+#           /dev/mapper/crypted on /mnt/nix (btrfs, ...)
+#           /dev/mapper/crypted on /mnt/persist (btrfs, ...)
+#           /dev/sda1 on /mnt/boot (vfat, ...)
+```
+
+`/mnt` is now mounted with `root`, `nix`, `persist`, and `boot` subdirectories.
 
 ## 3. Create the blank snapshot and SSH keys
 
@@ -68,27 +79,35 @@ sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub \
 # (b) Rekey all secrets for Soyo — decrypts with your master identity (SSH key)
 #     and re-encrypts with Soyo's host key. Results go to secrets/rekeyed/soyo/.
 #
-# NOTE: This needs your SSH private key. Copy it first if not present:
-#   install -d -m 700 ~/.ssh && cat > ~/.ssh/id_ed25519
-#   (paste the key, then Ctrl+D; or use scp/ssh-agent)
+# NOTE: This needs your SSH private key. If it's not on the live ISO, copy it:
+#   mkdir -p -m 700 ~/.ssh && cat > ~/.ssh/id_YOURKEY
+#   (paste the key contents, then Ctrl+D; or use scp/ssh-agent)
+# NOTE: The first `nix develop` builds the devshell from scratch — may take
+#       a few minutes.
 nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
 
 # (c) Commit the new host pubkey and rekeyed secrets, push
 #     If git complains about missing user.name/user.email, set them first:
 #       git config user.name "Your Name"
 #       git config user.email "your@email.com"
+#     If the push fails (HTTPS auth), skip it — you can push later from
+#     your workstation. The install only needs the local files.
 git add secrets/soyo.age.pub secrets/rekeyed/
 git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
-git push
+git push || echo "Push failed — you can push from your workstation later."
 ```
 
 ## 5. Install
 
 ```bash
-sudo nixos-install --flake .#soyo
+sudo NIX_CONFIG="$NIX_CONFIG" nixos-install --flake .#soyo
 ```
 
 Reboot. Soyo comes up with TPM auto-unlock, LAN DHCP/DNS, and all secrets decrypted.
+
+> **Cleanup:** If you copied your SSH private key onto the live ISO, remove it
+> (`rm ~/.ssh/id_*`) before rebooting or discarding the USB — it's only needed
+> for `agenix rekey`.
 
 ## 6. Enroll TPM (if not auto-detected)
 
