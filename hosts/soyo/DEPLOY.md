@@ -64,10 +64,11 @@ sudo nix --extra-experimental-features 'nix-command flakes' run github:nix-commu
 ```bash
 # Verify the mounts:
 mount | grep /mnt
-# Expected (4 lines):
-#   /dev/mapper/crypted on /mnt (btrfs, ...)
+# Expected (5 lines):
+#   /dev/mapper/crypted on /mnt (btrfs, ...)           # root
 #   /dev/mapper/crypted on /mnt/nix (btrfs, ...)
 #   /dev/mapper/crypted on /mnt/persist (btrfs, ...)
+#   /dev/mapper/crypted on /mnt/snapshots (btrfs, ...)
 #   /dev/sda1 on /mnt/boot (vfat, ...)
 ```
 
