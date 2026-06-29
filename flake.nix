@@ -2,7 +2,7 @@
   description = "Multi-host NixOS flake; first host is the Soyo DNS/DHCP appliance";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/714a5f8c4ead";
 
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";
@@ -23,6 +23,7 @@
     agenix-rekey.inputs.nixpkgs.follows = "nixpkgs";
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   # The whole flake is built by auto-importing every module file under ./modules
