@@ -30,7 +30,7 @@ sudo nix run github:nix-community/disko -- --mode disko hosts/soyo/disko.nix
 
 ## 3. Create the blank snapshot and SSH keys
 
-Two one-time bootstrap steps the running system depends on:
+Three one-time bootstrap steps the running system depends on:
 
 ```bash
 # (a) Root-blank snapshot (the initrd rollback target)
@@ -53,18 +53,25 @@ ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
 Before `nixos-install`, register Soyo's host key so secrets (password hashes, etc.) are decryptable on first boot:
 
 ```bash
-nix shell nixpkgs#agenix nixpkgs#ssh-to-age
-ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub > secrets/soyo.age.pub
+# Run agenix commands inside a nix shell with the right tools
+nix shell nixpkgs#agenix nixpkgs#ssh-to-age --command sh -c '
+  # Derive the age public key from the stage-2 host key
+  ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub > secrets/soyo.age.pub
+
+  # Rekey all secrets to include the new recipient
+  agenix -r
+'
 ```
 
-Add `soyo.age.pub` to `secrets/secrets.nix` as a recipient, then rekey:
+Now create or update `secrets/secrets.nix` to include `soyo.age.pub` as an agenix recipient, alongside your existing key. Then commit and push the enrolled recipient:
 
 ```bash
-agenix -r
-git add secrets
+git add secrets/
 git commit -m "feat: enroll soyo agenix recipient"
 git push
 ```
+
+> **Prerequisite:** `secrets/secrets.nix` must exist with at least your own recipient key. See the [agenix-rekey docs](https://github.com/oddlama/agenix-rekey) and Task 6 in the [plan](../docs/superpowers/plans/2026-06-28-soyo-dns-dhcp-appliance.md) for the full setup.
 
 > **Alternative** — if you skip this step, first boot will generate the host key; then enroll from it, rekey, and redeploy to populate password secrets. SSH key auth (via `authorizedKeys` in plaintext) still works on first boot.
 
