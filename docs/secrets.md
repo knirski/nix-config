@@ -99,6 +99,47 @@ editable by the right people while still committing them to git.
 Each host has its own SSH host key, so a compromised machine cannot decrypt
 secrets meant for a different machine.
 
+### Why must they be different keys?
+
+It would be *convenient* to use your personal SSH key as both the master
+identity and Soyo's host key — one keypair to rule them all.  **Do not do
+this.**  Here is why:
+
+- **Different trust boundaries.** Your personal key proves *you* are who you
+  say you are.  Soyo's host key proves *Soyo* is who it says it is.  These
+  are different claims.  If they are the same key, there is no way to
+  distinguish "Krzysztof is SSHing into the build server" from "Soyo is
+  decrypting secrets at boot" — they both use the same credential.
+
+- **Blast radius.** If you copy your personal private key onto Soyo so it
+  can decrypt secrets, a compromised Soyo gives an attacker your personal
+  key.  Now they can:
+  - SSH into every other machine as you.
+  - Sign commits and git operations as you.
+  - Decrypt every secret in the repo (master files + any host's rekeyed
+    files).
+  - Re-encrypt secrets for their own keys and push them to the repo.
+
+  With separate keys, a compromised Soyo only gives the attacker Soyo's
+  host key — they can decrypt secrets meant for Soyo, but nothing else.
+  Your personal key never leaves your workstation.
+
+- **Rotation independence.** If you rotate your personal SSH key (moved to
+  a new laptop, YubiKey replaced, suspected compromise), you do not want
+  to also break Soyo's ability to boot.  Separate keys let you rotate
+  each one independently: update `krzysiek.age.pub`, rekey, deploy — Soyo
+  keeps its own key and keeps running.
+
+- **Multi-host scalability.** With N hosts, using your personal key as every
+  host's key means either (a) every host gets a copy of your private key
+  (disaster), or (b) you generate N keypairs anyway and enroll each one as a
+  recipient in `secrets.nix` — which is exactly what the two-layer rekeyFile
+  flow does automatically.
+
+**In short:** The master identity is *you*; a host key is *that machine*.
+They are different actors with different privileges.  Keeping them separate
+is the entire point of the rekeyFile design.
+
 ---
 
 ## The two-layer rekeyFile flow
