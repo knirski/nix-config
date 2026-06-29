@@ -78,10 +78,17 @@ Three one-time bootstrap steps the running system depends on:
 
 ```bash
 # (a) Root-blank snapshot (the initrd rollback target)
-sudo mkdir -p /mnt-top
-sudo mount -o subvolid=5 /dev/mapper/crypted /mnt-top
-sudo btrfs subvolume snapshot -r /mnt-top/root /mnt-top/root-blank
-sudo umount /mnt-top
+# First check if it already exists (idempotent):
+if sudo btrfs subvolume list -t /mnt | grep -q root-blank; then
+  echo "root-blank already exists — skipping"
+else
+  sudo mkdir -p /mnt-top
+  sudo mount -t btrfs -o subvolid=5 /dev/mapper/crypted /mnt-top
+  # Verify it's read-write
+  mount | grep /mnt-top | grep -q rw || echo "WARNING: /mnt-top is read-only"
+  sudo btrfs subvolume snapshot -r /mnt-top/root /mnt-top/root-blank
+  sudo umount /mnt-top
+fi
 ```
 
 ```bash
