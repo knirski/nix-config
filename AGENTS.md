@@ -20,10 +20,10 @@ and its docs must teach (see "Learning docs" below).
 3. **`modules/nixos/base.nix` and `modules/home/base.nix` stay role-neutral** — no network
    backend, no swap policy, no GUI/display assumptions. Role-specific config
    lives in a role module or the host.
-4. **Kernel is pinned to Linux 6.12 LTS** for the out-of-tree `yt6801` NIC
-   module. Do not bump it blind: after any change, confirm the module builds and
-   `enp1s0` comes up. Unpin only when the in-tree `yt6801` lands
-   (`drivers/net/ethernet/motorcomm/yt6801/` present in the running kernel).
+4. **Kernel follows `linuxPackages_latest`** (7.1.1+). The NIC uses the in-tree
+   `dwmac_motorcomm` driver. Do not pin to an older kernel without confirming
+   `enp1s0` comes up, and do not regress to the out-of-tree `yt6801` module
+   unless a kernel regression forces it.
 5. **Secrets via agenix only.** Never commit plaintext secrets; passwords are
    hashed-password secrets. MAC/IP addresses are *not* secrets (plaintext fine).
 6. **DNS ownership is split:** Blocky owns forward A records; dnsmasq owns

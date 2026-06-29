@@ -13,7 +13,7 @@
 Every task's requirements implicitly include these (exact values, copied from the spec):
 
 - `nixpkgs` tracks `nixos-unstable`; `system.stateVersion = "26.05"`; `home.stateVersion = "26.05"`.
-- Kernel is pinned to `pkgs.linuxPackages_6_12` for the out-of-tree `yt6801` NIC module; userspace tracks unstable. A userspace bump must not silently move the kernel.
+- Kernel uses `pkgs.linuxPackages_latest` with the in-tree `dwmac_motorcomm` NIC driver — no pin, no out-of-tree module.
 - Host name `soyo`; static LAN IP `10.0.0.9/24`; gateway `10.0.0.1`; DHCP pool `10.0.0.50,10.0.0.199`; direct-link rescue `192.168.254.2/30` (laptop `192.168.254.1/30`); search/local domain `home.arpa`; wired interface `enp1s0`; disk `/dev/disk/by-id/ata-PELADN_512GB_20250522100164`.
 - Dendritic: aspects expose `flake.modules.nixos.<aspect>` / `flake.modules.homeManager.<aspect>`; hosts assemble with `config.flake.modules.nixos.*`. No manual sibling `imports` of aspect files.
 - Impermanent root via Btrfs blank-snapshot rollback (systemd initrd) + `preservation`; durable state only under `/persist`. Persisted-path completeness is correctness, not cleanup.
@@ -524,14 +524,13 @@ Expected: FAIL (the rollback unit does not exist yet).
 }
 ```
 
-- [ ] **Step 3: Create the boot file (pinned 6.12 kernel, NIC module, Limine, TPM-ready systemd initrd, zram)**
+- [ ] **Step 3: Create the boot file (linuxPackages_latest, in-tree driver, Limine, TPM-ready systemd initrd, zram)**
 
 ```nix
 # hosts/soyo/boot.nix
 { config, pkgs, ... }:
 {
-  boot.kernelPackages = pkgs.linuxPackages_6_12;
-  boot.extraModulePackages = [ config.boot.kernelPackages.yt6801 ];
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   zramSwap.enable = true;
   security.tpm2.enable = true;
@@ -735,8 +734,8 @@ inputs.disko.nixosModules.disko
 
 - [ ] **Step 8: Verify evaluation and the M1 boot path**
 
-Run: `nix eval .#nixosConfigurations.soyo.config.boot.kernelPackages.kernel.version`
-Expected: PASS and the value begins with `6.12`.
+Run: `nix eval .#nixosConfigurations.soyo.config.boot.kernelPackages.kernel.modDirVersion`
+Expected: PASS and the value begins with `7`.
 
 Run: `nix eval .#nixosConfigurations.soyo.config.fileSystems.\"/persist\".neededForBoot`
 Expected: PASS with `true`.
@@ -1419,7 +1418,7 @@ The success test: a reader new to Nix can follow the design journey and the read
 
 - [ ] **Step 3: Write the install and recovery runbooks**
 
-Create `docs/install-soyo.md`. Cover: USB path; Wi-Fi/USB-Ethernet caveat (the installer lacks `yt6801`); `nixos-facter` report; `disko`; then the two one-time bootstrap steps that the running system depends on, in this exact order:
+Create `docs/install-soyo.md`. Cover: USB path; Wi-Fi/USB-Ethernet caveat; `nixos-facter` report; `disko`; then the two one-time bootstrap steps that the running system depends on, in this exact order:
 
 ```bash
 # (a) Root-blank. disko mounts the `root` subvolume at /mnt (per-mountpoint), so
@@ -1636,7 +1635,7 @@ git commit -m "feat: harden soyo boot with secure boot plan"
 - Dendritic flake (`import-tree`, `flake.modules.nixos.*`, aspect→host assembler): Tasks 1–2, wired through every later task.
 - Impermanent root (blank-snapshot rollback + `preservation`), agenix host-key ordering, zstd, zram: Task 4.
 - `nixos-facter` hardware: Task 3.
-- Pinned 6.12 kernel + `yt6801`, Limine, TPM Phase-1 unlock, remote/direct-link unlock: Tasks 4.
+- `linuxPackages_latest` + in-tree `dwmac_motorcomm`, Limine, TPM Phase-1 unlock, remote/direct-link unlock: Tasks 4.
 - Blocky (full policy preserved — B1) + dnsmasq DHCP with router/DNS/search options (B2): Task 5.
 - agenix secrets, correct relative paths (B3), password hashes: Task 6.
 - restic via `services.restic.backups` (not rustic/kopia), btrbk, maintenance (gc, scrub, smartd, free-space, generation limit, generic OnFailure), observability exporters: Task 7.
