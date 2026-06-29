@@ -6,7 +6,8 @@
 - The target disk: `/dev/disk/by-id/ata-PELADN_512GB_20250522100164` (adjust in `disko.nix` if different).
 - Network: live ISO gets an IP via DHCP on the LAN uplink.
 - A local checkout of this repo with write access to the remote.
-- Your SSH private key (the one corresponding to `secrets/krzysiek.age.pub`) to decrypt master-encrypted secrets.
+- Your SSH private key (the one corresponding to `secrets/krzysiek.age.pub`) to decrypt master-encrypted secrets — copy it onto the live ISO before step 4 (see the note there).
+- Your git `user.name` and `user.email` configured (needed for committing in step 4c).
 
 ## 1. Boot the live ISO and clone
 
@@ -14,10 +15,9 @@
 # Optional: bring up WiFi if wired is down
 # iwctl station wlan0 connect <SSID>
 
-# Clone the config and enable flakes
+# Clone the config
 git clone https://github.com/knirski/nix-config
 cd nix-config
-export NIX_CONFIG="experimental-features = nix-command flakes"
 ```
 
 ## 2. Partition and format
@@ -74,6 +74,9 @@ sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub \
 nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
 
 # (c) Commit the new host pubkey and rekeyed secrets, push
+#     If git complains about missing user.name/user.email, set them first:
+#       git config user.name "Your Name"
+#       git config user.email "your@email.com"
 git add secrets/soyo.age.pub secrets/rekeyed/
 git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
 git push
@@ -82,7 +85,7 @@ git push
 ## 5. Install
 
 ```bash
-sudo NIX_CONFIG="$NIX_CONFIG" nixos-install --flake .#soyo
+sudo nixos-install --flake .#soyo
 ```
 
 Reboot. Soyo comes up with TPM auto-unlock, LAN DHCP/DNS, and all secrets decrypted.
