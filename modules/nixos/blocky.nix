@@ -21,7 +21,13 @@
           settings = cfg.settings;
         };
 
+        systemd.services.blocky = {
+          after = [ "network-online.target" ];
+          wants = [ "network-online.target" ];
+        };
+
         services.resolved.enable = false;
+        networking.nameservers = [ "127.0.0.1" ];
         networking.firewall.interfaces.${cfg.lanInterface} = {
           allowedTCPPorts = [
             53
