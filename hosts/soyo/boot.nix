@@ -1,7 +1,6 @@
 { config, pkgs, ... }:
 {
-  boot.kernelPackages = pkgs.linuxPackages_6_12;
-  boot.extraModulePackages = [ config.boot.kernelPackages.yt6801 ];
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   zramSwap.enable = true;
   security.tpm2.enable = true;
