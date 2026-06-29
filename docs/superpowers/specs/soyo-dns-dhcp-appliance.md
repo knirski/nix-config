@@ -79,7 +79,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 | Impermanence | `preservation` for the persisted-path inventory; root rolled back to a blank Btrfs snapshot in systemd initrd each boot |
 | Hardware facts | `nixos-facter` (committed `facter.json`), not `nixos-generate-config` |
 | Swap | `zramSwap`, no on-disk swap |
-| Kernel | Pinned LTS (Linux 6.12) for the out-of-tree `yt6801` NIC module; userspace tracks unstable; switch to in-tree when yt6801 mainlines |
+| Kernel | `linuxPackages_latest`; in-tree `dwmac_motorcomm` NIC driver — no pin, no out-of-tree module |
 | DNS | Blocky (forwarding/caching + ad-block) on port 53 |
 | DNS upstream | DoH to DNS4EU NoAds (general filtering) + Quad9 fallback; one local Polish blocklist; static-IP `bootstrapDns` |
 | DHCP + local PTR | dnsmasq, reverse zone conditionally forwarded from Blocky |
@@ -218,17 +218,13 @@ This keeps filtering always enforced and makes extended downtime an operator act
 - UEFI boot
 - Limine bootloader throughout, Secure Boot enabled in Phase 2 (see PCR Binding and Secure Boot)
 - systemd initrd, required for TPM2 unlock
-- a pinned LTS kernel the out-of-tree `yt6801` module builds against (see below)
+- `linuxPackages_latest` with the in-tree `dwmac_motorcomm` driver — no pin needed (see below)
 
 ### Kernel and NIC Driver
 
-The onboard Ethernet is the Motorcomm `YT6801` Gigabit controller (`1f0a:6801`), with no in-tree driver: the mainline driver is still in review (net-next v4, April 2025), confirmed absent from the mainline tree and MAINTAINERS. The only working driver is the out-of-tree vendor module, packaged in nixpkgs as `yt6801` (v1.0.30), whose compat patches reach only 6.16 and which is reported broken on 6.17+. Confirmed on the unit: a 6.19.3 live environment binds no driver and shows no wired interface.
+The onboard Ethernet is the Motorcomm `YT6801` Gigabit controller (`1f0a:6801`). After this hardware shipped without a mainline driver, the `dwmac_motorcomm` in-tree driver landed in Linux 6.13 and is present in `linuxPackages_latest` (7.1.1+ at the time of writing). The NIC is confirmed working on the unit via this driver. (The nixpkgs 26.05 default kernel config does not enable the module, so we explicitly use `linuxPackages_latest`.)
 
-Decision: pin a kernel the `yt6801` module builds against and load it via `boot.extraModulePackages`. Pin the latest LTS in range — Linux 6.12 LTS — not a soon-EOL 6.16, to keep security backports. Userspace still tracks `nixos-unstable`; only the kernel is pinned via `boot.kernelPackages`.
-
-- a pinned non-current kernel lags features and, once its series ends, security fixes — mitigated by choosing an LTS and by the host being LAN-only, not WAN-exposed
-- TPM2, Btrfs, and Limine Secure Boot are all mature well before 6.12, so the pin costs nothing there
-- exit path: when in-tree `yt6801` merges, move to a `nixos-unstable` kernel containing `drivers/net/ethernet/motorcomm/yt6801/`, drop the module, and unpin. The trigger is that path appearing in the running kernel.
+Decision: use `linuxPackages_latest` with the in-tree `dwmac_motorcomm` driver — no kernel pin, no out-of-tree module. This avoids the maintenance burden of a compat-limited vendor module. If a future kernel regression breaks the NIC, fall back to the pinned-out-of-tree strategy described in the Alternatives appendix.
 
 ## Disk Layout
 
@@ -526,7 +522,7 @@ Assumes Soyo boots the installer USB, the live environment has internet, and Git
 8. complete agenix recipient enrollment and secret refresh if needed
 9. verify the migrated DHCP reservations and local DNS records against the current router/dnsmasq config before disabling router DHCP
 
-Install-time networking caveat: the stock installer lacks the out-of-tree `yt6801` module (the unit's 6.19.3 live environment had no wired interface), so connect over WiFi (`RTL8852BE` works in-tree) or a USB Ethernet adapter; the onboard port works once the installed system runs the pinned kernel with `yt6801`.
+Install-time networking caveat: the live environment must have `dwmac_motorcomm` (Linux 6.13+) to bring up `enp1s0`. The 26.05 ISO's kernel has it. Fallback: WiFi (`RTL8852BE` in-tree) or a USB Ethernet adapter.
 
 Two acceptable operator models:
 
@@ -599,7 +595,7 @@ Easy path to the newest `nixos-unstable`:
 - M1/M2 remote deploys use native `nixos-rebuild --target-host` (local build on the workstation, remote activation); `deploy-rs` (deploy checks wired into `nix flake check`) is deferred to M4 multi-host
 - local break-glass path remains `nixos-rebuild test|switch`
 - rollback documented alongside update
-- the kernel is deliberately pinned to an LTS for `yt6801` (see Kernel and NIC Driver), independent of the `nixpkgs` bump; a userspace update must not silently move the kernel, and after each update the `yt6801` module is confirmed built and `enp1s0` up
+- kernel is `linuxPackages_latest` — no separate pin; after each nixpkgs update confirm `enp1s0` still comes up
 
 Default policy is manual but easy; unattended updates are out of scope.
 
@@ -722,7 +718,7 @@ The onboard `yt6801` is a single port. If it fails, the fallback is a USB Ethern
 Post-install checklist:
 
 - host builds from the flake
-- the `yt6801` module builds against the pinned kernel and `enp1s0` comes up
+- `enp1s0` comes up (in-tree `dwmac_motorcomm` driver)
 - host reaches the static LAN IP
 - `ssh` by IP works
 - `ssh soyo.home.arpa` resolves and works from a DHCP client
@@ -841,7 +837,7 @@ The "fits this box" profile: light, always-on, trusted-LAN, state small or on th
 Confirmed on the unit from a NixOS live environment:
 
 - Intel N150 (4 cores), 16 GB RAM, iGPU (`/dev/dri`: `card1`, `renderD128`) — QuickSync available for a future Jellyfin; comfortable headroom for DNS/DHCP
-- Ethernet: Motorcomm `YT6801` (`1f0a:6801`), Gigabit. No in-tree driver; needs the out-of-tree `yt6801` module on a pinned kernel (see Kernel and NIC Driver). On 6.19.3 no driver binds and no wired interface appears. Expected wired interface `enp1s0` (PCI `01:00.0`) once the module loads
+- Ethernet: Motorcomm `YT6801` (`1f0a:6801`), Gigabit. In-tree `dwmac_motorcomm` driver (Linux 6.13+). Confirmed working on the 26.05 live ISO. Expected wired interface `enp1s0` (PCI `01:00.0`)
 - WiFi: Realtek `RTL8852BE` on `wlp2s0`, driver `rtw89_8852be`, in-tree on 6.19.3
 - target disk: SATA SSD at `/dev/disk/by-id/ata-PELADN_512GB_20250522100164` (~512 GB) — use this by-id in `disko`
 - TPM2 present and usable: firmware TPM (`MSFT0101`, `tpm_crb`), v2, visible to `systemd-cryptenroll`
@@ -867,7 +863,7 @@ Avoid: desktop policy; broad self-hosting stacks; ZFS; legacy initrd shell hacks
 1. New `flake.nix` on `flake-parts` + `import-tree` with `nixos-facter-modules`, `disko`, `preservation`, `agenix`, and `home-manager` inputs, plus optional operator tooling such as `agenix-rekey` (`deploy-rs` added at M4)
 2. Dendritic aspect-module tree (base, server, service, user, Home Manager aspects in `flake.modules.*`), with each host toggling the aspects it uses
 3. `hosts/soyo` host assembly
-4. Boot config pinning Linux 6.12 LTS and loading the out-of-tree `yt6801` module, with the documented switch to in-tree when it mainlines
+4. Boot config using `linuxPackages_latest` — in-tree `dwmac_motorcomm` driver, no pin needed
 5. Encrypted Btrfs `disko` definition with `root`/`root-blank` subvolumes and an initrd blank-snapshot rollback for the impermanent root
 6. Limine config plus TPM2 auto-unlock: Phase 1 enrolls `systemd-cryptenroll` against PCR 7 with a passphrase fallback; Phase 2 enables Limine Secure Boot (`secureBoot.enable`, `sbctl` keys with Microsoft keys kept) and re-enrolls the TPM against PCR 0+2+7, with documented rollback/recovery steps
 7. agenix secret layout and example password-hash onboarding, with the future `agenix-rekey` migration path documented but not required for M1/M2
@@ -892,7 +888,7 @@ Before touching hardware, rehearse the host build and disk layout in a VM (`nixo
 - flake-parts + `import-tree` dendritic skeleton with base + server + service aspects; `nixos-facter` hardware report committed
 - `disko`: LUKS2 + Btrfs with `root`/`root-blank` subvolumes on the `ata-PELADN_512GB_...` disk
 - impermanent root via the initrd blank-snapshot rollback + `preservation`, with an explicit persisted-path inventory for host identity (incl. the agenix host key before decryption), declarative users, logs, and DHCP state
-- pinned Linux 6.12 LTS + out-of-tree `yt6801` module; `systemd-networkd` static LAN on `enp1s0`
+- `linuxPackages_latest` + in-tree `dwmac_motorcomm` driver; `systemd-networkd` static LAN on `enp1s0`
 - Blocky (ad-block, DoT upstream, `bootstrapDns`) + dnsmasq (DHCP, reverse zone, `home.arpa` search domain)
 - TPM Phase-1 auto-unlock (PCR 7, passphrase fallback), systemd initrd, Limine; initrd LAN + direct-link rescue addresses
 - `root` + `krzysiek` users, key-only SSH policy
