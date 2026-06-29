@@ -574,6 +574,8 @@
           "swapgs",
           "rfds",
           "bhi",
+          "spectre_v2_user",
+          "old_microcode",
           "vmscape"
         ],
         "power_management": [
@@ -862,7 +864,7 @@
         },
         "vendor": {
           "hex": "1d6b",
-          "name": "Linux 6.12.74 xhci-hcd",
+          "name": "Linux 7.1.1 xhci-hcd",
           "value": 7531
         },
         "device": {
@@ -872,11 +874,11 @@
         },
         "revision": {
           "hex": "0000",
-          "name": "6.12",
+          "name": "7.01",
           "value": 0
         },
         "serial": "0000:00:14.0",
-        "model": "Linux 6.12.74 xhci-hcd xHCI Host Controller",
+        "model": "Linux 7.1.1 xhci-hcd xHCI Host Controller",
         "sysfs_id": "/devices/pci0000:00/0000:00:14.0/usb3/3-0:1.0",
         "sysfs_bus_id": "3-0:1.0",
         "resources": [
@@ -924,7 +926,7 @@
         "driver_modules": [
           "usbcore"
         ],
-        "module_alias": "usb:v1D6Bp0002d0612dc09dsc00dp01ic09isc00ip00in00"
+        "module_alias": "usb:v1D6Bp0002d0701dc09dsc00dp01ic09isc00ip00in00"
       },
       {
         "index": 45,
@@ -949,7 +951,7 @@
         },
         "vendor": {
           "hex": "1d6b",
-          "name": "Linux 6.12.74 xhci-hcd",
+          "name": "Linux 7.1.1 xhci-hcd",
           "value": 7531
         },
         "device": {
@@ -959,11 +961,11 @@
         },
         "revision": {
           "hex": "0000",
-          "name": "6.12",
+          "name": "7.01",
           "value": 0
         },
         "serial": "0000:00:14.0",
-        "model": "Linux 6.12.74 xhci-hcd xHCI Host Controller",
+        "model": "Linux 7.1.1 xhci-hcd xHCI Host Controller",
         "sysfs_id": "/devices/pci0000:00/0000:00:14.0/usb4/4-0:1.0",
         "sysfs_bus_id": "4-0:1.0",
         "detail": {
@@ -1001,7 +1003,7 @@
         "driver_modules": [
           "usbcore"
         ],
-        "module_alias": "usb:v1D6Bp0003d0612dc09dsc00dp03ic09isc00ip00in00"
+        "module_alias": "usb:v1D6Bp0003d0701dc09dsc00dp03ic09isc00ip00in00"
       },
       {
         "index": 46,
@@ -1026,7 +1028,7 @@
         },
         "vendor": {
           "hex": "1d6b",
-          "name": "Linux 6.12.74 xhci-hcd",
+          "name": "Linux 7.1.1 xhci-hcd",
           "value": 7531
         },
         "device": {
@@ -1036,11 +1038,11 @@
         },
         "revision": {
           "hex": "0000",
-          "name": "6.12",
+          "name": "7.01",
           "value": 0
         },
         "serial": "0000:00:0d.0",
-        "model": "Linux 6.12.74 xhci-hcd xHCI Host Controller",
+        "model": "Linux 7.1.1 xhci-hcd xHCI Host Controller",
         "sysfs_id": "/devices/pci0000:00/0000:00:0d.0/usb1/1-0:1.0",
         "sysfs_bus_id": "1-0:1.0",
         "resources": [
@@ -1088,7 +1090,7 @@
         "driver_modules": [
           "usbcore"
         ],
-        "module_alias": "usb:v1D6Bp0002d0612dc09dsc00dp01ic09isc00ip00in00"
+        "module_alias": "usb:v1D6Bp0002d0701dc09dsc00dp01ic09isc00ip00in00"
       },
       {
         "index": 51,
@@ -1113,7 +1115,7 @@
         },
         "vendor": {
           "hex": "1d6b",
-          "name": "Linux 6.12.74 xhci-hcd",
+          "name": "Linux 7.1.1 xhci-hcd",
           "value": 7531
         },
         "device": {
@@ -1123,11 +1125,11 @@
         },
         "revision": {
           "hex": "0000",
-          "name": "6.12",
+          "name": "7.01",
           "value": 0
         },
         "serial": "0000:00:0d.0",
-        "model": "Linux 6.12.74 xhci-hcd xHCI Host Controller",
+        "model": "Linux 7.1.1 xhci-hcd xHCI Host Controller",
         "sysfs_id": "/devices/pci0000:00/0000:00:0d.0/usb2/2-0:1.0",
         "sysfs_bus_id": "2-0:1.0",
         "detail": {
@@ -1165,7 +1167,7 @@
         "driver_modules": [
           "usbcore"
         ],
-        "module_alias": "usb:v1D6Bp0003d0612dc09dsc00dp03ic09isc00ip00in00"
+        "module_alias": "usb:v1D6Bp0003d0701dc09dsc00dp03ic09isc00ip00in00"
       }
     ],
     "keyboard": [
@@ -1756,28 +1758,110 @@
         "model": "Ethernet controller",
         "sysfs_id": "/devices/pci0000:00/0000:00:1c.0/0000:01:00.0",
         "sysfs_bus_id": "0000:01:00.0",
+        "unix_device_names": [
+          "enp1s0"
+        ],
         "resources": [
+          {
+            "type": "hwaddr",
+            "address": 48
+          },
           {
             "type": "io",
             "base": 16384,
             "range": 256,
-            "enabled": false,
+            "enabled": true,
             "access": "read_write"
+          },
+          {
+            "type": "phwaddr",
+            "address": 48
           }
         ],
         "detail": {
           "function": 0,
-          "command": 0,
+          "command": 1031,
           "header_type": 0,
           "secondary_bus": 0,
           "prog_if": 0
         },
+        "driver": "dwmac-motorcomm",
+        "driver_module": "dwmac_motorcomm",
+        "drivers": [
+          "dwmac-motorcomm"
+        ],
+        "driver_modules": [
+          "dwmac_motorcomm"
+        ],
         "module_alias": "pci:v00001F0Ad00006801sv00002066sd00009806bc02sc00i00"
       }
     ],
     "network_interface": [
       {
         "index": 52,
+        "attached_to": 0,
+        "class_list": [
+          "network_interface"
+        ],
+        "base_class": {
+          "hex": "0107",
+          "name": "Network Interface",
+          "value": 263
+        },
+        "sub_class": {
+          "hex": "0000",
+          "name": "Loopback",
+          "value": 0
+        },
+        "model": "Loopback network interface",
+        "sysfs_id": "/class/net/lo",
+        "unix_device_names": [
+          "lo"
+        ]
+      },
+      {
+        "index": 53,
+        "attached_to": 16,
+        "class_list": [
+          "network_interface"
+        ],
+        "base_class": {
+          "hex": "0107",
+          "name": "Network Interface",
+          "value": 263
+        },
+        "sub_class": {
+          "hex": "0001",
+          "name": "Ethernet",
+          "value": 1
+        },
+        "model": "Ethernet network interface",
+        "sysfs_id": "/class/net/enp1s0",
+        "sysfs_device_link": "/devices/pci0000:00/0000:00:1c.0/0000:01:00.0",
+        "unix_device_names": [
+          "enp1s0"
+        ],
+        "resources": [
+          {
+            "type": "hwaddr",
+            "address": 48
+          },
+          {
+            "type": "phwaddr",
+            "address": 48
+          }
+        ],
+        "driver": "dwmac-motorcomm",
+        "driver_module": "dwmac_motorcomm",
+        "drivers": [
+          "dwmac-motorcomm"
+        ],
+        "driver_modules": [
+          "dwmac_motorcomm"
+        ]
+      },
+      {
+        "index": 54,
         "attached_to": 13,
         "class_list": [
           "network_interface"
@@ -1815,28 +1899,6 @@
         ],
         "driver_modules": [
           "rtw89_8852be"
-        ]
-      },
-      {
-        "index": 53,
-        "attached_to": 0,
-        "class_list": [
-          "network_interface"
-        ],
-        "base_class": {
-          "hex": "0107",
-          "name": "Network Interface",
-          "value": 263
-        },
-        "sub_class": {
-          "hex": "0000",
-          "name": "Loopback",
-          "value": 0
-        },
-        "model": "Loopback network interface",
-        "sysfs_id": "/class/net/lo",
-        "unix_device_names": [
-          "lo"
         ]
       }
     ],
