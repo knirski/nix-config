@@ -925,7 +925,13 @@ in
 +    enable = true;
 +    lanInterface = "enp1s0";
 +    settings = {
-       ports = { dns = 53; http = "10.0.0.9:4000"; };
+        ports = {
+          dns = [
+            "127.0.0.1:53"
+            "10.0.0.9:53"
+          ];
+          http = "10.0.0.9:4000";
+        };
        # ... keep upstreams, bootstrapDns, customDNS, conditional, blocking, caching unchanged ...
      };
    };
