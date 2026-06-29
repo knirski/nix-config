@@ -40,14 +40,18 @@ mount -o subvol=/ /dev/mapper/crypted /mnt-top
 btrfs subvolume snapshot -r /mnt-top/root /mnt-top/root-blank
 umount /mnt-top
 
-# (b) Initrd break-glass SSH host key on the ESP
+# (b) Soyo's initrd SSH host key (for break-glass unlock, lives on ESP)
 install -d -m 700 /mnt/boot/initrd-ssh
 ssh-keygen -t ed25519 -N "" -f /mnt/boot/initrd-ssh/ssh_host_ed25519_key
 
-# (c) Stage-2 host key on /persist (so agenix can decrypt on first boot)
+# (c) Soyo's stage-2 host key on /persist (so agenix can decrypt on first boot)
 install -d -m 700 /mnt/persist/etc/ssh
 ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
 ```
+
+These are the **machine's** host keys, not your personal SSH key. Your own key is
+needed later in step 4 for `agenix -r` — copy it onto the live ISO when the
+time comes (see the note there).
 
 ## 4. Enroll the Soyo agenix recipient
 
