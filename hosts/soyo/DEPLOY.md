@@ -13,9 +13,10 @@
 # Optional: bring up WiFi if wired is down
 # iwctl station wlan0 connect <SSID>
 
-# Clone the config
+# Clone the config and enable flakes
 git clone https://github.com/knirski/nix-config
 cd nix-config
+export NIX_CONFIG="experimental-features = nix-command flakes"
 ```
 
 ## 2. Partition and format
@@ -23,7 +24,7 @@ cd nix-config
 Wipes the target disk and creates the LUKS + Btrfs layout from `disko.nix`:
 
 ```bash
-sudo nix run github:nix-community/disko -- --mode disko hosts/soyo/disko.nix
+sudo nix --extra-experimental-features 'nix-command flakes' run github:nix-community/disko -- --mode disko hosts/soyo/disko.nix
 ```
 
 `/mnt` is now mounted with `root` at `/mnt`, `nix` at `/mnt/nix`, `persist` at `/mnt/persist`, and `/boot` at `/mnt/boot`.
@@ -54,7 +55,7 @@ Before `nixos-install`, add Soyo's host key to the recipient list so secrets are
 
 ```bash
 # Derive the age public key from the stage-2 host key (placed in step 3c)
-nix shell nixpkgs#ssh-to-age --command sh -c '                         \
+nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age --command sh -c '  \
   ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub            \
              > secrets/soyo.age.pub                                     '
 ```
@@ -81,7 +82,7 @@ Now edit `secrets/secrets.nix` and add `soyo` alongside `krzysiek`:
 Then rekey all existing secrets to include the new recipient, commit, and push:
 
 ```bash
-nix shell nixpkgs#agenix --command agenix -r
+nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#agenix --command agenix -r
 git add secrets/
 git commit -m "feat: enroll soyo agenix recipient"
 git push
@@ -93,7 +94,7 @@ git push
 ## 5. Install
 
 ```bash
-sudo nixos-install --flake .#soyo
+sudo NIX_CONFIG="$NIX_CONFIG" nixos-install --flake .#soyo
 ```
 
 Reboot. Soyo comes up with TPM auto-unlock, LAN DHCP/DNS, and all secrets decrypted.
@@ -149,7 +150,7 @@ mkpasswd -m sha-512
 
 # 2. Edit the encrypted secret — agenix decrypts, opens $EDITOR, re-encrypts
 #    Replace the old hash with the new one, save, and exit.
-nix shell nixpkgs#agenix --command agenix -e secrets/root-password.age
+nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#agenix --command agenix -e secrets/root-password.age
 
 # 3. Commit and deploy
 git add secrets/root-password.age
