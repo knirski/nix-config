@@ -30,8 +30,6 @@ For a first install from the NixOS live ISO, see [hosts/soyo/DEPLOY.md](hosts/so
 └── flake.nix              # Entry point — auto-imports modules/
 ```
 
-For a detailed explanation of the secrets workflow, see [`docs/secrets.md`](docs/secrets.md).
-
 Aspect modules expose `flake.modules.nixos.<name>` and are toggled in the host
 assembler (`modules/parts/soyo.nix`). Host directories hold machine-specific
 data only.
