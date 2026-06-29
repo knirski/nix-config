@@ -36,18 +36,18 @@ Three one-time bootstrap steps the running system depends on:
 
 ```bash
 # (a) Root-blank snapshot (the initrd rollback target)
-mkdir -p /mnt-top
-mount -o subvol=/ /dev/mapper/crypted /mnt-top
-btrfs subvolume snapshot -r /mnt-top/root /mnt-top/root-blank
-umount /mnt-top
+sudo mkdir -p /mnt-top
+sudo mount -o subvol=/ /dev/mapper/crypted /mnt-top
+sudo btrfs subvolume snapshot -r /mnt-top/root /mnt-top/root-blank
+sudo umount /mnt-top
 
 # (b) Soyo's initrd SSH host key (for break-glass unlock, lives on ESP)
-install -d -m 700 /mnt/boot/initrd-ssh
-ssh-keygen -t ed25519 -N "" -f /mnt/boot/initrd-ssh/ssh_host_ed25519_key
+sudo install -d -m 700 /mnt/boot/initrd-ssh
+sudo ssh-keygen -t ed25519 -N "" -f /mnt/boot/initrd-ssh/ssh_host_ed25519_key
 
 # (c) Soyo's stage-2 host key on /persist (so agenix can decrypt on first boot)
-install -d -m 700 /mnt/persist/etc/ssh
-ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
+sudo install -d -m 700 /mnt/persist/etc/ssh
+sudo ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
 ```
 
 These are the **machine's** host keys, not your personal SSH key. Your own key is
