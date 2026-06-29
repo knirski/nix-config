@@ -53,24 +53,42 @@ ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
 Before `nixos-install`, add Soyo's host key to the recipient list so secrets are decryptable on first boot:
 
 ```bash
-# Run agenix commands inside a nix shell with the right tools
-nix shell nixpkgs#agenix nixpkgs#ssh-to-age --command sh -c '
-  # Derive the age public key from the stage-2 host key (placed in step 3c)
-  ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub > secrets/soyo.age.pub
-
-  # Add soyo to the recipient list in secrets/secrets.nix (already exists with krzysiek)
-  # Edit secrets/secrets.nix to add "soyo" alongside "krzysiek", then:
-  agenix -r
-'
+# Derive the age public key from the stage-2 host key (placed in step 3c)
+nix shell nixpkgs#ssh-to-age --command sh -c '                         \
+  ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub            \
+             > secrets/soyo.age.pub                                     '
 ```
 
-Now add `soyo.age.pub` to `secrets/secrets.nix` as a recipient, then commit and push:
+Now edit `secrets/secrets.nix` and add `soyo` alongside `krzysiek`:
+
+```diff
+ let
+   krzysiek = builtins.readFile ./krzysiek.age.pub;
++  soyo = builtins.readFile ./soyo.age.pub;
+ in
+ {
+-  "root-password.age".publicKeys = [ krzysiek ];
+-  "krzysiek-password.age".publicKeys = [ krzysiek ];
+-  "restic-password.age".publicKeys = [ krzysiek ];
+-  "ntfy-token.age".publicKeys = [ krzysiek ];
++  "root-password.age".publicKeys = [ krzysiek soyo ];
++  "krzysiek-password.age".publicKeys = [ krzysiek soyo ];
++  "restic-password.age".publicKeys = [ krzysiek soyo ];
++  "ntfy-token.age".publicKeys = [ krzysiek soyo ];
+ }
+```
+
+Then rekey all existing secrets to include the new recipient, commit, and push:
 
 ```bash
+nix shell nixpkgs#agenix --command agenix -r
 git add secrets/
 git commit -m "feat: enroll soyo agenix recipient"
 git push
 ```
+
+> **Note:** `agenix -r` needs your SSH private key to decrypt the existing secrets. If you're on the live ISO, copy your key first:
+> `install -d -m 700 ~/.ssh && cat > ~/.ssh/id_ed25519` then paste it (or use `scp`/`ssh-agent`).
 
 ## 5. Install
 
