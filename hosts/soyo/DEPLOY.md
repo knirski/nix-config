@@ -123,6 +123,24 @@ Or locally on Soyo:
 sudo nixos-rebuild switch --flake .#soyo
 ```
 
+## Changing a password
+
+```bash
+# 1. Generate a new SHA-512 password hash
+mkpasswd -m sha-512
+
+# 2. Edit the encrypted secret — agenix decrypts, opens $EDITOR, re-encrypts
+#    Replace the old hash with the new one, save, and exit.
+nix shell nixpkgs#agenix --command agenix -e secrets/root-password.age
+
+# 3. Commit and deploy
+git add secrets/root-password.age
+git commit -m "chore: update root password"
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+```
+
+Same flow for `krzysiek-password.age` or any other secret.
+
 ## Recovery paths
 
 See the recovery runbook at `docs/recovery.md` (not yet written) or the [design doc](../docs/superpowers/specs/soyo-dns-dhcp-appliance.md) for TPM, remote initrd SSH, and direct-link rescue procedures.
