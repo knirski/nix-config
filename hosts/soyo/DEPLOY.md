@@ -60,9 +60,10 @@ master-encrypted originals:
 
 ```bash
 # (a) Derive the age public key from the stage-2 host key
-nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age --command sh -c '  \
-  ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub            \
-             > secrets/soyo.age.pub                                     '
+#     (the pubkey was created by sudo in step 3 — pipe it through sudo cat)
+sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub \
+  | nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age --command ssh-to-age \
+  > secrets/soyo.age.pub
 
 # (b) Set hostPubkey in the assembler so agenix-rekey encrypts for the real host key
 #     Edit modules/parts/soyo.nix — uncomment or set:
