@@ -25,7 +25,7 @@ For a first install from the NixOS live ISO, see [hosts/soyo/DEPLOY.md](hosts/so
 │   ├── nixos/             # Reusable NixOS aspect modules (base, blocky, dhcp, …)
 │   ├── home/              # Reusable Home Manager aspect modules
 │   └── parts/             # flake-parts modules: assemblers, options
-├── secrets/               # agenix-encrypted secrets + recipients
+├── secrets/               # agenix-encrypted secrets + recipients (see [docs/secrets.md](docs/secrets.md))
 ├── docs/                  # Design spec, plans, and learning docs
 └── flake.nix              # Entry point — auto-imports modules/
 ```
@@ -43,7 +43,7 @@ Key principles:
 
 - **DNS + DHCP only** — everything else is a guest service, resource-isolated.
 - **Impermanent root** — `/` is wiped to a blank Btrfs snapshot each boot; durable state lives under `/persist`.
-- **Secrets via agenix** — never committed in plaintext.
+- **Secrets via agenix-rekey** — master-encrypted files rekeyed per host. Full walkthrough in [docs/secrets.md](docs/secrets.md).
 - **`linuxPackages_latest`** — the in-tree `dwmac_motorcomm` NIC driver (Linux 6.13+).
 - **TPM auto-unlock** — unattended power-loss recovery; passphrase keyslot as break-glass fallback.
 
