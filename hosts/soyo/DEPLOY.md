@@ -5,7 +5,8 @@
 - NixOS 26.05 ISO with `enp1s0` support (in-tree `dwmac_motorcomm`). WiFi (`RTL8852BE`) or USB Ethernet as fallback.
 - The target disk: `/dev/disk/by-id/ata-PELADN_512GB_20250522100164` (adjust in `disko.nix` if different).
 - Network: live ISO gets an IP via DHCP on the LAN uplink.
-- A local checkout of this repo with write access to the remote (for pushing the agenix recipient).
+- A local checkout of this repo with write access to the remote.
+- Your SSH private key (the one corresponding to `secrets/krzysiek.age.pub`) to decrypt master-encrypted secrets.
 
 ## 1. Boot the live ISO and clone
 
@@ -50,50 +51,42 @@ ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
 ```
 
 These are the **machine's** host keys, not your personal SSH key. Your own key is
-needed later in step 4 for `agenix -r` — copy it onto the live ISO when the
-time comes (see the note there).
+needed in step 4 to decrypt the master-encrypted secrets during `agenix rekey`.
 
-## 4. Enroll the Soyo agenix recipient
+## 4. Enroll Soyo and rekey secrets
 
-Before `nixos-install`, add Soyo's host key to the recipient list so secrets are decryptable on first boot:
+Before `nixos-install`, generate host-specific rekeyed secrets from the
+master-encrypted originals:
 
 ```bash
-# Derive the age public key from the stage-2 host key (placed in step 3c)
+# (a) Derive the age public key from the stage-2 host key
 nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age --command sh -c '  \
   ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub            \
              > secrets/soyo.age.pub                                     '
 ```
 
-Now edit `secrets/secrets.nix` and add `soyo` alongside `krzysiek`:
-
-```diff
- let
-   krzysiek = builtins.readFile ./krzysiek.age.pub;
-+  soyo = builtins.readFile ./soyo.age.pub;
- in
- {
--  "root-password.age".publicKeys = [ krzysiek ];
--  "krzysiek-password.age".publicKeys = [ krzysiek ];
--  "restic-password.age".publicKeys = [ krzysiek ];
--  "ntfy-token.age".publicKeys = [ krzysiek ];
-+  "root-password.age".publicKeys = [ krzysiek soyo ];
-+  "krzysiek-password.age".publicKeys = [ krzysiek soyo ];
-+  "restic-password.age".publicKeys = [ krzysiek soyo ];
-+  "ntfy-token.age".publicKeys = [ krzysiek soyo ];
- }
+```bash
+# (b) Set hostPubkey in the assembler so agenix-rekey encrypts for the real host key
+#     Edit modules/parts/soyo.nix — uncomment or set:
+#       hostPubkey = ../../secrets/soyo.age.pub;
 ```
-
-Then rekey all existing secrets to include the new recipient, commit, and push:
 
 ```bash
-nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#agenix --command agenix -r
-git add secrets/
-git commit -m "feat: enroll soyo agenix recipient"
-git push
+# (c) Rekey all secrets for Soyo — decrypts with your master identity (SSH key)
+#     and re-encrypts with Soyo's host key. Results go to secrets/rekeyed/soyo/.
+#
+# NOTE: This needs your SSH private key. Copy it first if not present:
+#   install -d -m 700 ~/.ssh && cat > ~/.ssh/id_ed25519
+#   (paste the key, then Ctrl+D; or use scp/ssh-agent)
+nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
 ```
 
-> **Note:** `agenix -r` needs your SSH private key to decrypt the existing secrets. If you're on the live ISO, copy your key first:
-> `install -d -m 700 ~/.ssh && cat > ~/.ssh/id_ed25519` then paste it (or use `scp`/`ssh-agent`).
+```bash
+# (d) Commit the new host pubkey and rekeyed secrets, push
+git add secrets/soyo.age.pub secrets/rekeyed/
+git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
+git push
+```
 
 ## 5. Install
 
@@ -146,18 +139,26 @@ Or locally on Soyo:
 sudo nixos-rebuild switch --flake .#soyo
 ```
 
+When secrets change, re-run `agenix rekey` on the build workstation before deploying:
+
+```bash
+nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+```
+
 ## Changing a password
 
 ```bash
 # 1. Generate a new SHA-512 password hash
 mkpasswd -m sha-512
 
-# 2. Edit the encrypted secret — agenix decrypts, opens $EDITOR, re-encrypts
-#    Replace the old hash with the new one, save, and exit.
-nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#agenix --command agenix -e secrets/root-password.age
+# 2. Edit the master-encrypted secret (uses your master identity — SSH key)
+nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix edit secrets/root-password.age
 
-# 3. Commit and deploy
-git add secrets/root-password.age
+# 3. Rekey so the change propagates to the host-specific rekeyed secret
+nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+
+# 4. Commit and deploy
+git add secrets/root-password.age secrets/rekeyed/
 git commit -m "chore: update root password"
 nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
 ```

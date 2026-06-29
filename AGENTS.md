@@ -24,8 +24,13 @@ and its docs must teach (see "Learning docs" below).
    `dwmac_motorcomm` driver. Do not pin to an older kernel without confirming
    `enp1s0` comes up, and do not regress to the out-of-tree `yt6801` module
    unless a kernel regression forces it.
-5. **Secrets via agenix only.** Never commit plaintext secrets; passwords are
+5. **Secrets via agenix-rekey (rekeyFile flow).** See [`docs/secrets.md`](docs/secrets.md)
+   for the full walkthrough. Never commit plaintext secrets; passwords are
    hashed-password secrets. MAC/IP addresses are *not* secrets (plaintext fine).
+   - Master-encrypted `.age` files live in `secrets/`.
+   - Host-specific rekeyed files live in `secrets/rekeyed/<host>/`.
+   - The master identity is the operator's SSH key (`secrets/krzysiek.age.pub`).
+   - Each host's age public key is derived from its SSH host key at install time.
 6. **DNS ownership is split:** Blocky owns forward A records; dnsmasq owns
    reverse/PTR (lease-aware, Blocky forwards the reverse zone to it). Static
    hosts come from `hosts/soyo/reservations.nix` — the single source of truth.
@@ -78,10 +83,17 @@ and its docs must teach (see "Learning docs" below).
 - Reuse the `base`, `users`, `home.base`, and `backup` aspects and the disko
   pattern. Do **not** toggle on server-only aspects (DNS, DHCP, remote-unlock)
   for a non-server host.
-- New agenix host key + recipient + rekey for any secrets it needs.
+- New agenix host key: generate an SSH host key, derive its age pubkey
+  (`ssh-to-age`), save as `secrets/<host>.age.pub`, set
+  `age.rekey.hostPubkey` in the host assembler, run `agenix rekey` to
+  generate per-host rekeyed secrets, then commit the new pubkey and
+  rekeyed files.
 
 ## Learning docs (required output)
 
+- [`docs/secrets.md`](docs/secrets.md) is the canonical introduction to the
+  agenix-rekey rekeyFile workflow, written for beginners. Keep it in sync
+  with any secrets-related changes.
 - Comment modules with the *why* and the idiom, not just the *what*.
 - Introduce one concept at a time along the M1–M4 roadmap.
 - When a concept first appears, explain it briefly and link a canonical source:

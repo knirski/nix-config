@@ -19,7 +19,7 @@ Every task's requirements implicitly include these (exact values, copied from th
 - Impermanent root via Btrfs blank-snapshot rollback (systemd initrd) + `preservation`; durable state only under `/persist`. Persisted-path completeness is correctness, not cleanup.
 - Hardware via `nixos-facter` (committed `hosts/soyo/facter.json`); no `hardware-configuration.nix`.
 - Backups use `restic` via `services.restic.backups` (first-class module) — not rustic/kopia.
-- Secrets use plain `agenix` with `age.secrets.<name>.file`. Do not use `agenix-rekey`'s `rekeyFile` flow in M1/M2.
+- Secrets use `agenix-rekey`'s `rekeyFile` flow: master-encrypted secrets under `secrets/`, rekeyed per-host under `secrets/rekeyed/<host>/`. The `age.rekey.hostPubkey` defaults to a dummy placeholder for bootstrap, set to the real host key after the first deploy.
 - DNS/DHCP/exporters/initrd-SSH are LAN-interface only, never WAN-facing.
 - Learning-oriented, beginner-friendly docs are a first-class deliverable (Task 8), not a by-product.
 
