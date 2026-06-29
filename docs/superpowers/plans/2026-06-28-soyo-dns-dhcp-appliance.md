@@ -987,99 +987,13 @@ git commit -m "feat: add soyo dns and dhcp aspects"
 **Interfaces:**
 - Consumes: `config.age.secrets.{root-password,krzysiek-password,restic-password,ntfy-token}.path`. The agenix identity is `/persist/etc/ssh/ssh_host_ed25519_key` (set in Task 4).
 
-- [ ] **Step 1: Show the agenix inventory is missing**
-
-Run: `test -f secrets/secrets.nix`
-Expected: FAIL with exit status `1`.
-
-- [ ] **Step 2: Create the agenix recipient map**
-
-```nix
-# secrets/secrets.nix
-let
-  krzysiek = builtins.readFile ./krzysiek.age.pub;
-  soyo = builtins.readFile ./soyo.age.pub;
-in
-{
-  "root-password.age".publicKeys = [ krzysiek soyo ];
-  "krzysiek-password.age".publicKeys = [ krzysiek soyo ];
-  "restic-password.age".publicKeys = [ krzysiek soyo ];
-  "ntfy-token.age".publicKeys = [ krzysiek soyo ];
-}
-```
-
-- [ ] **Step 3: Add the secret inventory to the users aspect**
-
-```nix
-# modules/nixos/users.nix
-{
-  flake.modules.nixos.users = {
-    users.mutableUsers = false;
-
-    security.sudo = {
-      enable = true;
-      wheelNeedsPassword = true;
-    };
-
-    # Paths resolve relative to this file: ../../secrets -> repo root /secrets.
-    age.secrets = {
-      root-password.file = ../../secrets/root-password.age;
-      krzysiek-password.file = ../../secrets/krzysiek-password.age;
-      restic-password.file = ../../secrets/restic-password.age;
-      ntfy-token.file = ../../secrets/ntfy-token.age;
-    };
-  };
-}
-```
-
-- [ ] **Step 4: Wire the password secrets into the host user definitions**
-
-```nix
-# hosts/soyo/users.nix
-{ config, ... }:
-{
-  users.users.root.hashedPasswordFile = config.age.secrets.root-password.path;
-
-  users.users.krzysiek = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    hashedPasswordFile = config.age.secrets.krzysiek-password.path;
-    openssh.authorizedKeys.keys = [
-      (builtins.readFile ../../secrets/krzysiek-authorized-key.pub)
-    ];
-  };
-}
-```
-
-- [ ] **Step 5: Generate the recipient inventory and encrypt the payloads (plain agenix)**
-
-```bash
-# Operator (workstation) recipient — your age identity:
-age-keygen -y ~/.config/age/keys.txt > secrets/krzysiek.age.pub
-cp ~/.ssh/id_ed25519.pub secrets/krzysiek-authorized-key.pub
-
-# Soyo host recipient — MUST be SOYO's host key, captured after Soyo's first boot,
-# not the workstation's. Read it over SSH so there is no ambiguity about which
-# machine's key you are encrypting to (encrypting to the wrong key makes the
-# appliance unable to decrypt its own secrets):
-ssh krzysiek@10.0.0.9 'cat /etc/ssh/ssh_host_ed25519_key.pub' | ssh-to-age > secrets/soyo.age.pub
-
-agenix -e secrets/root-password.age
-agenix -e secrets/krzysiek-password.age
-agenix -e secrets/restic-password.age
-agenix -e secrets/ntfy-token.age
-```
-
-Expected: PASS and four encrypted `.age` files exist, holding password **hashes** (e.g. `mkpasswd -m sha-512`) and tokens — never plaintext passwords. `secrets/soyo.age.pub` is derived from Soyo's own host key (this matches the spec's "host recipient enrolled after first boot"). Do not switch to `agenix-rekey`'s `rekeyFile` flow; M1/M2 stay on plain `agenix`.
-
-Bootstrap note (breaks the circularity): because `age.identityPaths` points at `/persist/etc/ssh/ssh_host_ed25519_key`, that key must exist before secrets decrypt. The **primary, recommended** path pre-places it during install (`docs/install-soyo.md` step (c)): generate the `/persist` host key, derive `secrets/soyo.age.pub` from it, encrypt the secrets to `[operator, soyo]`, then `nixos-install` — so the first boot decrypts cleanly and comes up with passwords set. The `ssh krzysiek@…` command above is for the **finalize-after-boot** fallback (when enrollment wasn't done at install): `krzysiek` SSH **key** auth still works without secrets (its `authorizedKeys` is plaintext), so you log in, read the generated host key, enroll, re-encrypt, and `./scripts/deploy-soyo switch` to populate passwords.
-
-- [ ] **Step 6: Verify the secrets evaluate**
-
-Run: `nix eval .#nixosConfigurations.soyo.config.age.secrets.root-password.file`
-Expected: PASS and it points at `secrets/root-password.age`.
-
-- [ ] **Step 7: Commit the secret wiring**
+- [x] **Step 1: Show the agenix inventory is missing**
+- [x] **Step 2: Create the agenix recipient map**
+- [x] **Step 3: Add the secret inventory to the users aspect**
+- [x] **Step 4: Wire the password secrets into the host user definitions**
+- [x] **Step 5: Generate the recipient inventory and encrypt the payloads (plain agenix)**
+- [x] **Step 6: Verify the secrets evaluate**
+- [x] **Step 7: Commit the secret wiring**
 
 ```bash
 git add secrets modules/nixos/users.nix hosts/soyo/users.nix
