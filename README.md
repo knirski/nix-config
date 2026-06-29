@@ -1,5 +1,12 @@
 # knirski/nix-config
 
+<p>
+  <a href="https://nixos.org"><img src="https://img.shields.io/badge/NixOS-26.05-5277C3?logo=nixos&logoColor=white" alt="NixOS"></a>
+  <a href="https://nixos.wiki/wiki/Flakes"><img src="https://img.shields.io/badge/flakes-enabled-7eb6e0?logo=nixos&logoColor=white" alt="Flakes"></a>
+  <a href="https://flake.parts"><img src="https://img.shields.io/badge/built%20with-flake--parts-7eb6e0" alt="flake-parts"></a>
+  <a href="https://github.com/vic/import-tree"><img src="https://img.shields.io/badge/pattern-dendritic-7eb6e0" alt="dendritic"></a>
+</p>
+
 Multi-host [NixOS](https://nixos.org) flake built with [flake-parts](https://flake.parts)
 and the [dendritic](https://github.com/vic/import-tree) pattern.
 
