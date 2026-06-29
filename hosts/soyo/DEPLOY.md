@@ -6,19 +6,51 @@
 - The target disk: `/dev/disk/by-id/ata-PELADN_512GB_20250522100164` (adjust in `disko.nix` if different).
 - Network: live ISO gets an IP via DHCP on the LAN uplink.
 - A local checkout of this repo with write access to the remote.
-- Your SSH private key (the one corresponding to `secrets/krzysiek.age.pub`) to decrypt master-encrypted secrets — copy it onto the live ISO before step 4 (see the note there).
-- Your git `user.name` and `user.email` configured (needed for committing in step 4c).
+- Your SSH private key available on the live ISO (see [Setup SSH key](#setup-ssh-key) below).
 
-## 1. Boot the live ISO and clone
+## Setup SSH key
+
+`agenix rekey` (step 4) needs your SSH private key to decrypt the master-encrypted
+secrets. If it's already on the live ISO (e.g. you SSHed in with agent forwarding),
+skip this. Otherwise copy it from your workstation:
 
 ```bash
-# Optional: bring up WiFi if wired is down
-# iwctl station wlan0 connect <SSID>
+# On Soyo's live ISO, find its IP:
+ip -4 addr show | grep inet
+# Look for something like "192.168.1.42/24" — that's Soyo's address.
+# Then, from YOUR WORKSTATION, run:
+#   scp ~/.ssh/id_ed25519 nixos@192.168.1.42:~
+#   (replace id_ed25519 with your actual key file and IP)
+#
+# Back on Soyo's live ISO, install the key:
+mkdir -p -m 700 ~/.ssh
+mv ~/id_ed25519 ~/.ssh/ 2>/dev/null || echo "Key not found via scp — you can paste it manually:"
+# If the mv failed, paste manually:
+#   cat > ~/.ssh/id_ed25519
+#   (paste the private key contents, press Ctrl+D)
+chmod 600 ~/.ssh/id_ed25519
+```
 
-# Clone the config
+```bash
+# Verify the key is usable:
+ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null && echo "SSH key OK"
+# Expected output: "SSH key OK"
+```
+
+## 1. Clone the repo and configure git
+
+```bash
 git clone https://github.com/knirski/nix-config
 cd nix-config
 export NIX_CONFIG="experimental-features = nix-command flakes"
+git config user.name "Your Name"
+git config user.email "your@email.com"
+```
+
+```bash
+# Verify:
+git log --oneline -1
+# Expected: some commit hash with message
 ```
 
 ## 2. Partition and format
@@ -29,17 +61,15 @@ Wipes the target disk and creates the LUKS + Btrfs layout from `disko.nix`:
 sudo nix --extra-experimental-features 'nix-command flakes' run github:nix-community/disko -- --mode disko hosts/soyo/disko.nix
 ```
 
-Verify the mounts are in place:
-
 ```bash
+# Verify the mounts:
 mount | grep /mnt
-# Expected: /dev/mapper/crypted on /mnt (btrfs, ...)
-#           /dev/mapper/crypted on /mnt/nix (btrfs, ...)
-#           /dev/mapper/crypted on /mnt/persist (btrfs, ...)
-#           /dev/sda1 on /mnt/boot (vfat, ...)
+# Expected (4 lines):
+#   /dev/mapper/crypted on /mnt (btrfs, ...)
+#   /dev/mapper/crypted on /mnt/nix (btrfs, ...)
+#   /dev/mapper/crypted on /mnt/persist (btrfs, ...)
+#   /dev/sda1 on /mnt/boot (vfat, ...)
 ```
-
-`/mnt` is now mounted with `root`, `nix`, `persist`, and `boot` subdirectories.
 
 ## 3. Create the blank snapshot and SSH keys
 
@@ -51,18 +81,37 @@ sudo mkdir -p /mnt-top
 sudo mount -o subvol=/ /dev/mapper/crypted /mnt-top
 sudo btrfs subvolume snapshot -r /mnt-top/root /mnt-top/root-blank
 sudo umount /mnt-top
+```
 
+```bash
+# Verify (a): root-blank snapshot exists
+sudo btrfs subvolume list -t /mnt | grep root-blank
+# Expected: a line containing "root-blank"
+```
+
+```bash
 # (b) Soyo's initrd SSH host key (for break-glass unlock, lives on ESP)
 sudo install -d -m 700 /mnt/boot/initrd-ssh
 sudo ssh-keygen -t ed25519 -N "" -f /mnt/boot/initrd-ssh/ssh_host_ed25519_key
+```
 
+```bash
+# Verify (b): initrd SSH key created
+sudo ls -la /mnt/boot/initrd-ssh/
+# Expected: ssh_host_ed25519_key and ssh_host_ed25519_key.pub
+```
+
+```bash
 # (c) Soyo's stage-2 host key on /persist (so agenix can decrypt on first boot)
 sudo install -d -m 700 /mnt/persist/etc/ssh
 sudo ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
 ```
 
-These are the **machine's** host keys, not your personal SSH key. Your own key is
-needed in step 4 to decrypt the master-encrypted secrets during `agenix rekey`.
+```bash
+# Verify (c): stage-2 host key created
+sudo ls -la /mnt/persist/etc/ssh/
+# Expected: ssh_host_ed25519_key and ssh_host_ed25519_key.pub
+```
 
 ## 4. Enroll Soyo and rekey secrets
 
@@ -71,30 +120,44 @@ master-encrypted originals:
 
 ```bash
 # (a) Overwrite the placeholder soyo.age.pub with the real host pubkey
-#     (the host key was created by sudo in step 3 — pipe it through sudo cat)
 sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub \
   | nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age --command ssh-to-age \
   > secrets/soyo.age.pub
+```
 
+```bash
+# Verify (a): soyo.age.pub now contains the real key (not the dummy)
+head -1 secrets/soyo.age.pub | grep -v "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq" \
+  && echo "Real key installed" || echo "ERROR: still the dummy key!"
+# Expected: "Real key installed"
+```
+
+```bash
 # (b) Rekey all secrets for Soyo — decrypts with your master identity (SSH key)
 #     and re-encrypts with Soyo's host key. Results go to secrets/rekeyed/soyo/.
 #
-# NOTE: This needs your SSH private key. If it's not on the live ISO, copy it:
-#   mkdir -p -m 700 ~/.ssh && cat > ~/.ssh/id_YOURKEY
-#   (paste the key contents, then Ctrl+D; or use scp/ssh-agent)
-# NOTE: The first `nix develop` builds the devshell from scratch — may take
-#       a few minutes.
+# NOTE: First `nix develop` builds the devshell from scratch — may take a few
+#       minutes. If rage prompts for your SSH key passphrase, enter it.
 nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+```
 
-# (c) Commit the new host pubkey and rekeyed secrets, push
-#     If git complains about missing user.name/user.email, set them first:
-#       git config user.name "Your Name"
-#       git config user.email "your@email.com"
-#     If the push fails (HTTPS auth), skip it — you can push later from
-#     your workstation. The install only needs the local files.
+```bash
+# Verify (b): rekeyed secrets exist
+ls -la secrets/rekeyed/soyo/
+# Expected: 4 .age files (root-password, krzysiek-password, restic-password, ntfy-token)
+```
+
+```bash
+# (c) Commit the new host pubkey and rekeyed secrets
 git add secrets/soyo.age.pub secrets/rekeyed/
 git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
-git push || echo "Push failed — you can push from your workstation later."
+git push || echo "Push skipped (HTTPS auth) — push from your workstation later."
+```
+
+```bash
+# Verify (c): committed
+git log --oneline -1
+# Expected: "feat: enroll soyo agenix recipient and rekey secrets"
 ```
 
 ## 5. Install
@@ -103,21 +166,32 @@ git push || echo "Push failed — you can push from your workstation later."
 sudo NIX_CONFIG="$NIX_CONFIG" nixos-install --flake .#soyo
 ```
 
-Reboot. Soyo comes up with TPM auto-unlock, LAN DHCP/DNS, and all secrets decrypted.
+```bash
+# Verify: build succeeded (nixos-install exits 0 on success)
+echo "Exit code: $?"
+# If 0, proceed to reboot. If non-zero, scroll up and check the error.
+```
 
-> **Cleanup:** If you copied your SSH private key onto the live ISO, remove it
-> (`rm ~/.ssh/id_*`) before rebooting or discarding the USB — it's only needed
-> for `agenix rekey`.
+Reboot Soyo. After reboot, TPM should auto-unlock, LAN DHCP/DNS should be
+running, and all secrets decrypted.
+
+> **Cleanup:** If you copied your SSH private key onto the live ISO (`id_ed25519`),
+> remove it before discarding the USB:
+> `rm -f ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub`
 
 ## 6. Enroll TPM (if not auto-detected)
 
-If `boot.initrd.luks.devices.crypted.crypttabExtraOpts` doesn't auto-enroll, run on the target:
+If the TPM was not automatically enrolled during install:
 
 ```bash
 sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/luks
 ```
 
-Phase 2 (M3) will bind PCR 0+2+7 with Secure Boot.
+```bash
+# Verify TPM enrollment
+sudo systemd-cryptenroll /dev/disk/by-partlabel/luks | grep -i tpm
+# Expected: a line mentioning "TPM2" or the PCR binding
+```
 
 ## 7. Validate
 
@@ -126,13 +200,14 @@ Phase 2 (M3) will bind PCR 0+2+7 with Secure Boot.
 uname -r
 
 # NIC driver is in-tree dwmac_motorcomm
-ethtool -i enp1s0
+ethtool -i enp1s0 | grep driver
+# Expected: driver: dwmac_motorcomm
 
 # DNS resolves (Blocky on :53)
 dig +short soyo.home.arpa @127.0.0.1
 
 # DHCP issues leases
-journalctl -u dnsmasq -n 20
+journalctl -u dnsmasq -n 5 --no-pager
 
 # TPM unlock works
 sudo journalctl -u systemd-cryptsetup@crypted --no-pager | tail
@@ -180,4 +255,6 @@ Same flow for `krzysiek-password.age` or any other secret.
 
 ## Recovery paths
 
-See the recovery runbook at `docs/recovery.md` (not yet written) or the [design doc](../docs/superpowers/specs/soyo-dns-dhcp-appliance.md) for TPM, remote initrd SSH, and direct-link rescue procedures.
+See the recovery runbook at `docs/recovery.md` (not yet written) or the
+[design doc](../docs/superpowers/specs/soyo-dns-dhcp-appliance.md) for TPM,
+remote initrd SSH, and direct-link rescue procedures.
