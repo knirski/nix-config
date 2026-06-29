@@ -48,32 +48,29 @@ install -d -m 700 /mnt/persist/etc/ssh
 ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
 ```
 
-## 4. Enroll the agenix recipient
+## 4. Enroll the Soyo agenix recipient
 
-Before `nixos-install`, register Soyo's host key so secrets (password hashes, etc.) are decryptable on first boot:
+Before `nixos-install`, add Soyo's host key to the recipient list so secrets are decryptable on first boot:
 
 ```bash
 # Run agenix commands inside a nix shell with the right tools
 nix shell nixpkgs#agenix nixpkgs#ssh-to-age --command sh -c '
-  # Derive the age public key from the stage-2 host key
+  # Derive the age public key from the stage-2 host key (placed in step 3c)
   ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub > secrets/soyo.age.pub
 
-  # Rekey all secrets to include the new recipient
+  # Add soyo to the recipient list in secrets/secrets.nix (already exists with krzysiek)
+  # Edit secrets/secrets.nix to add "soyo" alongside "krzysiek", then:
   agenix -r
 '
 ```
 
-Now create or update `secrets/secrets.nix` to include `soyo.age.pub` as an agenix recipient, alongside your existing key. Then commit and push the enrolled recipient:
+Now add `soyo.age.pub` to `secrets/secrets.nix` as a recipient, then commit and push:
 
 ```bash
 git add secrets/
 git commit -m "feat: enroll soyo agenix recipient"
 git push
 ```
-
-> **Prerequisite:** `secrets/secrets.nix` must exist with at least your own recipient key. See the [agenix-rekey docs](https://github.com/oddlama/agenix-rekey) and Task 6 in the [plan](../docs/superpowers/plans/2026-06-28-soyo-dns-dhcp-appliance.md) for the full setup.
-
-> **Alternative** — if you skip this step, first boot will generate the host key; then enroll from it, rekey, and redeploy to populate password secrets. SSH key auth (via `authorizedKeys` in plaintext) still works on first boot.
 
 ## 5. Install
 
