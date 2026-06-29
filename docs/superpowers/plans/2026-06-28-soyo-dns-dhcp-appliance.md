@@ -807,10 +807,17 @@ Expected: return `false`.
           settings = cfg.settings;
         };
 
+        systemd.services.blocky = {
+          after = [ "network-online.target" ];
+          wants = [ "network-online.target" ];
+        };
+
         services.resolved.enable = false;
-        networking.firewall.allowedTCPPorts = [ 53 ];
-        networking.firewall.allowedUDPPorts = [ 53 ];
-        networking.firewall.interfaces.${cfg.lanInterface}.allowedTCPPorts = [ 4000 ];
+        networking.nameservers = [ "127.0.0.1" ];
+        networking.firewall.interfaces.${cfg.lanInterface} = {
+          allowedTCPPorts = [ 53 4000 ];
+          allowedUDPPorts = [ 53 ];
+        };
       };
     };
 }
