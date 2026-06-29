@@ -79,7 +79,7 @@ Three one-time bootstrap steps the running system depends on:
 ```bash
 # (a) Root-blank snapshot (the initrd rollback target)
 sudo mkdir -p /mnt-top
-sudo mount -o subvol=/ /dev/mapper/crypted /mnt-top
+sudo mount -o subvolid=5 /dev/mapper/crypted /mnt-top
 sudo btrfs subvolume snapshot -r /mnt-top/root /mnt-top/root-blank
 sudo umount /mnt-top
 ```
