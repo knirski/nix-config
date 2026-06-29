@@ -44,11 +44,13 @@
           system.stateVersion = "26.05";
 
           # Secrets use the agenix-rekey rekeyFile flow (see docs/secrets.md).
-          # Master-encrypted files (secrets/*.age) are rekeyed per host via
-          # `agenix rekey` into secrets/rekeyed/<host>/.  The default hostPubkey
-          # is a dummy placeholder so the first deploy can happen before the
-          # real host key is known — set it once soyo.age.pub exists.
+          # hostPubkey reads from secrets/soyo.age.pub — that file contains the
+          # well-known dummy pubkey by default (auto-generates placeholder
+          # secrets so first build succeeds).  Overwrite it with the real host
+          # pubkey during first install; then `agenix rekey` produces real
+          # host-specific rekeyed files into secrets/rekeyed/<host>/.
           age.rekey = {
+            hostPubkey = ../../secrets/soyo.age.pub;
             masterIdentities = [ ../../secrets/krzysiek.age.pub ];
             storageMode = "local";
             localStorageDir = ../../. + "/secrets/rekeyed/soyo";

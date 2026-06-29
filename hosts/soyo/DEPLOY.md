@@ -59,17 +59,13 @@ Before `nixos-install`, generate host-specific rekeyed secrets from the
 master-encrypted originals:
 
 ```bash
-# (a) Derive the age public key from the stage-2 host key
-#     (the pubkey was created by sudo in step 3 — pipe it through sudo cat)
+# (a) Overwrite the placeholder soyo.age.pub with the real host pubkey
+#     (the host key was created by sudo in step 3 — pipe it through sudo cat)
 sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub \
   | nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age --command ssh-to-age \
   > secrets/soyo.age.pub
 
-# (b) Set hostPubkey in the assembler so agenix-rekey encrypts for the real host key
-#     Edit modules/parts/soyo.nix — uncomment or set:
-#       hostPubkey = ../../secrets/soyo.age.pub;
-
-# (c) Rekey all secrets for Soyo — decrypts with your master identity (SSH key)
+# (b) Rekey all secrets for Soyo — decrypts with your master identity (SSH key)
 #     and re-encrypts with Soyo's host key. Results go to secrets/rekeyed/soyo/.
 #
 # NOTE: This needs your SSH private key. Copy it first if not present:
@@ -77,7 +73,7 @@ sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub \
 #   (paste the key, then Ctrl+D; or use scp/ssh-agent)
 nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
 
-# (d) Commit the new host pubkey and rekeyed secrets, push
+# (c) Commit the new host pubkey and rekeyed secrets, push
 git add secrets/soyo.age.pub secrets/rekeyed/
 git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
 git push

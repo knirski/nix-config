@@ -255,10 +255,10 @@ This allows:
 Then:
 
 4. ssh-to-age on the target to get the real host pubkey.
-5. Save it as `secrets/soyo.age.pub`.
-6. Set `hostPubkey = ../../secrets/soyo.age.pub;` in the host assembler.
-7. Run `agenix rekey` to produce real rekeyed files.
-8. Redeploy — now the target can decrypt them.
+5. Overwrite `secrets/soyo.age.pub` with it (the `hostPubkey` option already
+   points to this file, so no config edit needed).
+6. Run `agenix rekey` to produce real rekeyed files.
+7. Redeploy — now the target can decrypt them.
 
 > **Note:** The design doc's M1/M2 cut-line places the first install without
 > rekeyed secrets; the full rekey workflow is completed as part of the
@@ -334,11 +334,14 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 
 1. Create the host directory and assembler module (see AGENTS.md "Adding a host").
 2. Include the `users` aspect to reuse the secret inventory.
-3. On the target (or a one-time bootstrap key):
+3. In the host assembler, set `age.rekey.hostPubkey = ../../secrets/<host>.age.pub;`
+   and create a placeholder `secrets/<host>.age.pub` containing the agenix-rekey
+   dummy pubkey (`age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq`).
+   The dummy allows building before the real key exists.
+4. On the target (or a one-time bootstrap key):
    - Generate an SSH host key.
    - Derive its age public key with `ssh-to-age`.
-4. Save the pubkey as `secrets/<host>.age.pub`.
-5. In the host assembler, set `age.rekey.hostPubkey = ../../secrets/<host>.age.pub;`.
+5. Overwrite `secrets/<host>.age.pub` with the real pubkey.
 6. Run `agenix rekey` — it will rekey all secrets for the new host.
 7. Deploy.
 
