@@ -13,7 +13,7 @@
 Every task's requirements implicitly include these (exact values, copied from the spec):
 
 - `nixpkgs` tracks `nixos-unstable`; `system.stateVersion = "26.05"`; `home.stateVersion = "26.05"`.
-- Kernel uses `pkgs.linuxPackages_latest` with the in-tree `dwmac_motorcomm` NIC driver — no pin, no out-of-tree module.
+- Kernel uses `pkgs.linuxPackages_latest` with the in-tree `dwmac_motorcomm` NIC driver — no pin, no out-of-tree module. (nixpkgs 26.05's default kernel config lacks the driver, hence `linuxPackages_latest`.)
 - Host name `soyo`; static LAN IP `10.0.0.9/24`; gateway `10.0.0.1`; DHCP pool `10.0.0.50,10.0.0.199`; direct-link rescue `192.168.254.2/30` (laptop `192.168.254.1/30`); search/local domain `home.arpa`; wired interface `enp1s0`; disk `/dev/disk/by-id/ata-PELADN_512GB_20250522100164`.
 - Dendritic: aspects expose `flake.modules.nixos.<aspect>` / `flake.modules.homeManager.<aspect>`; hosts assemble with `config.flake.modules.nixos.*`. No manual sibling `imports` of aspect files.
 - Impermanent root via Btrfs blank-snapshot rollback (systemd initrd) + `preservation`; durable state only under `/persist`. Persisted-path completeness is correctness, not cleanup.
