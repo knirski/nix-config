@@ -63,15 +63,11 @@ master-encrypted originals:
 nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age --command sh -c '  \
   ssh-to-age < /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub            \
              > secrets/soyo.age.pub                                     '
-```
 
-```bash
 # (b) Set hostPubkey in the assembler so agenix-rekey encrypts for the real host key
 #     Edit modules/parts/soyo.nix — uncomment or set:
 #       hostPubkey = ../../secrets/soyo.age.pub;
-```
 
-```bash
 # (c) Rekey all secrets for Soyo — decrypts with your master identity (SSH key)
 #     and re-encrypts with Soyo's host key. Results go to secrets/rekeyed/soyo/.
 #
@@ -79,9 +75,7 @@ nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age 
 #   install -d -m 700 ~/.ssh && cat > ~/.ssh/id_ed25519
 #   (paste the key, then Ctrl+D; or use scp/ssh-agent)
 nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
-```
 
-```bash
 # (d) Commit the new host pubkey and rekeyed secrets, push
 git add secrets/soyo.age.pub secrets/rekeyed/
 git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
