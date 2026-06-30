@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+echo "==> Rekeying agenix secrets..."
+nix develop '.#' -c agenix rekey
+
+echo "==> Deploying to soyo (local build, remote activation)..."
+nixos-rebuild switch --flake .#soyo --target-host "krzysiek@10.0.0.9" --use-remote-sudo "$@"

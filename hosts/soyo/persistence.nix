@@ -15,6 +15,7 @@
       }
       "/var/lib/dnsmasq"
       "/var/log"
+      "/etc/restic"
     ];
     files = [
       {
