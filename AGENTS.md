@@ -83,11 +83,10 @@ and its docs must teach (see "Learning docs" below).
 - Reuse the `base`, `users`, `home.base`, and `backup` aspects and the disko
   pattern. Do **not** toggle on server-only aspects (DNS, DHCP, remote-unlock)
   for a non-server host.
-- New agenix host key: generate an SSH host key, derive its age pubkey
-  (`ssh-to-age`), save as `secrets/<host>.age.pub`, set
-  `age.rekey.hostPubkey` in the host assembler, run `agenix rekey` to
-  generate per-host rekeyed secrets, then commit the new pubkey and
-  rekeyed files.
+- New agenix host key: generate an SSH host key, save its public key as
+  `secrets/<host>.pub`, set `age.rekey.hostPubkey` in the host assembler to
+  that path, run `agenix rekey` to generate per-host rekeyed secrets, then
+  commit the new pubkey and rekeyed files.
 
 ## Learning docs (required output)
 

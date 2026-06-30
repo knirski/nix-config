@@ -94,7 +94,7 @@ editable by the right people while still committing them to git.
 - **Who holds it:** the target machine (e.g. Soyo).
 - **What it does:** lets that machine decrypt secrets at boot time.
 - **Where it lives:** `/persist/etc/ssh/ssh_host_ed25519_key` on the target.
-- **Its public key in the repo:** `secrets/soyo.age.pub` (added during first install).
+- **Its public key in the repo:** `secrets/soyo.pub` (added during first install).
 
 Each host has its own SSH host key, so a compromised machine cannot decrypt
 secrets meant for a different machine.
@@ -200,7 +200,7 @@ Layer 1 (in git)                    Layer 2 (in git)
 ```
 secrets/
 ├── krzysiek.age.pub        # Master identity public key (plaintext)
-├── soyo.age.pub            # Soyo host public key (plaintext; placeholder
+├── soyo.pub                # Soyo host SSH public key (plaintext; placeholder
 │                           #   before first install)
 ├── root-password.age       # Master-encrypted (krzysiek's key)
 ├── krzysiek-password.age   # Master-encrypted
@@ -238,11 +238,18 @@ And we need the rekeyed secrets to build the system for that first install.
 
 **agenix-rekey solves this with a dummy placeholder:**
 
-The `age.rekey.hostPubkey` option defaults to a well-known dummy age public
-key for which **no one has the private key**.  When the system sees this
-dummy key during `nix build`, it does not look for real rekeyed files.
-Instead it auto-generates **placeholder secrets** — dummy encrypted files
-that satisfy the build but cannot actually be decrypted.
+The file at `age.rekey.hostPubkey` is pre-seeded with a well-known dummy
+SSH public key for which **no one has the private key**.  When the system
+sees this dummy key during `nix build`, it does not look for real rekeyed
+files.  Instead it auto-generates **placeholder secrets** — dummy encrypted
+files that satisfy the build but cannot actually be decrypted.
+
+**Why an SSH public key and not an age X25519 key?**  The agenix activation
+script on the target uses the Go `age` binary with `-i ssh_key` to decrypt
+rekeyed secrets.  Go `age` converts SSH ed25519 → X25519 internally when
+given an `-> ssh-ed25519` recipient, but it *cannot* match an SSH private
+key to an `-> X25519` recipient.  Therefore `hostPubkey` must point to the
+raw SSH public key so rekeyed files use `-> ssh-ed25519` recipients.
 
 This allows:
 
@@ -254,9 +261,10 @@ This allows:
 
 Then:
 
-4. ssh-to-age on the target to get the real host pubkey.
-5. Overwrite `secrets/soyo.age.pub` with it (the `hostPubkey` option already
-   points to this file, so no config edit needed).
+4. Generate the SSH host key (first boot creates it on `/persist`).
+5. Overwrite `secrets/soyo.pub` with the real SSH public key (the
+   `hostPubkey` option already points to this file, so no config edit
+   needed).
 6. Run `agenix rekey` to produce real rekeyed files.
 7. Redeploy — now the target can decrypt them.
 
@@ -331,16 +339,15 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 
 1. Create the host directory and assembler module (see AGENTS.md "Adding a host").
 2. Include the `users` aspect to reuse the secret inventory.
-3. In the host assembler, set `age.rekey.hostPubkey = ../../secrets/<host>.age.pub;`
-   and create a placeholder `secrets/<host>.age.pub` containing the agenix-rekey
-   dummy pubkey (`age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq`).
+3. In the host assembler, set `age.rekey.hostPubkey = ../../secrets/<host>.pub;`
+   and create a placeholder `secrets/<host>.pub` containing a dummy SSH public
+   key (e.g. `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKnownDummyKeyNoOneHasThePrivateKey=`).
    The dummy allows building before the real key exists.
 4. On the target (or a one-time bootstrap key):
    - Generate an SSH host key.
-   - Derive its age public key with `ssh-to-age`.
-5. Overwrite `secrets/<host>.age.pub` with the real pubkey.
-6. Run `agenix rekey` — it will rekey all secrets for the new host.
-7. Deploy.
+   - Copy the SSH public key into the repo as `secrets/<host>.pub`.
+5. Run `agenix rekey` — it will rekey all secrets for the new host.
+6. Deploy.
 
 ---
 
@@ -351,7 +358,7 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 | `~/.ssh/id_ed25519` | Master **private** key (YOUR SSH key) | `ssh-keygen` on your workstation |
 | `~/.ssh/id_ed25519.pub` | Master public key | same |
 | `secrets/krzysiek.age.pub` | Master age public key, stored in repo | `ssh-to-age < ~/.ssh/id_ed25519.pub` (one-time setup) |
-| `secrets/soyo.age.pub` | Soyo's age public key | `ssh-to-age < /persist/etc/ssh/ssh_host_ed25519_key.pub` during install |
+| `secrets/soyo.pub` | Soyo's SSH public key (raw, not age-converted) | `cat /persist/etc/ssh/ssh_host_ed25519_key.pub` during install |
 | `/persist/etc/ssh/ssh_host_ed25519_key` | Soyo's SSH host **private** key | `ssh-keygen` during first install |
 | `/persist/etc/ssh/ssh_host_ed25519_key.pub` | Soyo's SSH host public key | same |
 | `secrets/*.age` | Master-encrypted secrets | `agenix edit ...` or `rage -e -i ...` |

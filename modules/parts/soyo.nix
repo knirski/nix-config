@@ -44,11 +44,12 @@
           system.stateVersion = "26.05";
 
           # Secrets use the agenix-rekey rekeyFile flow (see docs/secrets.md).
-          # hostPubkey reads from secrets/soyo.age.pub — that file contains the
-          # well-known dummy pubkey by default (auto-generates placeholder
-          # secrets so first build succeeds).  Overwrite it with the real host
-          # pubkey during first install; then `agenix rekey` produces real
-          # host-specific rekeyed files into secrets/rekeyed/<host>/.
+          # hostPubkey reads from secrets/soyo.pub — the raw SSH public key.
+          # Go `age` (used by agenix activation) can only decrypt
+          # -> ssh-ed25519 recipients with -i ssh_key, not -> X25519.
+          # During bootstrap (before host key exists) this must be a dummy
+          # SSH public key placeholder; overwrite with the real key from
+          # /persist/etc/ssh/ during first install.
           age.rekey = {
             hostPubkey = ../../secrets/soyo.pub;
             # Path to the operator's SSH private key, used to decrypt

@@ -166,16 +166,17 @@ master-encrypted originals.  The config points `masterIdentities` to
 so decryption works.
 
 ```bash
-# (a) Overwrite the placeholder soyo.age.pub with the real host pubkey
+# (a) Overwrite the placeholder soyo.pub with the real host SSH pubkey.
+#     Go `age` (used by agenix activation on the target) requires raw SSH
+#     public keys (not X25519 age pubkeys) to match with `-i ssh_key`.
 sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub \
-  | nix shell nixpkgs#ssh-to-age --command ssh-to-age \
-  > secrets/soyo.age.pub
+  > secrets/soyo.pub
 ```
 
 ```bash
-# Verify (a): soyo.age.pub now contains the real key (not the dummy)
-head -1 secrets/soyo.age.pub | grep -v "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq" \
-  && echo "Real key installed" || echo "ERROR: still the dummy key!"
+# Verify (a): soyo.pub now contains the real key (not the dummy)
+head -1 secrets/soyo.pub | grep -q ssh-ed25519 \
+  && echo "Real key installed" || echo "ERROR: not an SSH public key!"
 # Expected: "Real key installed"
 ```
 
@@ -196,7 +197,7 @@ ls -la secrets/rekeyed/soyo/
 
 ```bash
 # (c) Commit the new host pubkey and rekeyed secrets
-git add secrets/soyo.age.pub secrets/rekeyed/
+git add secrets/soyo.pub secrets/rekeyed/
 git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
 git push
 ```
