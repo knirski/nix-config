@@ -24,8 +24,8 @@ then the concrete file layout and daily commands.
   - [Add a new host](#add-a-new-host)
 - [Key rotation & recovery](#key-rotation--recovery)
   - [Change a secret on a running system](#change-a-secret-on-a-running-system)
-  - [Rotate the master key (compromised operator key)](#rotate-the-master-key-compromised-operator-key)
-  - [Rotate a host key (compromised machine)](#rotate-a-host-key-compromised-machine)
+  - [Rotate the master key](#rotate-the-master-key)
+  - [Rotate a host key](#rotate-a-host-key)
 - [Reference: key files and where they live](#reference-key-files-and-where-they-live)
 
 ---
@@ -382,10 +382,13 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 
 After deploy, the new value is live. No reboot needed.
 
-### Rotate the master key (compromised operator key)
+### Rotate the master key
 
-If your personal SSH key is compromised, all master-encrypted `.age` files
-must be re-encrypted with a new key, and all hosts must be rekeyed.
+Reasons to rotate: your SSH key is compromised, you got a new laptop, you
+want to use a YubiKey, or simply periodic key rotation policy.
+
+Whatever the reason, every master-encrypted `.age` file in `secrets/` must
+be re-encrypted with the new key, and all hosts rekeyed.
 
 **On your workstation:**
 
@@ -425,12 +428,15 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 - Update your SSH config, GitHub deploy keys, etc. to use the new key.
 - Securely destroy the old private key.
 
-### Rotate a host key (compromised machine)
+### Rotate a host key
 
-If a machine's SSH host key is compromised, that machine's rekeyed secrets
-are exposed. Replace the host key and regenerate rekeyed files.
+Reasons to rotate: the machine's host key is compromised, you are rebuilding
+from scratch and want fresh keys, or routine key rotation.
 
-**On the compromised machine (or the live ISO with /persist mounted):**
+A rotated host key means old rekeyed secrets are no longer decryptable —
+regenerate them before deploying.
+
+**On the target machine (or live ISO with /persist mounted):**
 
 ```bash
 # 1. Generate a new SSH host key
