@@ -135,7 +135,7 @@
                     name = vol.name;
                     value = {
                       snapshot_dir = vol.snapshotDir;
-                      snapshot_create = "yes";
+                      snapshot_create = "always";
                     }
                     // lib.optionalAttrs (vol.retention != { }) {
                       snapshot_preserve_min = "2d";
