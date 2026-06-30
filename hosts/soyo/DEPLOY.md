@@ -154,7 +154,8 @@ head -1 secrets/soyo.age.pub | grep -v "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs
 #
 # NOTE: First `nix develop` builds the devshell from scratch — may take a few
 #       minutes. If rage prompts for your SSH key passphrase, enter it.
-nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+#       NIX_CONFIG propagates experimental features to agenix-rekey's internal nix calls.
+NIX_CONFIG="experimental-features = nix-command flakes" NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
 ```
 
 ```bash
@@ -246,7 +247,7 @@ sudo nixos-rebuild switch --flake .#soyo
 When secrets change, re-run `agenix rekey` on the build workstation before deploying:
 
 ```bash
-nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
 ```
 
 ## Changing a password
@@ -256,10 +257,10 @@ nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix re
 mkpasswd -m sha-512
 
 # 2. Edit the master-encrypted secret (uses your master identity — SSH key)
-nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix edit secrets/root-password.age
+NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix edit secrets/root-password.age
 
 # 3. Rekey so the change propagates to the host-specific rekeyed secret
-nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
 
 # 4. Commit and deploy
 git add secrets/root-password.age secrets/rekeyed/
