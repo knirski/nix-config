@@ -50,7 +50,7 @@
           # pubkey during first install; then `agenix rekey` produces real
           # host-specific rekeyed files into secrets/rekeyed/<host>/.
           age.rekey = {
-            hostPubkey = ../../secrets/soyo.age.pub;
+            hostPubkey = ../../secrets/soyo.pub;
             # Path to the operator's SSH private key, used to decrypt
             # master-encrypted secrets before rekeying for the host.
             # Must be an absolute string (not a Nix path) so it's NOT
