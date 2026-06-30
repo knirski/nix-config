@@ -9,5 +9,5 @@ echo "==> Deploying to soyo (local build, remote activation)..."
 nixos-rebuild switch \
   --flake .#soyo \
   --target-host "krzysiek@10.0.0.9" \
-  --use-remote-sudo
+  --sudo
 SCRIPT
