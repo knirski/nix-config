@@ -26,7 +26,6 @@
           pkgs.nh
           pkgs.nixos-anywhere
           pkgs.nixos-facter
-          inputs.agenix.packages.${system}.default
           inputs.agenix-rekey.packages.${system}.default
         ];
       };
