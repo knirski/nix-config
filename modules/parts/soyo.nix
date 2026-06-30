@@ -51,12 +51,14 @@
           # host-specific rekeyed files into secrets/rekeyed/<host>/.
           age.rekey = {
             hostPubkey = ../../secrets/soyo.age.pub;
-            # Point to the operator's SSH private key using $HOME so it's not
-            # copied to the nix store (avoids leaking the key).  The corresponding
-            # public key is in secrets/krzysiek.age.pub.  You can override at
-            # runtime with agenix rekey -i /path/to/key.
+            # Path to the operator's SSH private key, used to decrypt
+            # master-encrypted secrets before rekeying for the host.
+            # Must be an absolute string (not a Nix path) so it's NOT
+            # copied to the nix store.  Adjust this to your machine:
+            #   live ISO: /home/nixos/.ssh/id_ed25519
+            #   workstation: /home/krzysiek/.ssh/id_ed25519
             masterIdentities = [
-              (builtins.getEnv "HOME" + "/.ssh/id_ed25519")
+              "/home/nixos/.ssh/id_ed25519"
             ];
             storageMode = "local";
             localStorageDir = ../../. + "/secrets/rekeyed/soyo";

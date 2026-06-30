@@ -157,7 +157,9 @@ sudo ls -la /mnt/persist/etc/ssh/
 ## 4. Enroll Soyo and rekey secrets
 
 Before `nixos-install`, generate host-specific rekeyed secrets from the
-master-encrypted originals:
+master-encrypted originals.  The config points `masterIdentities` to
+`/home/nixos/.ssh/id_ed25519` — your key from step 1 lives at that path,
+so decryption works.
 
 ```bash
 # (a) Overwrite the placeholder soyo.age.pub with the real host pubkey
@@ -253,6 +255,10 @@ journalctl -u dnsmasq -n 5 --no-pager
 # TPM unlock works
 sudo journalctl -u systemd-cryptsetup@crypted --no-pager | tail
 ```
+
+> **Post-deploy:** Update `masterIdentities` in `modules/parts/soyo.nix` to
+> your workstation's SSH key path (e.g. `/home/krzysiek/.ssh/id_ed25519`)
+> before running `agenix rekey` from your workstation later.
 
 ## Subsequent deploys
 
