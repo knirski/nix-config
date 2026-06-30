@@ -1,3 +1,5 @@
 result
 # agenix-rekey temp files
 **/.tmp.agenix-rekey.*/
+# direnv local cache
+.direnv/
