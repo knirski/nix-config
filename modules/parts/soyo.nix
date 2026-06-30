@@ -55,11 +55,11 @@
             # Path to the operator's SSH private key, used to decrypt
             # master-encrypted secrets before rekeying for the host.
             # Must be an absolute string (not a Nix path) so it's NOT
-            # copied to the nix store.  Adjust this to your machine:
-            #   live ISO: /home/nixos/.ssh/id_ed25519
+            # copied to the nix store.  Adjust to your machine:
             #   workstation: /home/krzysiek/.ssh/id_ed25519
+            #   live ISO:    /home/nixos/.ssh/id_ed25519
             masterIdentities = [
-              "/home/nixos/.ssh/id_ed25519"
+              "/home/krzysiek/.ssh/id_ed25519"
             ];
             storageMode = "local";
             localStorageDir = ../../. + "/secrets/rekeyed/soyo";

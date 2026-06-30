@@ -261,9 +261,10 @@ journalctl -u dnsmasq -n 5 --no-pager
 sudo journalctl -u systemd-cryptsetup@crypted --no-pager | tail
 ```
 
-> **Post-deploy:** Update `masterIdentities` in `modules/parts/soyo.nix` to
-> your workstation's SSH key path (e.g. `/home/krzysiek/.ssh/id_ed25519`)
-> before running `agenix rekey` from your workstation later.
+> **Note:** `masterIdentities` in `modules/parts/soyo.nix` now points to
+> `/home/krzysiek/.ssh/id_ed25519` (your workstation). If you ever need to
+> run `agenix rekey` from the live ISO again, change it to
+> `/home/nixos/.ssh/id_ed25519` first.
 
 ## Subsequent deploys
 
