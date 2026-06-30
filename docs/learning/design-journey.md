@@ -2,6 +2,16 @@
 
 Why Soyo's config looks the way it does — the forks and the reasons.
 
+## Why Nix and flakes?
+
+Before any of this made sense, the question was: why not just `apt install dnsmasq blocky` on a Debian box?
+
+A shell-scripted server works fine for one machine. The problems start when you want to reproduce it — a replacement after disk failure, a second host, or just remembering what you changed six months ago. With imperative config, the machine is a snowflake: its state is whatever accumulated from every command you ever ran. There's no single source of truth for what's installed, configured, or running.
+
+NixOS solves this by making the entire system a **derivation of configuration**. Every package, every config file, every service is declared in one place. The system is built atomically from that declaration. If it builds, it works; if it breaks, roll back to the previous generation. The machine becomes a function of your config, not an accumulation of manual steps.
+
+**Flakes** are the modern Nix convention for packaging that config: a self-contained unit with locked inputs (`nixpkgs` pinned to a specific revision), a clean entry point, and composable outputs. A flake is version-controllable, reproducible, and sharable across machines. This repo is a single flake that can build any of its hosts.
+
 ## Starting point: a single flake
 
 The simplest NixOS flake has one `nixosConfiguration` in `flake.nix` and a `hardware-configuration.nix` from `nixos-generate-config`. That works for one host, but the second host means copying everything. This repo starts multi-host from day one.
