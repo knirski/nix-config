@@ -278,12 +278,10 @@ mkpasswd -m sha-512
 
 # 2. Edit the master-encrypted secret
 #    agenix edit decrypts with your SSH key, opens $EDITOR, re-encrypts
-nix --extra-experimental-features 'nix-command flakes' \
-  develop '.#' -c agenix edit secrets/root-password.age
+nix develop '.#' -c agenix edit secrets/root-password.age
 
 # 3. Rekey so the change propagates to host-specific rekeyed files
-nix --extra-experimental-features 'nix-command flakes' \
-  develop '.#' -c agenix rekey
+nix develop '.#' -c agenix rekey
 
 # 4. Commit and deploy
 git add secrets/root-password.age secrets/rekeyed/
