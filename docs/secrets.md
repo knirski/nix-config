@@ -303,8 +303,7 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 
    ```bash
    echo -n "my-api-token-value" \
-     | nix shell nixpkgs#age -c age --encrypt \
-       -r "$(cat secrets/krzysiek.age.pub)" \
+     | nix run nixpkgs#rage -- -e -i ~/.ssh/id_ed25519 \
        -o secrets/my-api-token.age
    ```
 
@@ -355,7 +354,7 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 | `secrets/soyo.age.pub` | Soyo's age public key | `ssh-to-age < /persist/etc/ssh/ssh_host_ed25519_key.pub` during install |
 | `/persist/etc/ssh/ssh_host_ed25519_key` | Soyo's SSH host **private** key | `ssh-keygen` during first install |
 | `/persist/etc/ssh/ssh_host_ed25519_key.pub` | Soyo's SSH host public key | same |
-| `secrets/*.age` | Master-encrypted secrets | `agenix edit ...` or `age --encrypt ...` |
+| `secrets/*.age` | Master-encrypted secrets | `agenix edit ...` or `rage -e -i ...` |
 | `secrets/rekeyed/<host>/*.age` | Host-specific rekeyed secrets | `agenix rekey` |
 
 ---
