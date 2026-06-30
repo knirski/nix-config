@@ -15,6 +15,9 @@
         remote-unlock
         blocky
         dhcp
+        maintenance
+        backup
+        observability
       ])
       ++ [
         inputs.disko.nixosModules.disko
@@ -36,6 +39,8 @@
         ../../hosts/soyo/initrd-unlock.nix
         ../../hosts/soyo/dns.nix
         ../../hosts/soyo/dhcp.nix
+        ../../hosts/soyo/backup.nix
+        ../../hosts/soyo/observability.nix
         inputs.nixos-facter-modules.nixosModules.facter
         { facter.reportPath = ../../hosts/soyo/facter.json; }
         ../../hosts/soyo/networking.nix
@@ -57,7 +62,7 @@
             # Must be an absolute string (not a Nix path) so it's NOT
             # copied to the nix store.  Adjust this to your machine:
             #   live ISO: /home/nixos/.ssh/id_ed25519
-            #   workstation: /home/krzysiek/.ssh/id_ed25519
+            #   workstation: /home/krzysiek/.ssh/soyo_ed25519
             masterIdentities = [
               "/home/nixos/.ssh/id_ed25519"
             ];

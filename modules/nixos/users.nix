@@ -18,6 +18,7 @@
       krzysiek-password.rekeyFile = ../../secrets/krzysiek-password.age;
       restic-password.rekeyFile = ../../secrets/restic-password.age;
       ntfy-token.rekeyFile = ../../secrets/ntfy-token.age;
+      ntfy-topic.rekeyFile = ../../secrets/ntfy-topic.age;
     };
   };
 }

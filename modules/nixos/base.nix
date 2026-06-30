@@ -4,6 +4,7 @@
     {
       time.timeZone = "Europe/Warsaw";
       i18n.defaultLocale = "en_US.UTF-8";
+      environment.variables.EDITOR = "nvim";
 
       nix.settings = {
         experimental-features = [
@@ -16,11 +17,15 @@
 
       documentation.nixos.enable = true;
 
+      programs.neovim = {
+        enable = true;
+        viAlias = true;
+      };
+
       environment.systemPackages = with pkgs; [
         git
         htop
         jq
-        vim
       ];
     };
 }
