@@ -22,6 +22,10 @@ then the concrete file layout and daily commands.
   - [Edit a secret (change a password)](#edit-a-secret-change-a-password)
   - [Add a new secret](#add-a-new-secret)
   - [Add a new host](#add-a-new-host)
+- [Key rotation & recovery](#key-rotation--recovery)
+  - [Change a secret on a running system](#change-a-secret-on-a-running-system)
+  - [Rotate the master key (compromised operator key)](#rotate-the-master-key-compromised-operator-key)
+  - [Rotate a host key (compromised machine)](#rotate-a-host-key-compromised-machine)
 - [Reference: key files and where they live](#reference-key-files-and-where-they-live)
 
 ---
@@ -348,6 +352,120 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
    - Copy the SSH public key into the repo as `secrets/<host>.pub`.
 5. Run `agenix rekey` — it will rekey all secrets for the new host.
 6. Deploy.
+
+---
+
+## Key rotation & recovery
+
+### Change a secret on a running system
+
+Use the same flow for any secret — password hash, API token, or backup passphrase:
+
+```bash
+# 1. Generate the new value
+mkpasswd -m sha-512                  # for a password hash
+echo -n "new-ntfy-token" > /dev/null # replace with your actual token
+
+# 2. Re-encrypt the master file with your SSH key
+echo -n "new-value" \
+  | nix run nixpkgs#rage -- -e -i ~/.ssh/id_ed25519 \
+    -o secrets/ntfy-token.age
+
+# 3. Rekey for all hosts
+nix develop '.#' -c agenix rekey
+
+# 4. Commit and deploy
+git add secrets/ntfy-token.age secrets/rekeyed/
+git commit -m "chore: update ntfy token"
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+```
+
+After deploy, the new value is live. No reboot needed.
+
+### Rotate the master key (compromised operator key)
+
+If your personal SSH key is compromised, all master-encrypted `.age` files
+must be re-encrypted with a new key, and all hosts must be rekeyed.
+
+**On your workstation:**
+
+```bash
+# 1. Generate a new SSH key
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_new
+
+# 2. Derive the new age pubkey
+ssh-to-age < ~/.ssh/id_ed25519_new.pub > secrets/krzysiek.age.pub
+
+# 3. Re-encrypt every master .age file with the new key
+for f in secrets/*.age; do
+  rage -d -i ~/.ssh/id_ed25519_old "$f" \
+    | rage -e -i ~/.ssh/id_ed25519_new -o "$f.tmp" \
+    && mv "$f.tmp" "$f"
+done
+
+# 4. Update masterIdentities in the host assembler to point to the new key
+#    (absolute path on your workstation)
+#    modules/parts/soyo.nix → masterIdentities = [ "/home/krzysiek/.ssh/id_ed25519_new" ];
+
+# 5. Rekey for all hosts
+nix develop '.#' -c agenix rekey
+
+# 6. Commit
+git add secrets/
+git commit -m "fix: rotate compromised master key"
+
+# 7. Deploy to every host
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+```
+
+**After deploy:**
+- The old key can no longer decrypt new master files.
+- Hosts continue working — their rekeyed files are unchanged (still encrypted
+  with each host's own key).
+- Update your SSH config, GitHub deploy keys, etc. to use the new key.
+- Securely destroy the old private key.
+
+### Rotate a host key (compromised machine)
+
+If a machine's SSH host key is compromised, that machine's rekeyed secrets
+are exposed. Replace the host key and regenerate rekeyed files.
+
+**On the compromised machine (or the live ISO with /persist mounted):**
+
+```bash
+# 1. Generate a new SSH host key
+sudo ssh-keygen -t ed25519 -f /persist/etc/ssh/ssh_host_ed25519_key -N ""
+```
+
+**On your workstation:**
+
+```bash
+# 2. Copy the new SSH public key into the repo
+#    (scp from the machine, or paste manually)
+scp krzysiek@soyo:/persist/etc/ssh/ssh_host_ed25519_key.pub secrets/soyo.pub
+
+# 3. Rekey — decrypts with your master key, re-encrypts with the new host key
+nix develop '.#' -c agenix rekey
+
+# 4. Commit and deploy
+git add secrets/soyo.pub secrets/rekeyed/
+git commit -m "fix: rotate compromised soyo host key"
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+```
+
+**After deploy:**
+- The new host key is in use. Add it to your `known_hosts`:
+
+  ```bash
+  ssh-keygen -R soyo.home.arpa
+  ssh krzysiek@soyo.home.arpa -o StrictHostKeyChecking=accept-new
+  ```
+
+- The old host key is replaced. If other machines had it in their
+  `known_hosts`, they will warn on next SSH connection — verify and accept
+  the new fingerprint.
+- Secrets are now encrypted for the new key. The old key can no longer
+  decrypt them.
 
 ---
 
