@@ -71,7 +71,7 @@
                   name = lib.mkOption { type = lib.types.str; };
                   snapshotDir = lib.mkOption { type = lib.types.str; };
                   retention = lib.mkOption {
-                    type = lib.types.attrsOf lib.types.str;
+                    type = lib.types.attrsOf (lib.types.either lib.types.int lib.types.str);
                     default = { };
                   };
                 };
