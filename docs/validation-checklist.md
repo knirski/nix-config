@@ -206,7 +206,7 @@ Run after first install and after significant updates. Each check has the exact 
 
 - [ ] **Native `nixos-rebuild --target-host` works**
   ```sh
-  ./scripts/deploy-soyo
+  ./scripts/deploy-soyo.sh
   ```
   Expected: builds locally, activates on Soyo.
 

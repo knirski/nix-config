@@ -7,7 +7,7 @@ How to update Soyo to the latest `nixos-unstable` and roll back when an update g
 The day-2 remote deploy uses native `nixos-rebuild --target-host` — your workstation builds, Soyo activates.
 
 ```sh
-./scripts/deploy-soyo
+./scripts/deploy-soyo.sh
 ```
 
 This runs:
