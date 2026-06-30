@@ -29,18 +29,18 @@
         name = "persist";
         snapshotDir = "/snapshots/persist";
         retention = {
-          daily = "7d";
-          weekly = "4w";
-          monthly = "6m";
+          daily = 7;
+          weekly = 4;
+          monthly = 6;
         };
       }
       {
         name = "root";
         snapshotDir = "/snapshots/root";
         retention = {
-          daily = "7d";
-          weekly = "4w";
-          monthly = "3m";
+          daily = 7;
+          weekly = 4;
+          monthly = 3;
         };
       }
     ];

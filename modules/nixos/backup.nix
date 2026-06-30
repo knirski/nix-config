@@ -140,7 +140,9 @@
                     // lib.optionalAttrs (vol.retention != { }) {
                       snapshot_preserve_min = "2d";
                     }
-                    // lib.mapAttrs' (k: v: lib.nameValuePair "snapshot_preserve" "${k} ${v}") vol.retention;
+                    // lib.listToAttrs (lib.mapAttrsToList
+                      (k: v: lib.nameValuePair "snapshot_preserve_${k}" (toString v))
+                      vol.retention);
                   }) cfg.btrbk.subvolumes
                 );
               };
