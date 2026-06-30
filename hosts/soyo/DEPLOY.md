@@ -99,7 +99,7 @@ sudo btrfs subvolume list -t /mnt | grep root-blank
 
 ```bash
 # (b) Soyo's initrd SSH host key (for break-glass unlock, lives on ESP)
-if [ -f /mnt/boot/initrd-ssh/ssh_host_ed25519_key ]; then
+if sudo [ -f /mnt/boot/initrd-ssh/ssh_host_ed25519_key ]; then
   echo "initrd SSH key already exists — skipping"
 else
   sudo install -d -m 700 /mnt/boot/initrd-ssh
@@ -115,7 +115,7 @@ sudo ls -la /mnt/boot/initrd-ssh/
 
 ```bash
 # (c) Soyo's stage-2 host key on /persist (so agenix can decrypt on first boot)
-if [ -f /mnt/persist/etc/ssh/ssh_host_ed25519_key ]; then
+if sudo [ -f /mnt/persist/etc/ssh/ssh_host_ed25519_key ]; then
   echo "stage-2 SSH key already exists — skipping"
 else
   sudo install -d -m 700 /mnt/persist/etc/ssh
