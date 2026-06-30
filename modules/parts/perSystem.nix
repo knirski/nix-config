@@ -24,6 +24,7 @@
       devShells.default = pkgs.mkShell {
         packages = [
           pkgs.deadnix
+          pkgs.gh
           pkgs.git
           pkgs.nh
           pkgs.nixos-anywhere

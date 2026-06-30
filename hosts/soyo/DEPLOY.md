@@ -6,13 +6,14 @@
 - The target disk: `/dev/disk/by-id/ata-PELADN_512GB_20250522100164` (adjust in `disko.nix` if different).
 - Network: live ISO gets an IP via DHCP on the LAN uplink.
 - A local checkout of this repo with write access to the remote.
-- Your SSH private key available on the live ISO (see [Setup SSH key](#setup-ssh-key) below).
+- A GitHub personal access token (classic, with `repo` scope) for `gh` CLI auth.
+- Your SSH private key on the live ISO for `agenix rekey` (see below).
 
-## Setup SSH key
+## Setup SSH key (for agenix rekey)
 
-`agenix rekey` (step 4) needs your SSH private key to decrypt the master-encrypted
-secrets. If it's already on the live ISO (e.g. you SSHed in with agent forwarding),
-skip this. Otherwise copy it from your workstation:
+This key is **only needed for `agenix rekey`** to decrypt master-encrypted secrets.
+Git operations use `gh` instead (see below). If your SSH key is already on the live
+ISO (e.g. you SSHed in with agent forwarding), skip this.
 
 ```bash
 # On Soyo's live ISO, find its IP:
@@ -37,13 +38,32 @@ ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null && echo "SSH key OK"
 # Expected output: "SSH key OK"
 ```
 
+## Setup gh CLI (for git auth)
+
+`gh` handles all GitHub auth (clone, push) without fuss. Install and log in:
+
+```bash
+nix profile install nixpkgs#gh
+gh auth login
+# Follow the prompts:
+#   1. GitHub.com (default)
+#   2. HTTPS (recommended) or SSH
+#   3. Login with a browser — copy the one-time code, open
+#      https://github.com/login/device on any machine, paste it.
+#      Or paste an authentication token (classic, repo scope).
+```
+
+```bash
+# Verify:
+gh auth status
+# Expected: "Logged in to github.com as <your-username>"
+```
+
 ## 1. Clone the repo and configure git
 
 ```bash
-git clone https://github.com/knirski/nix-config
+gh repo clone knirski/nix-config
 cd nix-config
-git config user.name "Your Name"
-git config user.email "your@email.com"
 
 # Enable experimental features permanently so every nix command
 # works without --extra-experimental-features:
@@ -172,7 +192,7 @@ ls -la secrets/rekeyed/soyo/
 # (c) Commit the new host pubkey and rekeyed secrets
 git add secrets/soyo.age.pub secrets/rekeyed/
 git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
-git push || echo "Push skipped (HTTPS auth) — push from your workstation later."
+git push
 ```
 
 ```bash
