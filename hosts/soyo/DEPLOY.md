@@ -155,7 +155,7 @@ head -1 secrets/soyo.age.pub | grep -v "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs
 # NOTE: First `nix develop` builds the devshell from scratch — may take a few
 #       minutes. If rage prompts for your SSH key passphrase, enter it.
 #       NIX_CONFIG propagates experimental features to agenix-rekey's internal nix calls.
-NIX_CONFIG="experimental-features = nix-command flakes" NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
 ```
 
 ```bash
