@@ -42,9 +42,14 @@ ssh-keygen -y -f ~/.ssh/id_ed25519 > /dev/null && echo "SSH key OK"
 ```bash
 git clone https://github.com/knirski/nix-config
 cd nix-config
-export NIX_CONFIG="experimental-features = nix-command flakes"
 git config user.name "Your Name"
 git config user.email "your@email.com"
+
+# Enable experimental features permanently so every nix command
+# works without --extra-experimental-features:
+mkdir -p ~/.config/nix
+grep -qxF "experimental-features = nix-command flakes" ~/.config/nix/nix.conf 2>/dev/null \
+  || echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 ```
 
 ```bash
@@ -58,7 +63,7 @@ git log --oneline -1
 Wipes the target disk and creates the LUKS + Btrfs layout from `disko.nix`:
 
 ```bash
-sudo nix --extra-experimental-features 'nix-command flakes' run github:nix-community/disko -- --mode disko hosts/soyo/disko.nix
+sudo nix run github:nix-community/disko -- --mode disko hosts/soyo/disko.nix
 ```
 
 ```bash
@@ -137,7 +142,7 @@ master-encrypted originals:
 ```bash
 # (a) Overwrite the placeholder soyo.age.pub with the real host pubkey
 sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub \
-  | nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#ssh-to-age --command ssh-to-age \
+  | nix shell nixpkgs#ssh-to-age --command ssh-to-age \
   > secrets/soyo.age.pub
 ```
 
@@ -152,10 +157,9 @@ head -1 secrets/soyo.age.pub | grep -v "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs
 # (b) Rekey all secrets for Soyo — decrypts with your master identity (SSH key)
 #     and re-encrypts with Soyo's host key. Results go to secrets/rekeyed/soyo/.
 #
-# NOTE: First `nix develop` builds the devshell from scratch — may take a few
-#       minutes. If rage prompts for your SSH key passphrase, enter it.
-#       NIX_CONFIG propagates experimental features to agenix-rekey's internal nix calls.
-NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+# NOTE: First `nix develop` builds the devshell from scratch — may take a
+#       few minutes. If rage prompts for your SSH key passphrase, enter it.
+nix develop '.#' -c agenix rekey
 ```
 
 ```bash
@@ -180,7 +184,7 @@ git log --oneline -1
 ## 5. Install
 
 ```bash
-sudo NIX_CONFIG="$NIX_CONFIG" nixos-install --flake .#soyo
+sudo nixos-install --flake .#soyo
 ```
 
 ```bash
@@ -247,7 +251,7 @@ sudo nixos-rebuild switch --flake .#soyo
 When secrets change, re-run `agenix rekey` on the build workstation before deploying:
 
 ```bash
-NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+nix develop '.#' -c agenix rekey
 ```
 
 ## Changing a password
@@ -257,10 +261,10 @@ NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental
 mkpasswd -m sha-512
 
 # 2. Edit the master-encrypted secret (uses your master identity — SSH key)
-NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix edit secrets/root-password.age
+nix develop '.#' -c agenix edit secrets/root-password.age
 
 # 3. Rekey so the change propagates to the host-specific rekeyed secret
-NIX_CONFIG="experimental-features = nix-command flakes" nix --extra-experimental-features 'nix-command flakes' develop '.#' -c agenix rekey
+nix develop '.#' -c agenix rekey
 
 # 4. Commit and deploy
 git add secrets/root-password.age secrets/rekeyed/
