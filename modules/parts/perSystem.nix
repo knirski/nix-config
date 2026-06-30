@@ -1,8 +1,10 @@
 # flake-parts module: dev shell, formatter, and repo checks.
-{ inputs, ... }:
-{
+{ inputs, ... }: {
   systems = [ "x86_64-linux" ];
-  imports = [ inputs.treefmt-nix.flakeModule ];
+  imports = [
+    inputs.treefmt-nix.flakeModule
+    inputs.agenix-rekey.flakeModules.default
+  ];
 
   perSystem =
     {
