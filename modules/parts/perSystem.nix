@@ -29,6 +29,7 @@
           pkgs.nh
           pkgs.nixos-anywhere
           pkgs.nixos-facter
+          pkgs.nixos-rebuild
           config.agenix-rekey.package
         ];
       };
