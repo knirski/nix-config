@@ -204,6 +204,12 @@ Run after first install and after significant updates. Each check has the exact 
   ```
   Expected: `200` or `302` (Grafana redirects to login). Prometheus datasource should be pre-provisioned.
 
+- [ ] **Tailscale connected**
+  ```sh
+  ssh krzysiek@10.0.0.9 tailscale status
+  ```
+  Expected: shows "soyo" as connected with a Tailscale IP. The auth key auto-authenticates on first boot.
+
 - [ ] **Synology Uptime Kuma probe**
   On the Synology: add a DNS monitor in Uptime Kuma querying `10.0.0.9:53` for `soyo.home.arpa`. Power off Soyo. Expected: probe reports DNS down.
 
