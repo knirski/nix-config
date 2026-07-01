@@ -209,13 +209,19 @@ secrets/
 ├── root-password.age       # Master-encrypted (krzysiek's key)
 ├── krzysiek-password.age   # Master-encrypted
 ├── restic-password.age     # Master-encrypted
-├── ntfy-token.age          # Master-encrypted
+├── ntfy-token.age          # Master-encrypted (ntfy.sh access token)
+├── ntfy-topic.age          # Master-encrypted (ntfy.sh topic URL)
+├── grafana-admin-password.age # Master-encrypted (Grafana admin password)
+├── tailscale-auth-key.age  # Master-encrypted (Tailscale pre-auth key)
 └── rekeyed/
     └── soyo/               # Host-specific rekeyed files (soyo's key)
         ├── root-password.age
         ├── krzysiek-password.age
         ├── restic-password.age
-        └── ntfy-token.age
+        ├── ntfy-token.age
+        ├── ntfy-topic.age
+        ├── grafana-admin-password.age
+        └── tailscale-auth-key.age
 ```
 
 Files under `secrets/rekeyed/` are produced by `agenix rekey` and tracked in
