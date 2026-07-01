@@ -1,7 +1,7 @@
 { inputs, ... }:
 {
   flake.modules.nixos.persistence =
-    { pkgs, ... }:
+    { lib, pkgs, ... }:
     {
       imports = [ inputs.preservation.nixosModules.preservation ];
 
@@ -13,6 +13,10 @@
 
       # agenix decrypts using the durable host key, not the wiped /etc/ssh.
       age.identityPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
+
+      # /etc/machine-id is persisted via preservation (not transient), so this
+      # service would fail — harmless, but disable it to keep --failed clean.
+      systemd.services.systemd-machine-id-commit.enable = lib.mkForce false;
 
       # Erase-your-darlings on Btrfs: restore `root` from a blank snapshot each
       # boot. Ordered after the LUKS device opens and before the root is mounted.
