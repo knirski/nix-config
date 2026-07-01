@@ -490,6 +490,32 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 
 ---
 
+## Using `rage` with native SSH keys
+
+`rage` (the Rust implementation of age) supports SSH private keys as native
+identities — no conversion needed. The examples in this doc use `agenix edit`
+for convenience, but you can work with `.age` files directly:
+
+```bash
+# Encrypt a file for the master identity
+rage -e -r "$(ssh-to-age < ~/.ssh/soyo_ed25519.pub)" \
+  < plaintext.txt > secrets/encrypted.age
+
+# Decrypt with the SSH private key directly
+rage -d -i ~/.ssh/soyo_ed25519 secrets/encrypted.age
+```
+
+This only works when the file was encrypted for a recipient that matches the
+SSH key (i.e. the age public key was derived from that SSH key via
+`ssh-to-age`). The `agenix edit` command handles this correctly; raw `rage -e`
+also works as long as you use `ssh-to-age` to derive the recipient.
+
+The `masterIdentities` in `modules/parts/soyo.nix` can point directly to your
+SSH private key — `agenix rekey` passes it to `rage` as `-i <path>`, and
+`rage` handles the rest.
+
+---
+
 ## Further reading
 
 - [age encryption format](https://age-encryption.org)
