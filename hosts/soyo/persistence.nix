@@ -16,6 +16,7 @@
       "/var/lib/dnsmasq"
       "/var/lib/grafana"
       "/var/lib/loki"
+      "/var/lib/tailscale"
       "/var/lib/tempo"
       "/var/lib/prometheus"
       "/var/log"
