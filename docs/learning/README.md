@@ -24,6 +24,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 16 | `modules/nixos/observability.nix`, `hosts/soyo/observability.nix` | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces |
 | 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding |
 | 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, checks |
+| 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
 
 ## What is this repo?
 
@@ -52,6 +53,10 @@ A NixOS flake that configures a small Intel N150 box ("Soyo") as a LAN DNS and D
 **PCR (Platform Configuration Register)** — A TPM register that hashes boot components. If firmware, bootloader, or Secure Boot state changes, PCR values change and the TPM won't release the key — the passphrase fallback is used instead.
 
 **rekeyFile** — agenix-rekey's flow: secrets are master-encrypted with the operator's key, then rekeyed per-host at deploy time. Each host gets its own copy encrypted with its SSH host key.
+
+**Tailscale** — A WireGuard-based mesh VPN that assigns each device a stable IP
+in your tailnet. No open firewall ports, no DynDNS. Soyo joins automatically
+using an encrypted auth key, so you can SSH in from anywhere.
 
 **home.arpa** — The IANA-reserved special-use domain for home networks (RFC 8375). Used as the local search domain instead of `.local` (reserved for mDNS) or a made-up TLD.
 

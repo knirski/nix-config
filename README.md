@@ -54,6 +54,7 @@ Key principles:
 - **Secrets via agenix-rekey** — master-encrypted files rekeyed per host. Full walkthrough in [docs/secrets.md](docs/secrets.md).
 - **`linuxPackages_latest`** — the in-tree `dwmac_motorcomm` NIC driver (Linux 6.13+).
 - **TPM auto-unlock** — unattended power-loss recovery; passphrase keyslot as break-glass fallback.
+- **Tailscale mesh VPN** — remote admin from anywhere, no open ports, no DynDNS. Auth key deployed as an encrypted agenix secret.
 
 ## Tooling
 
@@ -67,6 +68,9 @@ nom build .#nixosConfigurations.soyo.config.system.build.toplevel
 
 # Find which package provides a missing command
 nix-locate <command>
+
+# Connect remotely via Tailscale
+ssh krzysiek@soyo.tailnet-name.ts.net
 
 # Check for CVEs in the current system closure
 # (requires vulnix: nix shell nixpkgs#vulnix)
