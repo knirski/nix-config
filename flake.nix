@@ -24,6 +24,9 @@
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    nix-topology.url = "github:oddlama/nix-topology";
+    nix-topology.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   # The whole flake is built by auto-importing every module file under ./modules
