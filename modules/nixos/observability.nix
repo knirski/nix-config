@@ -10,14 +10,15 @@
         nodeExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "10.0.0.9:9100";
-            description = "Listen address for the prometheus node_exporter (LAN interface, not 0.0.0.0).";
+            default = "10.0.0.9";
+            description = "Listen address (IP only, no port — the module appends its default :9100).";
           };
         };
         dnsmasqExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "10.0.0.9:9153";
+            default = "10.0.0.9";
+            description = "Listen address (IP only, no port — the module appends its default :9153).";
           };
           dnsmasqListenAddress = lib.mkOption {
             type = lib.types.str;
