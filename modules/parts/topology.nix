@@ -1,8 +1,11 @@
 # flake-parts module: expose nix-topology infrastructure diagram output.
 #
-# Generates SVG network topology diagrams from NixOS configurations.
-# Render with: nix build .#topology.x86_64-linux.config.output
-# Result: result/ (contains main.svg, network.svg)
+# LAN devices are derived from hosts/soyo/reservations.nix — the single source
+# of truth. Add a device there, it appears in the diagram automatically.
+# Soyo itself is auto-extracted by the NixOS module (interfaces, IPs, services).
+#
+# Render with: nix build .#topology.x86_64-linux && cp result/main.svg .
+# Result: result/main.svg (physical topology), result/network.svg (network view)
 #
 # Docs: https://oddlama.github.io/nix-topology/
 {
@@ -13,6 +16,139 @@
 }:
 let
   inherit (inputs) nix-topology;
+
+  reservations = import ../../hosts/soyo/reservations.nix;
+
+  # Group reservations by name (multihomed hosts have multiple entries)
+  grouped = lib.foldl (
+    acc: r:
+    acc
+    // {
+      ${r.name} = (acc.${r.name} or [ ]) ++ [
+        {
+          inherit (r) name mac ip;
+          isWiFi = lib.hasPrefix "orbi-satellite" r.name;
+          isNAS = r.name == "czworaczki";
+        }
+      ];
+    }
+  ) { } reservations;
+
+  # Build one topology node per device group
+  deviceNodes = lib.mapAttrsToList (
+    name: entries:
+    let
+      first = builtins.head entries;
+      # One interface per entry (multihomed = multiple interfaces)
+      interfaces = lib.listToAttrs (
+        lib.imap0 (i: e: {
+          name = if builtins.length entries == 1 then "lan" else "eth${toString i}";
+          value = {
+            network = "lan";
+            mac = e.mac;
+          }
+          // lib.optionalAttrs e.isWiFi { type = "wifi"; };
+        }) entries
+      );
+
+      attrs = {
+        inherit interfaces;
+      }
+      // lib.optionalAttrs first.isNAS {
+        name = "Synology DS423+ (${name})";
+        deviceType = "nas";
+      }
+      // lib.optionalAttrs first.isWiFi {
+        name = "Orbi Satellite ${lib.last (lib.splitString "-" name)}";
+        deviceType = "switch";
+      }
+      // lib.optionalAttrs (!first.isNAS && !first.isWiFi) (
+        if name == "twins" then
+          {
+            name = "Backup NAS (${name})";
+            deviceType = "nas";
+          }
+        else if name == "drukarka" then
+          {
+            name = "Drukarka (Printer)";
+            deviceType = "server";
+          }
+        else
+          {
+            inherit name;
+            deviceType = "server";
+          }
+      );
+    in
+    lib.nameValuePair name attrs
+  ) grouped;
+
+  # Generate all nodes: upstreams + router + LAN devices (excluding soyo)
+  allNodes = [
+    {
+      name = "dns4eu";
+      value = {
+        name = "DNS4EU NoAds (DoH)";
+        deviceType = "server";
+        interfaces.public = {
+          network = "internet";
+        };
+      };
+    }
+    {
+      name = "quad9";
+      value = {
+        name = "Quad9 DNS (DoH)";
+        deviceType = "server";
+        interfaces.public = {
+          network = "internet";
+        };
+      };
+    }
+    {
+      name = "router";
+      value = {
+        name = "Orbi Router (10.0.0.1)";
+        deviceType = "router";
+        interfaces = {
+          wan = {
+            network = "internet";
+          };
+          lan = {
+            network = "lan";
+            addresses = [ "10.0.0.1/24" ];
+            physicalConnections = [
+              {
+                node = "soyo";
+                interface = "enp1s0";
+              }
+              {
+                node = "czworaczki";
+                interface = "eth0";
+              }
+              {
+                node = "orbi-satellite-1";
+                interface = "lan";
+              }
+              {
+                node = "orbi-satellite-2";
+                interface = "lan";
+              }
+              {
+                node = "twins";
+                interface = "lan";
+              }
+              {
+                node = "drukarka";
+                interface = "lan";
+              }
+            ];
+          };
+        };
+      };
+    }
+  ]
+  ++ lib.filter (nv: nv.name != "soyo") deviceNodes;
 in
 {
   perSystem =
@@ -22,46 +158,10 @@ in
         (import nix-topology {
           pkgs = pkgs.extend (import "${nix-topology}/pkgs/default.nix");
           modules = [
-            # Auto-extract topology from all NixOS configs that have `topology` set
             {
               nixosConfigurations = lib.filterAttrs (_: c: c.config ? topology) self.nixosConfigurations;
             }
-            # Global topology: external devices, networks, connections
             {
-              nodes.router = {
-                name = "Orbi RBK53 Router";
-                deviceType = "router";
-                interfaces = {
-                  wan = {
-                    network = "internet";
-                  };
-                  lan = {
-                    network = "lan";
-                    mac = "00:00:00:00:00:01";
-                  };
-                };
-              };
-              nodes.nas = {
-                name = "Synology DS423+";
-                deviceType = "nas";
-                interfaces.lan = {
-                  network = "lan";
-                };
-              };
-              nodes.dns4eu = {
-                name = "DNS4EU NoAds";
-                deviceType = "server";
-                interfaces.public = {
-                  network = "internet";
-                };
-              };
-              nodes.quad9 = {
-                name = "Quad9 DNS";
-                deviceType = "server";
-                interfaces.public = {
-                  network = "internet";
-                };
-              };
               networks.lan = {
                 name = "Home LAN";
                 cidrv4 = "10.0.0.0/24";
@@ -74,7 +174,8 @@ in
                 name = "Internet";
                 cidrv4 = "0.0.0.0/0";
               };
-              nodes.router.interfaces.wan.physicalConnections = [ ];
+
+              nodes = builtins.listToAttrs allNodes;
             }
           ];
         }).config.output;
