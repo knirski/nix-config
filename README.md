@@ -59,6 +59,9 @@ Key principles:
 ## Tooling
 
 ```bash
+# CI (runs on every push via GitHub Actions)
+# https://github.com/knirski/nix-config/actions
+
 # Generate network topology diagram
 nix build .#topology.x86_64-linux.config.output
 # open result/main.svg
@@ -81,3 +84,7 @@ sudo nix-shell -p vulnix --run 'vulnix -c system'
 
 - Nix 2.18+ with flakes enabled (`nix-command flakes` experimental features)
 - NixOS 26.05 (nixpkgs `714a5f8c4ead`)
+
+## Resources
+
+- [Best of Nix](https://github.com/tolkonepiu/best-of-nix) — curated list of Nix & NixOS tools, libraries, and resources
