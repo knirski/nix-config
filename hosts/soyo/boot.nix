@@ -6,6 +6,7 @@
   security.tpm2.enable = true;
 
   boot.loader.limine.enable = true;
+  boot.loader.limine.secureBoot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.initrd.systemd.enable = true;
   boot.initrd.availableKernelModules = [
@@ -16,7 +17,10 @@
     "sd_mod"
   ];
 
-  # Phase 1 TPM auto-unlock; passphrase keyslot stays as the break-glass fallback.
+  # Phase 2: Limine Secure Boot is on (the module force-enables safe settings:
+  # enrollConfig, validateChecksums, panicOnChecksumMismatch). Re-enroll the
+  # TPM keyslot against PCR 0+2+7 after sbctl key enrollment (see docs/recovery.md).
+  # Passphrase keyslot stays as the break-glass fallback.
   boot.initrd.luks.devices.crypted = {
     device = "/dev/disk/by-partlabel/luks";
     allowDiscards = true;

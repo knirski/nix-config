@@ -14,6 +14,9 @@
         inInitrd = true;
       }
       "/var/lib/dnsmasq"
+      "/var/lib/grafana"
+      "/var/lib/loki"
+      "/var/lib/prometheus"
       "/var/log"
       "/etc/restic"
     ];

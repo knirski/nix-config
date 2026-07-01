@@ -97,7 +97,7 @@ Run after first install and after significant updates. Each check has the exact 
   sudo systemctl reboot
   # Unlock with passphrase (console or initrd SSH)
   # After boot, re-enroll:
-  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/luks
+  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partlabel/luks
   ```
   Expected: passphrase unlocks the disk.
 
@@ -198,6 +198,12 @@ Run after first install and after significant updates. Each check has the exact 
   ```
   Expected: Prometheus metrics output (DHCP lease count, DNS query stats).
 
+- [ ] **Grafana dashboard reachable**
+  ```sh
+  curl -s -o /dev/null -w "%{http_code}" http://10.0.0.9:3000
+  ```
+  Expected: `200` or `302` (Grafana redirects to login). Prometheus datasource should be pre-provisioned.
+
 - [ ] **Synology Uptime Kuma probe**
   On the Synology: add a DNS monitor in Uptime Kuma querying `10.0.0.9:53` for `soyo.home.arpa`. Power off Soyo. Expected: probe reports DNS down.
 
@@ -210,7 +216,7 @@ Run after first install and after significant updates. Each check has the exact 
   ```
   Expected: builds locally, activates on Soyo.
 
-## M3 — Security hardening (Phase 2, future)
+## M3 — Security hardening
 
 - [ ] **Secure Boot enabled**
   ```sh

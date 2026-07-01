@@ -47,14 +47,63 @@ When the LAN/router is down **and** the box is headless:
 4. Enter the LUKS passphrase.
 5. After boot, reconnect Soyo to the LAN switch/router.
 
-### After successful unlock
+### After successful unlock (Phase 2 — Secure Boot)
 
-If the cause was a PCR change (kernel/initrd/bootloader update), re-enroll:
+If the cause was a PCR change (kernel/initrd/bootloader update), re-enroll against PCR 0+2+7:
 
 ```sh
 sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
-sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/luks
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partlabel/luks
 ```
+
+## Phase 2 — Limine Secure Boot setup (one-time operator steps)
+
+These steps enable Secure Boot with custom keys on Soyo. Run once after deploying the Phase 2 config.
+
+### Prerequisites
+
+- Soyo has `boot.loader.limine.secureBoot.enable = true` deployed (the nixpkgs module force-enables `enrollConfig`, `validateChecksums`, and `panicOnChecksumMismatch`; the editor is locked).
+- Firmware Secure Boot Mode set to **Customized** (confirmed available on this board).
+- `sbctl` is available in the dev shell.
+
+### Steps
+
+```sh
+# 1. Put firmware into Setup Mode — boot into BIOS, set Secure Boot Mode to
+#    Customized, then use "Reset to Setup Mode" to clear the factory keys.
+#    Reboot.
+
+# 2. Generate custom Secure Boot keys on Soyo
+sudo sbctl create-keys
+
+# 3. Enroll keys, keeping Microsoft keys so option ROMs and vendor firmware still load
+sudo sbctl enroll-keys -m
+
+# 4. Enable Secure Boot in firmware
+#    BIOS → Secure Boot → Enabled. If "Reset to Setup Mode" is still active,
+#    toggle it off first.
+
+# 5. Re-enroll the TPM keyslot against PCR 0+2+7 for firmware+tamper coverage
+sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partlabel/luks
+
+# 6. Verify
+sudo sbctl status
+# Expected: Setup Mode: User, Secure Boot: enabled, files signed
+```
+
+### Recovery if Secure Boot blocks boot
+
+If Secure Boot prevents booting during setup (wrong keys, unsigned image):
+
+1. Enter BIOS, set Secure Boot back to **Standard** (or disable it).
+2. Boot normally — the passphrase keyslot is an independent fallback throughout.
+3. Debug and re-run the steps above.
+
+### Caveats
+
+- `fwupd` is currently broken under Limine Secure Boot ([nixpkgs #534574](https://github.com/NixOS/nixpkgs/issues/534574)). LVFS firmware updates may need Secure Boot temporarily off.
+- PCR 0+2+7 is stable across kernel/initrd/bootloader updates — auto-unlock survives normal deployments without re-enrollment. Only a BIOS/firmware update (changes PCR 0) or clearing the TPM requires re-enrollment.
 
 ## Soyo fully down (dead hardware, no power)
 
@@ -133,4 +182,4 @@ Reuses the provisioning flow with an extra restore step:
 2. Restore class 3 data: `sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo -p /run/agenix/restic-password restore latest --target /`
 3. Re-enroll agenix with the new host key.
 4. Update `hosts/soyo/facter.json` if the replacement hardware differs.
-5. Re-enroll TPM: `sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/luks`
+5. Re-enroll TPM against PCR 0+2+7: `sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partlabel/luks`

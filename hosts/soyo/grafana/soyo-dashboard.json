@@ -1,0 +1,434 @@
+{
+  "title": "Soyo Appliance",
+  "tags": ["soyo", "nixos"],
+  "schemaVersion": 39,
+  "version": 1,
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Uptime",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "expr": "node_time_seconds - node_boot_time_seconds",
+        "legendFormat": "uptime",
+        "refId": "A"
+      }],
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "CPU Usage",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 60, "color": "orange" },
+              { "value": 85, "color": "red" }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "100 - (avg by(instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])) * 100)",
+        "legendFormat": "CPU",
+        "refId": "A"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "gauge",
+      "title": "Memory Usage",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 70, "color": "orange" },
+              { "value": 90, "color": "red" }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100",
+        "legendFormat": "Memory",
+        "refId": "A"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "gauge",
+      "title": "Disk Usage (/)",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 70, "color": "orange" },
+              { "value": 90, "color": "red" }
+            ]
+          }
+        }
+      },
+      "targets": [{
+        "expr": "((node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"\"} - node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"\"}) / node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"\"}) * 100",
+        "legendFormat": "root",
+        "refId": "A"
+      }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "DNS Queries",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(blocky_query_count_total[$__rate_interval]))",
+        "legendFormat": "queries/s",
+        "refId": "A"
+      }],
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "DHCP Leases",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "expr": "dnsmasq_dhcp_lease_count",
+        "legendFormat": "leases",
+        "refId": "A"
+      }],
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "System Resources",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "collapsed": false
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "CPU Usage",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": { "showPoints": "never", "lineInterpolation": "smooth" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 - avg by(cpu)(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])) * 100",
+          "legendFormat": "{{cpu}}",
+          "refId": "A"
+        },
+        {
+          "expr": "avg by(instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])) * 100",
+          "legendFormat": "idle (avg)",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Memory",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "showPoints": "never", "lineInterpolation": "smooth" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemTotal_bytes",
+          "legendFormat": "total",
+          "refId": "A"
+        },
+        {
+          "expr": "node_memory_MemAvailable_bytes",
+          "legendFormat": "available",
+          "refId": "B"
+        },
+        {
+          "expr": "node_memory_MemFree_bytes",
+          "legendFormat": "free",
+          "refId": "C"
+        },
+        {
+          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "legendFormat": "used",
+          "refId": "D"
+        }
+      ],
+      "options": {
+        "legend": { "calcs": ["mean", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true }
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Network & Disk",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "collapsed": false
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Network Bandwidth (enp1s0)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": { "showPoints": "never", "lineInterpolation": "smooth" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(node_network_receive_bytes_total{device=\"enp1s0\"}[$__rate_interval]) * 8",
+          "legendFormat": "receive",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(node_network_transmit_bytes_total{device=\"enp1s0\"}[$__rate_interval]) * 8",
+          "legendFormat": "transmit",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }
+      },
+      "tooltip": { "mode": "multi", "sort": "desc" }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Disk I/O (LUKS)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "showPoints": "never", "lineInterpolation": "smooth" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(node_disk_read_bytes_total{device=\"dm-0\"}[$__rate_interval])",
+          "legendFormat": "read",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(node_disk_written_bytes_total{device=\"dm-0\"}[$__rate_interval])",
+          "legendFormat": "write",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }
+      },
+      "tooltip": { "mode": "multi", "sort": "desc" }
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "DNS & DHCP",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "collapsed": false
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "DNS Query Rate",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "color": { "mode": "palette-classic" },
+          "custom": { "showPoints": "never", "lineInterpolation": "smooth" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(blocky_query_count_total[$__rate_interval]))",
+        "legendFormat": "total",
+        "refId": "A"
+      }],
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Blocked Queries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "color": { "mode": "palette-classic" },
+          "custom": { "showPoints": "never", "lineInterpolation": "smooth" }
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(blocky_blocked_count_total[$__rate_interval]))",
+        "legendFormat": "blocked",
+        "refId": "A"
+      }],
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }
+      }
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Active DHCP Leases",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 32 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "value": null, "color": "green" },
+            { "value": 30, "color": "orange" }
+          ]}
+        }
+      },
+      "targets": [{
+        "expr": "dnsmasq_dhcp_lease_count",
+        "legendFormat": "leases",
+        "refId": "A"
+      }],
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "System Logs",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 },
+      "collapsed": false
+    },
+    {
+      "id": 19,
+      "type": "logs",
+      "title": "Recent Journal",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 37 },
+      "datasource": { "type": "loki", "uid": "soyo-loki" },
+      "targets": [{
+        "expr": "{host=\"soyo\"} |= \"\"",
+        "refId": "A"
+      }],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogJson": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      }
+    }
+  ]
+}
