@@ -13,6 +13,10 @@
         ];
         auto-optimise-store = true;
         warn-dirty = false;
+        # trusted-users: required for `nixos-rebuild --target-host` to work.
+        # Without this, the remote nix daemon rejects unsigned store paths
+        # (from `nix-copy-closure`) when the build adds new packages.
+        # Include root, the admin user, and @wheel so any future admin works too.
         trusted-users = [
           "root"
           "krzysiek"
