@@ -110,15 +110,15 @@
               scrapeConfigs = [
                 {
                   job_name = "node";
-                  static_configs = [ { targets = [ "127.0.0.1:9100" ]; } ];
+                  static_configs = [ { targets = [ "10.0.0.9:9100" ]; } ];
                 }
                 {
                   job_name = "dnsmasq";
-                  static_configs = [ { targets = [ "127.0.0.1:9153" ]; } ];
+                  static_configs = [ { targets = [ "10.0.0.9:9153" ]; } ];
                 }
                 {
                   job_name = "blocky";
-                  static_configs = [ { targets = [ "127.0.0.1:4000" ]; } ];
+                  static_configs = [ { targets = [ "10.0.0.9:4000" ]; } ];
                 }
               ];
             };
@@ -157,13 +157,13 @@
                   tsdb_shipper = {
                     active_index_directory = "/var/lib/loki/index";
                     cache_location = "/var/lib/loki/cache";
-                    shared_store = "filesystem";
                   };
                   filesystem.directory = "/var/lib/loki/chunks";
                 };
                 compactor = {
                   working_directory = "/var/lib/loki/compactor";
                   retention_enabled = true;
+                  delete_request_store = "filesystem";
                 };
                 limits_config = {
                   reject_old_samples = true;
@@ -189,10 +189,22 @@
                   host = "soyo",
                 }
                 relabel_rules {
-                  rule { source_labels = ["__journal__systemd_unit"]; target_label = "unit" }
-                  rule { source_labels = ["__journal__hostname"];    target_label = "hostname" }
-                  rule { source_labels = ["__journal__priority"];    target_label = "priority" }
-                  rule { source_labels = ["__journal__transport"];   target_label = "transport" }
+                  rule {
+                    source_labels = ["__journal__systemd_unit"]
+                    target_label  = "unit"
+                  }
+                  rule {
+                    source_labels = ["__journal__hostname"]
+                    target_label  = "hostname"
+                  }
+                  rule {
+                    source_labels = ["__journal__priority"]
+                    target_label  = "priority"
+                  }
+                  rule {
+                    source_labels = ["__journal__transport"]
+                    target_label  = "transport"
+                  }
                 }
               }
 
@@ -215,7 +227,7 @@
 
               otelcol.exporter.otlp "tempo" {
                 client {
-                  endpoint = "127.0.0.1:4317"
+                  endpoint = "127.0.0.1:4319"
                 }
               }
             '';
@@ -300,6 +312,10 @@
                 Nice = 10;
                 Restart = "on-failure";
                 RestartSec = "10s";
+                Path = lib.mkForce [
+                  "${pkgs.curl}/bin"
+                  "${pkgs.coreutils}/bin"
+                ];
               };
               script =
                 let
@@ -374,6 +390,15 @@
               Nice = 10;
             };
 
+            # Ensure persisted data dirs have correct ownership for their service users.
+            # The preservation module bind-mounts /persist/var/lib/<name> onto /var/lib/<name>;
+            # without explicit ownership, the source dir is owned by root and the service user
+            # can't write. tmpfiles fixes this at boot.
+            systemd.tmpfiles.rules = [
+              "d /persist/var/lib/grafana 0750 grafana grafana -"
+              "d /persist/var/lib/loki 0750 loki loki -"
+            ];
+
             systemd.services.prometheus.serviceConfig = {
               MemoryMax = "512M";
               CPUQuota = "30%";
@@ -401,10 +426,17 @@
               serviceConfig = {
                 ExecStart = ''
                   ${pkgs.tempo}/bin/tempo -config.file=${pkgs.writeText "tempo-config.yaml" ''
+                    target: all
+                    # Single-binary mode: run all Tempo components (distributor,
+                    # ingester, querier, compactor) in one process.
+
                     server:
                       http_listen_port: 3200
                       http_listen_address: 127.0.0.1
-                      grpc_listen_port: 4317
+                      # Use different gRPC port than Alloy (which owns :4317 for OTLP intake).
+                      # Alloy receives OTLP from trace generators and forwards to Tempo
+                      # on this port via otelcol.exporter.otlp.tempo.
+                      grpc_listen_port: 4319
                       grpc_listen_address: 127.0.0.1
 
                     distributor:
@@ -435,7 +467,7 @@
                       max_bytes_per_trace: 5_000_000
                   ''}
                 '';
-                Restart = "on-failure";
+                Restart = "always";
                 User = "tempo";
                 Group = "tempo";
                 StateDirectory = "tempo";

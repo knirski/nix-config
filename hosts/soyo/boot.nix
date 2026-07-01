@@ -6,7 +6,9 @@
   security.tpm2.enable = true;
 
   boot.loader.limine.enable = true;
-  boot.loader.limine.secureBoot.enable = true;
+  # Secure Boot disabled temporarily — enable after sbctl key enrollment:
+  #   ssh krzysiek@10.0.0.9 'sudo sbctl create-keys && sudo sbctl enroll-keys -m'
+  # boot.loader.limine.secureBoot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.initrd.systemd.enable = true;
   boot.initrd.availableKernelModules = [
