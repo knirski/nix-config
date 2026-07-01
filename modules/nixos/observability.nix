@@ -200,6 +200,22 @@
                   url = "http://127.0.0.1:3100/loki/api/v1/push"
                 }
               }
+
+              // OTLP receiver: accepts traces from local sources (boot tracer)
+              // and forwards to Tempo on loopback.
+              otelcol.receiver.otlp "soyo" {
+                grpc { endpoint = "127.0.0.1:4317" }
+                http { endpoint = "127.0.0.1:4318" }
+                output {
+                  traces = [otelcol.exporter.otlp.tempo.input]
+                }
+              }
+
+              otelcol.exporter.otlp "tempo" {
+                client {
+                  endpoint = "127.0.0.1:4317"
+                }
+              }
             '';
 
             services.grafana = {
@@ -232,6 +248,13 @@
                     access = "proxy";
                     url = "http://127.0.0.1:3100";
                     uid = "soyo-loki";
+                  }
+                  {
+                    name = "Tempo";
+                    type = "tempo";
+                    access = "proxy";
+                    url = "http://127.0.0.1:3200";
+                    uid = "soyo-tempo";
                   }
                 ];
               };
@@ -274,6 +297,155 @@
               MemoryMax = "128M";
               CPUQuota = "10%";
               Nice = 10;
+            };
+
+            # Tempo: distributed tracing backend. Stores traces locally with
+            # filesystem backend — no S3 needed at single-host scale.
+            systemd.services.tempo = {
+              description = "Grafana Tempo trace storage";
+              after = [ "network.target" ];
+              wantedBy = [ "multi-user.target" ];
+              serviceConfig = {
+                ExecStart = ''
+                  ${pkgs.tempo}/bin/tempo -config.file=${pkgs.writeText "tempo-config.yaml" ''
+                    server:
+                      http_listen_port: 3200
+                      http_listen_address: 127.0.0.1
+                      grpc_listen_port: 4317
+                      grpc_listen_address: 127.0.0.1
+
+                    distributor:
+                      receivers:
+                        otlp:
+                          protocols:
+                            grpc:
+                            http:
+
+                    ingester:
+                      lifecycler:
+                        ring:
+                          kvstore:
+                            store: inmemory
+                          replication_factor: 1
+
+                    storage:
+                      trace:
+                        backend: local
+                        local:
+                          path: /var/lib/tempo/blocks
+                        wal:
+                          path: /var/lib/tempo/wal
+
+                    compactor: {}
+
+                    overrides:
+                      max_bytes_per_trace: 5_000_000
+                  ''}
+                '';
+                Restart = "on-failure";
+                User = "tempo";
+                Group = "tempo";
+                StateDirectory = "tempo";
+                WorkingDirectory = "/var/lib/tempo";
+                MemoryMax = "512M";
+                CPUQuota = "20%";
+                Nice = 10;
+              };
+            };
+            users.users.tempo = {
+              description = "Tempo trace storage user";
+              group = "tempo";
+              isSystemUser = true;
+            };
+            users.groups.tempo = { };
+
+            # Boot trace generator: runs once after each boot, captures
+            # systemd-analyze data as an OTLP trace, pushes to Tempo via Alloy.
+            systemd.services.soyo-boot-trace = {
+              description = "Generate boot trace from systemd-analyze";
+              after = [ "multi-user.target" ];
+              wantedBy = [ "multi-user.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart =
+                  let
+                    tracer = pkgs.writeShellScript "soyo-boot-trace" ''
+                          set -euo pipefail
+                          exec ${pkgs.python3}/bin/python3 << 'PYEOF'
+                      import json, subprocess, re, os, uuid
+
+                      def get_boot_units():
+                          try:
+                              r = subprocess.run(["systemd-analyze", "blame"],
+                                  capture_output=True, text=True, timeout=15)
+                              units = []
+                              for line in r.stdout.strip().split('\n')[:60]:
+                                  m = re.match(r'^([\d.]+)s\s+(\S+)', line)
+                                  if m: units.append((m.group(2), float(m.group(1))))
+                              return units
+                          except: return []
+
+                      units = get_boot_units()
+                      if not units:
+                          raise SystemExit(0)
+
+                      boot_ns = int(subprocess.run(
+                          ["date", "-d", "$(systemd-analyze timestamp)", "+%s%N"],
+                          capture_output=True, text=True, shell=True).stdout.strip()) * 1000
+                      now_ns = int(subprocess.run(
+                          ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
+                      # If timestamp parsing failed, estimate from journal
+                      if boot_ns < 1000000000:
+                          boot_ns = now_ns - 120_000_000_000  # assume ~2 min ago
+
+                      trace_id = uuid.uuid4().hex
+                      spans = []
+                      span_ts = boot_ns
+                      for i, (name, dur) in enumerate(units):
+                          dur_ns = int(dur * 1e9)
+                          sid = uuid.uuid4().hex[:16]
+                          spans.append({
+                              "traceId": trace_id,
+                              "spanId": sid,
+                              "name": name,
+                              "kind": 2,
+                              "startTimeUnixNano": str(span_ts),
+                              "endTimeUnixNano": str(span_ts + dur_ns),
+                              "attributes": [
+                                  {"key": "unit", "value": {"stringValue": name}},
+                                  {"key": "duration_seconds", "value": {"doubleValue": dur}}
+                              ]
+                          })
+                          span_ts += dur_ns
+
+                      trace = {
+                          "resourceSpans": [{
+                              "resource": {"attributes": [
+                                  {"key": "service.name", "value": {"stringValue": "systemd-boot"}},
+                                  {"key": "host.name", "value": {"stringValue": "soyo"}}
+                              ]},
+                              "scopeSpans": [{
+                                  "scope": {"name": "systemd-analyze"},
+                                  "spans": spans
+                              }]
+                          }]
+                      }
+
+                      # Push via OTLP HTTP to Tempo (Alloy forwarder on :4318)
+                      subprocess.run(
+                          ["curl", "-sS", "-o", "/dev/null", "-X", "POST",
+                           "-H", "Content-Type: application/json",
+                           "--data", json.dumps(trace),
+                           "http://127.0.0.1:4318/v1/traces"],
+                          timeout=10, capture_output=True)
+                      PYEOF
+                    '';
+                  in
+                  "${tracer}";
+                MemoryMax = "64M";
+                CPUQuota = "10%";
+                Nice = 19;
+              };
             };
           })
         ]

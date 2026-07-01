@@ -429,6 +429,40 @@
         "sortOrder": "Descending",
         "wrapLogMessage": true
       }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Traces",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 49 },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Boot Traces Available",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 50 },
+      "datasource": { "type": "tempo", "uid": "soyo-tempo" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "query": "{service.name=\"systemd-boot\"} | count()",
+        "queryType": "traceql",
+        "refId": "A"
+      }],
+      "description": "Boot traces are generated automatically after each reboot via systemd-analyze. Explore them in Grafana's Explore view → select Tempo datasource → use TraceQL query: {service.name=\"systemd-boot\"}",
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
     }
   ]
 }
