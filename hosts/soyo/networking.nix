@@ -12,4 +12,9 @@
   };
 
   networking.firewall.enable = true;
+
+  # Tailscale: secure mesh VPN for remote admin. After deploy, authenticate:
+  #   sudo tailscale up
+  # Or set lanAppliance.services.tailscale.authKeyFile for unattended setup.
+  lanAppliance.services.tailscale.enable = true;
 }
