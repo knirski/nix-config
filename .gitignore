@@ -3,3 +3,5 @@ result
 **/.tmp.agenix-rekey.*/
 # direnv local cache
 .direnv/
+# plaintext Grafana admin password hint
+.grafana-password

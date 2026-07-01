@@ -158,6 +158,23 @@
                 'http://127.0.0.1:4318/v1/traces'], timeout=10, capture_output=True)
             " 2>/dev/null || true
 
+                        # Write Prometheus textfile metric for alerting
+                        mkdir -p /var/lib/prometheus/textfiles
+                        if [ "$RESULT" = "success" ]; then
+                          cat > /var/lib/prometheus/textfiles/backup.prom.$$ << EOF
+            # HELP restic_backup_success 1 if last backup succeeded, 0 otherwise
+            # TYPE restic_backup_success gauge
+            restic_backup_success 1
+            EOF
+                        else
+                          cat > /var/lib/prometheus/textfiles/backup.prom.$$ << EOF
+            # HELP restic_backup_success 1 if last backup succeeded, 0 otherwise
+            # TYPE restic_backup_success gauge
+            restic_backup_success 0
+            EOF
+                        fi
+                        mv /var/lib/prometheus/textfiles/backup.prom.$$ /var/lib/prometheus/textfiles/backup.prom
+
                         # ntfy notification on failure (unchanged)
                         if [ "$RESULT" != "success" ]; then
                           TOKEN=$(cat ${config.age.secrets.ntfy-token.path} 2>/dev/null || echo "")
