@@ -41,6 +41,8 @@
         ../../hosts/soyo/dhcp.nix
         ../../hosts/soyo/backup.nix
         ../../hosts/soyo/observability.nix
+        ../../hosts/soyo/topology.nix
+        inputs.nix-topology.nixosModules.default
         inputs.nixos-facter-modules.nixosModules.facter
         { facter.reportPath = ../../hosts/soyo/facter.json; }
         ../../hosts/soyo/networking.nix

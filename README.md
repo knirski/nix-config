@@ -5,6 +5,7 @@
   <a href="https://nixos.wiki/wiki/Flakes"><img src="https://img.shields.io/badge/flakes-enabled-7eb6e0?logo=nixos&logoColor=white" alt="Flakes"></a>
   <a href="https://flake.parts"><img src="https://img.shields.io/badge/built%20with-flake--parts-7eb6e0" alt="flake-parts"></a>
   <a href="https://github.com/vic/import-tree"><img src="https://img.shields.io/badge/pattern-dendritic-7eb6e0" alt="dendritic"></a>
+  <a href="https://github.com/oddlama/nix-topology"><img src="https://img.shields.io/badge/diagrams-nix--topology-7eb6e0" alt="nix-topology"></a>
 </p>
 
 Multi-host [NixOS](https://nixos.org) flake built with [flake-parts](https://flake.parts)
@@ -53,6 +54,24 @@ Key principles:
 - **Secrets via agenix-rekey** — master-encrypted files rekeyed per host. Full walkthrough in [docs/secrets.md](docs/secrets.md).
 - **`linuxPackages_latest`** — the in-tree `dwmac_motorcomm` NIC driver (Linux 6.13+).
 - **TPM auto-unlock** — unattended power-loss recovery; passphrase keyslot as break-glass fallback.
+
+## Tooling
+
+```bash
+# Generate network topology diagram
+nix build .#topology.x86_64-linux.config.output
+# open result/main.svg
+
+# Build with real-time progress
+nom build .#nixosConfigurations.soyo.config.system.build.toplevel
+
+# Find which package provides a missing command
+nix-locate <command>
+
+# Check for CVEs in the current system closure
+# (requires vulnix: nix shell nixpkgs#vulnix)
+sudo nix-shell -p vulnix --run 'vulnix -c system'
+```
 
 ## Requirements
 
