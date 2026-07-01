@@ -6,7 +6,10 @@
 
     security.sudo = {
       enable = true;
-      wheelNeedsPassword = true;
+      # Passwordless sudo: required for remote deploy via --target-host.
+      # SSH access is already key-only, so this doesn't weaken the auth
+      # boundary — it avoids interactive password prompts during activation.
+      wheelNeedsPassword = false;
     };
 
     # Paths resolve relative to this file: ../../secrets -> repo root /secrets.
