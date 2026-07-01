@@ -21,7 +21,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 13 | [agenix/agenix-rekey](https://github.com/ryantm/agenix), `docs/secrets.md` | M1 | Encrypted secrets, rekeyFile flow |
 | 14 | `modules/nixos/maintenance.nix` | M2 | Scheduled upkeep: gc, scrub, SMART, ntfy alerts |
 | 15 | `modules/nixos/backup.nix`, `hosts/soyo/backup.nix` | M2 | restic to Synology, btrbk local snapshots |
-| 16 | `modules/nixos/observability.nix`, `hosts/soyo/observability.nix` | M2 | Exporters on Soyo, dashboards off-box |
+| 16 | `modules/nixos/observability.nix`, `hosts/soyo/observability.nix` | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces |
 | 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding |
 | 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, checks |
 

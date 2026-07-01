@@ -1,6 +1,11 @@
 {
   flake.modules.nixos.backup =
-    { lib, config, ... }:
+    {
+      lib,
+      config,
+      pkgs,
+      ...
+    }:
     let
       cfg = config.lanAppliance.services.backup;
     in
@@ -105,19 +110,67 @@
           pruneOpts = cfg.restic.pruneOpts;
           checkOpts = cfg.restic.checkOpts;
 
-          # Detailed ntfy notification on failure. Runs in postStop where
-          # systemd exposes SERVICE_RESULT, EXIT_CODE, EXIT_STATUS.
+          # Record start time for tracing, then push an OTLP trace after completion.
+          # Traces show duration, phases, and success/failure in Tempo.
+          backupPrepareCommand = ''
+            date +%s%N > /run/restic-backup-start
+          '';
           backupCleanupCommand = ''
-            if [ "''${SERVICE_RESULT:-}" != "success" ]; then
-              TOKEN=$(cat ${config.age.secrets.ntfy-token.path})
-              TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
-              curl -sS -o /dev/null \
-                -H "Authorization: Bearer $TOKEN" \
-                -H "Title: soyo backup failed" \
-                -H "Tags: error" \
-                -d "restic backup to Synology failed: ''${SERVICE_RESULT:-unknown} (exit ''${EXIT_CODE:-?}/''${EXIT_STATUS:-?}) — check 'journalctl -u restic-backups-soyo -n 30'" \
-                "$TOPIC"
-            fi
+                        START_NS=$(cat /run/restic-backup-start 2>/dev/null || echo "0")
+                        END_NS=$(date +%s%N)
+                        RESULT="''${SERVICE_RESULT:-unknown}"
+                        STATUS="''${EXIT_STATUS:-0}"
+
+                        # Push OTLP trace to Tempo via Alloy
+                        ${pkgs.python3}/bin/python3 -c "
+            import json, os, uuid, subprocess
+            start = int(os.environ.get('START_NS', '0'))
+            end = int(os.environ.get('END_NS', '0'))
+            if start <= 0:
+                start = end - 120_000_000_000  # assume 2 min if no start recorded
+            result = os.environ.get('RESULT', 'unknown')
+            status = os.environ.get('STATUS', '0')
+            trace_id = uuid.uuid4().hex
+            root_id = uuid.uuid4().hex[:16]
+            spans = [{
+                'traceId': trace_id, 'spanId': root_id,
+                'name': 'restic-backup', 'kind': 2,
+                'startTimeUnixNano': str(start), 'endTimeUnixNano': str(end),
+                'status': {'code': 1 if result != 'success' else 0},
+                'attributes': [
+                    {'key': 'service.name', 'value': {'stringValue': 'restic-backup'}},
+                    {'key': 'result', 'value': {'stringValue': result}},
+                    {'key': 'exit_status', 'value': {'stringValue': status}}
+                ]
+            }]
+            trace = {
+                'resourceSpans': [{
+                    'resource': {'attributes': [
+                        {'key': 'service.name', 'value': {'stringValue': 'restic-backup'}},
+                        {'key': 'host.name', 'value': {'stringValue': 'soyo'}}
+                    ]},
+                    'scopeSpans': [{'scope': {'name': 'restic'}, 'spans': spans}]
+                }]
+            }
+            subprocess.run(['curl', '-sS', '-o', '/dev/null', '-X', 'POST',
+                '-H', 'Content-Type: application/json',
+                '--data', json.dumps(trace),
+                'http://127.0.0.1:4318/v1/traces'], timeout=10, capture_output=True)
+            " 2>/dev/null || true
+
+                        # ntfy notification on failure (unchanged)
+                        if [ "$RESULT" != "success" ]; then
+                          TOKEN=$(cat ${config.age.secrets.ntfy-token.path} 2>/dev/null || echo "")
+                          TOPIC=$(cat ${config.age.secrets.ntfy-topic.path} 2>/dev/null || echo "")
+                          if [ -n "$TOKEN" ] && [ -n "$TOPIC" ]; then
+                            curl -sS -o /dev/null \
+                              -H "Authorization: Bearer $TOKEN" \
+                              -H "Title: soyo backup failed" \
+                              -H "Tags: error" \
+                              -d "restic backup to Synology failed: $RESULT (exit $STATUS) — check 'journalctl -u restic-backups-soyo -n 30'" \
+                              "$TOPIC"
+                          fi
+                        fi
           '';
         };
 
