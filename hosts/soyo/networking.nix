@@ -1,4 +1,8 @@
 {
+  config,
+  ...
+}:
+{
   networking.useDHCP = false;
 
   systemd.network.networks."10-enp1s0" = {
@@ -13,8 +17,10 @@
 
   networking.firewall.enable = true;
 
-  # Tailscale: secure mesh VPN for remote admin. After deploy, authenticate:
-  #   sudo tailscale up
-  # Or set lanAppliance.services.tailscale.authKeyFile for unattended setup.
-  lanAppliance.services.tailscale.enable = true;
+  # Tailscale: secure mesh VPN for remote admin. Authenticates automatically
+  # using the agenix-encrypted auth key.
+  lanAppliance.services.tailscale = {
+    enable = true;
+    authKeyFile = config.age.secrets.tailscale-auth-key.path;
+  };
 }
