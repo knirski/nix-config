@@ -327,6 +327,5 @@ Same flow for `krzysiek-password.age` or any other secret.
 
 ## Recovery paths
 
-See the recovery runbook at `docs/recovery.md` (not yet written) or the
-[design doc](../docs/superpowers/specs/soyo-dns-dhcp-appliance.md) for TPM,
+See the recovery runbook at [`docs/recovery.md`](../docs/recovery.md) for TPM,
 remote initrd SSH, and direct-link rescue procedures.

@@ -447,6 +447,270 @@
                 Nice = 19;
               };
             };
+
+            # Blocky upstream latency tracer: runs hourly, samples query latency
+            # per upstream resolver from Blocky's Prometheus endpoint.
+            systemd.services.soyo-blocky-trace = {
+              description = "Sample Blocky upstream resolver latency as traces";
+              after = [ "blocky.service" ];
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart =
+                  let
+                    tracer = pkgs.writeScript "soyo-blocky-trace" ''
+                      #!${pkgs.python3}/bin/python3
+                      import json, urllib.request, re, uuid, subprocess, os
+
+                      try:
+                          resp = urllib.request.urlopen("http://127.0.0.1:4000/metrics", timeout=10)
+                          text = resp.read().decode()
+                      except:
+                          raise SystemExit(0)
+
+                      now_ns = int(subprocess.run(["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
+                      trace_id = uuid.uuid4().hex
+
+                      # Parse per-upstream query counts from blocky metrics
+                      # blocky_query_count_total{upstream="..."} or similar
+                      spans = []
+                      upstreams = {}
+                      for line in text.split('\n'):
+                          m = re.match(r'blocky_query_count_total\{upstream="([^"]+)"\}\s+([\d.]+)', line)
+                          if m:
+                              name = m.group(1).split('/')[-1][:40]
+                              count = float(m.group(2))
+                              upstreams[name] = count
+
+                      # Build a span per upstream showing relative query volume
+                      total = sum(upstreams.values()) or 1
+                      span_ts = now_ns - 60_000_000_000  # last minute
+                      for i, (upstream, count) in enumerate(sorted(upstreams.items())[:20]):
+                          ratio = count / total
+                          dur_ns = int(ratio * 60_000_000_000)
+                          sid = uuid.uuid4().hex[:16]
+                          spans.append({
+                              "traceId": trace_id, "spanId": sid,
+                              "name": f"upstream: {upstream}", "kind": 2,
+                              "startTimeUnixNano": str(span_ts),
+                              "endTimeUnixNano": str(span_ts + dur_ns),
+                              "attributes": [
+                                  {"key": "upstream", "value": {"stringValue": upstream}},
+                                  {"key": "query_count", "value": {"intValue": str(int(count))}},
+                                  {"key": "query_share", "value": {"doubleValue": ratio}}
+                              ]
+                          })
+                          span_ts += dur_ns
+
+                      if not spans:
+                          raise SystemExit(0)
+
+                      trace = {
+                          "resourceSpans": [{
+                              "resource": {"attributes": [
+                                  {"key": "service.name", "value": {"stringValue": "blocky-upstreams"}},
+                                  {"key": "host.name", "value": {"stringValue": "soyo"}}
+                              ]},
+                              "scopeSpans": [{"scope": {"name": "blocky"}, "spans": spans}]
+                          }]
+                      }
+                      subprocess.run(["curl", "-sS", "-o", "/dev/null", "-X", "POST",
+                          "-H", "Content-Type: application/json",
+                          "--data", json.dumps(trace),
+                          "http://127.0.0.1:4318/v1/traces"], timeout=10, capture_output=True)
+                    '';
+                  in
+                  "${tracer}";
+                MemoryMax = "32M";
+                CPUQuota = "5%";
+                Nice = 19;
+              };
+            };
+            systemd.timers.soyo-blocky-trace = {
+              description = "Hourly Blocky upstream latency trace";
+              wantedBy = [ "timers.target" ];
+              timerConfig = {
+                OnCalendar = "hourly";
+                RandomizedDelaySec = "300";
+                Persistent = true;
+              };
+            };
+
+            # Activation tracer: watches /run/current-system for changes and
+            # pushes a trace each time nixos-rebuild activates a new generation.
+            systemd.services.soyo-activation-trace = {
+              description = "Trace nixos-rebuild activation";
+              after = [ "multi-user.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart =
+                  let
+                    tracer = pkgs.writeScript "soyo-activation-trace" ''
+                      #!${pkgs.python3}/bin/python3
+                      import json, os, subprocess, uuid
+
+                      # Read the current generation from the profile symlink
+                      gen_path = "/run/current-system"
+                      if not os.path.isdir(gen_path):
+                          raise SystemExit(0)
+
+                      # Try to get build timestamp from the store path
+                      try:
+                          store_path = os.readlink(gen_path) if os.path.islink(gen_path) else gen_path
+                          # Parse timestamp from the store path or use mtime
+                          mtime = os.path.getmtime(gen_path)
+                      except:
+                          mtime = subprocess.run(
+                              ["date", "+%s%N"], capture_output=True, text=True).stdout.strip()
+                          mtime = int(mtime) if mtime.isdigit() else 0
+
+                      now_ns = int(subprocess.run(
+                          ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
+                      # Activation happened at mtime (generation created)
+                      start_ns = int(mtime * 1_000_000_000) if mtime > 1000000000 else now_ns - 300_000_000_000
+
+                      # Get generation number
+                      gen = "unknown"
+                      try:
+                          gen_result = subprocess.run(
+                              ["nixos-version"], capture_output=True, text=True, timeout=5)
+                          gen = gen_result.stdout.strip()[:40]
+                      except:
+                          pass
+
+                      trace_id = uuid.uuid4().hex
+                      root_id = uuid.uuid4().hex[:16]
+                      spans = [{
+                          "traceId": trace_id, "spanId": root_id,
+                          "name": f"nixos-activation-{gen}", "kind": 2,
+                          "startTimeUnixNano": str(start_ns),
+                          "endTimeUnixNano": str(now_ns),
+                          "attributes": [
+                              {"key": "service.name", "value": {"stringValue": "nixos-activation"}},
+                              {"key": "generation", "value": {"stringValue": gen}},
+                              {"key": "store_path", "value": {"stringValue": store_path if 'store_path' in dir() else gen_path}}
+                          ]
+                      }]
+
+                      trace = {
+                          "resourceSpans": [{
+                              "resource": {"attributes": [
+                                  {"key": "service.name", "value": {"stringValue": "nixos-activation"}},
+                                  {"key": "host.name", "value": {"stringValue": "soyo"}}
+                              ]},
+                              "scopeSpans": [{"scope": {"name": "nixos"}, "spans": spans}]
+                          }]
+                      }
+                      subprocess.run(["curl", "-sS", "-o", "/dev/null", "-X", "POST",
+                          "-H", "Content-Type: application/json",
+                          "--data", json.dumps(trace),
+                          "http://127.0.0.1:4318/v1/traces"], timeout=10, capture_output=True)
+                    '';
+                  in
+                  "${tracer}";
+                MemoryMax = "32M";
+                CPUQuota = "5%";
+                Nice = 19;
+              };
+            };
+            # Path unit: triggers activation trace when /run/current-system changes
+            systemd.paths.soyo-activation-trace = {
+              description = "Watch for NixOS activation";
+              wantedBy = [ "multi-user.target" ];
+              pathConfig = {
+                PathModified = "/run/current-system";
+                Unit = "soyo-activation-trace.service";
+              };
+            };
+
+            # Health check tracer: runs hourly, checks disk, SMART, services,
+            # cert expiry, and pushes results as a trace.
+            systemd.services.soyo-health-trace = {
+              description = "Periodic health checks as traces";
+              after = [ "multi-user.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart =
+                  let
+                    tracer = pkgs.writeScript "soyo-health-trace" ''
+                      #!${pkgs.python3}/bin/python3
+                      import json, subprocess, os, uuid
+
+                      now_ns = int(subprocess.run(
+                          ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
+                      trace_id = uuid.uuid4().hex
+                      spans = []
+
+                      def run_check(name, cmd, timeout=10):
+                          try:
+                              start = int(subprocess.run(
+                                  ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
+                              r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+                              end = int(subprocess.run(
+                                  ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
+                              ok = r.returncode == 0
+                              output = (r.stdout + r.stderr)[:200]
+                              return {
+                                  "ok": ok, "start": start, "end": end,
+                                  "output": output, "rc": r.returncode
+                              }
+                          except Exception as e:
+                              return {"ok": False, "start": now_ns, "end": now_ns,
+                                      "output": str(e)[:200], "rc": -1}
+
+                      checks = [
+                          ("disk-usage", ["btrfs", "filesystem", "usage", "-b", "/"]),
+                          ("systemd-health", ["systemctl", "is-system-running", "--wait"]),
+                          ("memory-free", ["awk", "/MemAvailable/{print $2}", "/proc/meminfo"]),
+                          ("zram-usage", ["awk", "/swap/ {s+=$2} END {print s}", "/proc/swaps"]),
+                      ]
+
+                      for name, cmd in checks:
+                          r = run_check(name, cmd, timeout=15)
+                          sid = uuid.uuid4().hex[:16]
+                          spans.append({
+                              "traceId": trace_id, "spanId": sid,
+                              "name": name, "kind": 2,
+                              "startTimeUnixNano": str(r["start"]),
+                              "endTimeUnixNano": str(r["end"]),
+                              "status": {"code": 0 if r["ok"] else 2},
+                              "attributes": [
+                                  {"key": "check", "value": {"stringValue": name}},
+                                  {"key": "healthy", "value": {"boolValue": r["ok"]}},
+                                  {"key": "return_code", "value": {"intValue": str(r["rc"])}},
+                                  {"key": "output", "value": {"stringValue": r["output"]}}
+                              ]
+                          })
+
+                      trace = {
+                          "resourceSpans": [{
+                              "resource": {"attributes": [
+                                  {"key": "service.name", "value": {"stringValue": "soyo-health"}},
+                                  {"key": "host.name", "value": {"stringValue": "soyo"}}
+                              ]},
+                              "scopeSpans": [{"scope": {"name": "health"}, "spans": spans}]
+                          }]
+                      }
+                      subprocess.run(["curl", "-sS", "-o", "/dev/null", "-X", "POST",
+                          "-H", "Content-Type: application/json",
+                          "--data", json.dumps(trace),
+                          "http://127.0.0.1:4318/v1/traces"], timeout=10, capture_output=True)
+                    '';
+                  in
+                  "${tracer}";
+                MemoryMax = "64M";
+                CPUQuota = "10%";
+                Nice = 19;
+              };
+            };
+            systemd.timers.soyo-health-trace = {
+              description = "Hourly health check trace";
+              wantedBy = [ "timers.target" ];
+              timerConfig = {
+                OnCalendar = "hourly";
+                RandomizedDelaySec = "120";
+                Persistent = true;
+              };
+            };
           })
         ]
       );

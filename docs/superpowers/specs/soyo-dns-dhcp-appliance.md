@@ -170,7 +170,7 @@ The dendritic pattern's earlier rejection (see appendix) is explicitly reversed:
   - `modules/nixos/dhcp.nix` — dnsmasq DHCP aspect
   - `modules/nixos/maintenance.nix` — `nix.gc`, store optimisation, scrub, journald/boot-entry limits, `smartd`, free-space monitoring, ntfy notifications, time sync
   - `modules/nixos/backup.nix` — restic jobs, snapshot scheduling, repo-secret wiring
-  - `modules/nixos/observability.nix` — lightweight on-box exporters; heavy dashboards and storage stay off-box
+  - `modules/nixos/observability.nix` — on-box exporters, Grafana dashboards, Loki logs, Tempo traces; all resource-isolated as guest services
   - `modules/home/base.nix` — shared headless Home Manager aspect
 
 ### Soyo Host Layout
@@ -556,7 +556,7 @@ Third-party/off-box services (distinct from on-Soyo Future Services). Optional o
 
 - GitHub Actions — CI for formatting, linting, host build checks; improves review without entering the runtime dependency chain
 - Tailscale — post-boot remote admin; secondary to the LAN and local-console recovery paths
-- Grafana Cloud with Grafana Alloy, or an external Prometheus/Grafana pair — optional off-box metrics storage, dashboards, and alerting
+- Grafana Cloud with Grafana Alloy, or an external Prometheus/Grafana pair — alternative to the on-box Grafana + Loki + Tempo stack (useful for multi-host or off-box dashboards)
 - Cachix (conditional) — binary cache if the repo later benefits, especially with CI builds or more hosts; only if its free-tier/visibility terms fit
 
 No hosted service is required for: first boot, remote unlock, local power-loss recovery, secret decryption on target, or ordinary LAN DNS/DHCP.

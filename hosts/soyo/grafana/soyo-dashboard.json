@@ -463,6 +463,114 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value_and_name"
       }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Backup Traces",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 50 },
+      "datasource": { "type": "tempo", "uid": "soyo-tempo" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "query": "{service.name=\"restic-backup\"} | count()",
+        "queryType": "traceql",
+        "refId": "A"
+      }],
+      "description": "Generated after each restic backup run (daily). Shows backup duration and success/failure.",
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Activation Traces",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 50 },
+      "datasource": { "type": "tempo", "uid": "soyo-tempo" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "query": "{service.name=\"nixos-activation\"} | count()",
+        "queryType": "traceql",
+        "refId": "A"
+      }],
+      "description": "Generated on each nixos-rebuild activation. Shows generation changes over time.",
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Health Check Traces",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 50 },
+      "datasource": { "type": "tempo", "uid": "soyo-tempo" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "query": "{service.name=\"soyo-health\"} | count()",
+        "queryType": "traceql",
+        "refId": "A"
+      }],
+      "description": "Hourly checks: disk usage, systemd health, memory, zram. Red spans = check failed.",
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "Blocky Upstream Traces",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 50 },
+      "datasource": { "type": "tempo", "uid": "soyo-tempo" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "none" },
+          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
+        }
+      },
+      "targets": [{
+        "query": "{service.name=\"blocky-upstreams\"} | count()",
+        "queryType": "traceql",
+        "refId": "A"
+      }],
+      "description": "Hourly per-upstream DNS query volume distribution. Shows which resolvers serve most traffic.",
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      }
     }
   ]
 }
