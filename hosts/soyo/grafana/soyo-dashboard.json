@@ -544,33 +544,6 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value_and_name"
       }
-    },
-    {
-      "id": 25,
-      "type": "stat",
-      "title": "Blocky Upstream Traces",
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 50 },
-      "datasource": { "type": "tempo", "uid": "soyo-tempo" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "none" },
-          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }] }
-        }
-      },
-      "targets": [{
-        "query": "{service.name=\"blocky-upstreams\"} | count()",
-        "queryType": "traceql",
-        "refId": "A"
-      }],
-      "description": "Hourly per-upstream DNS query volume distribution. Shows which resolvers serve most traffic.",
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "value_and_name"
-      }
     }
   ]
 }
