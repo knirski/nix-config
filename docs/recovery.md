@@ -2,6 +2,32 @@
 
 Consolidated runbook for every failure mode. Start here when Soyo is down.
 
+## Enable Tailscale
+
+Tailscale is pre-installed and configured on Soyo. After the first deploy, it
+authenticates automatically using the encrypted auth key. Once connected, you
+can reach Soyo from anywhere without open ports or DynDNS:
+
+```sh
+ssh krzysiek@soyo.tailnet-name.ts.net
+```
+
+To verify or check status:
+
+```sh
+ssh krzysiek@10.0.0.9
+tailscale status
+```
+
+If Tailscale isn't connected (e.g. after a full reinstall), force a re-auth:
+
+```sh
+sudo tailscale logout
+# The auto-auth service will re-authenticate on next boot,
+# or run manually:
+sudo tailscale up --auth-key "$(cat /run/agenix/tailscale-auth-key)"
+```
+
 ## Normal power loss
 
 Nothing to do. Soyo powers on (BIOS "State After G3" = S0), TPM auto-unlocks the disk, and DNS/DHCP resume in about a minute. Confirm with the Synology Uptime Kuma probe.
