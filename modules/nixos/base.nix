@@ -13,6 +13,10 @@
         ];
         auto-optimise-store = true;
         warn-dirty = false;
+        trusted-users = [
+          "krzysiek"
+          "@wheel"
+        ];
       };
 
       documentation.nixos.enable = true;
