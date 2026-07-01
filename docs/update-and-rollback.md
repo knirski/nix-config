@@ -81,4 +81,8 @@ git add secrets/rekeyed/soyo/
 git commit
 ```
 
-Secrets are not rekeyed automatically — `deploy-soyo` does it, but `rebuild-soyo` skips it for faster iteration.
+Secrets are rekeyed automatically by `deploy-soyo` as the first step. If you need a faster iteration without rekeying, run:
+
+```sh
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
+```
