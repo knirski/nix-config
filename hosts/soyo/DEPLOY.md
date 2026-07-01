@@ -267,6 +267,14 @@ sudo journalctl -u systemd-cryptsetup@crypted --no-pager | tail
 
 ## Subsequent deploys
 
+> **Prerequisite:** The base NixOS module (`modules/nixos/base.nix`) sets
+> `nix.settings.trusted-users` to include `krzysiek` and `@wheel`. Without
+> this, `nix-copy-closure` (used by `nixos-rebuild --target-host`) fails on
+> new store paths because the remote nix daemon rejects unsigned paths from
+> non-trusted users. If deploying fresh from `nixos-install`, this setting
+> is already active — it's only an issue if the first rebuild adds new
+> packages or services.
+
 From a workstation on the LAN:
 
 ```bash
