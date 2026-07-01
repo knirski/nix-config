@@ -6,9 +6,9 @@ nix develop '.#' -c bash <<'SCRIPT'
 set -euo pipefail
 
 echo "==> Deploying to soyo (local build, remote activation)..."
+export NIX_SSHOPTS="-o ControlMaster=no"
 nixos-rebuild switch \
   --flake .#soyo \
   --target-host "krzysiek@10.0.0.9" \
-  --sudo \
-  --no-ssh-tty
+  --sudo
 SCRIPT
