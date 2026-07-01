@@ -50,6 +50,8 @@ Traditional NixOS has a mutable `/` where services write state freely. That's si
 
 **Fork: deploy-rs or native build + copy.** `deploy-rs` adds deploy checks and magic-rollback but needs another flake input. Native `nixos-rebuild --target-host` does local build + remote activation with zero extra dependencies. `deploy-rs` deferred to M4 when a second host makes multi-host orchestration worth it.
 
+**First-deploy gotcha:** `trusted-users` and `wheelNeedsPassword = false` are required for `--target-host` to work (nix-copy-closure needs trusted-user, sudo needs no TTY). If you add these after `nixos-install`, the first remote deploy fails — you need one local build on Soyo first to activate them.
+
 ## What's deferred to M3/M4
 
 - **Secure Boot** (M3) — Limine secureBoot, sbctl key enrollment, PCR 0+2+7 re-enroll

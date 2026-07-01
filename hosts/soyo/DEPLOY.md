@@ -268,12 +268,24 @@ sudo journalctl -u systemd-cryptsetup@crypted --no-pager | tail
 ## Subsequent deploys
 
 > **Prerequisite:** The base NixOS module (`modules/nixos/base.nix`) sets
-> `nix.settings.trusted-users` to include `krzysiek` and `@wheel`. Without
-> this, `nix-copy-closure` (used by `nixos-rebuild --target-host`) fails on
-> new store paths because the remote nix daemon rejects unsigned paths from
-> non-trusted users. If deploying fresh from `nixos-install`, this setting
-> is already active — it's only an issue if the first rebuild adds new
-> packages or services.
+> `nix.settings.trusted-users` to include `krzysiek` and `@wheel`, and
+> `modules/nixos/users.nix` sets `wheelNeedsPassword = false`. Without these,
+> `nixos-rebuild --target-host` fails because the remote nix daemon rejects
+> unsigned store paths and sudo requires a TTY for password prompts.
+>
+> **First deploy after `nixos-install`:** The freshly installed system runs
+> the M1 config, which may not yet have `trusted-users` or passwordless sudo
+> if these were added later in development. The first `--target-host` deploy
+> from a workstation will fail for this reason. Bootstrap by building locally
+> on Soyo once:
+>
+> ```bash
+> # On Soyo (cloned repo or pulled from GitHub):
+> git pull
+> sudo nixos-rebuild switch --flake .#soyo
+> ```
+>
+> After that activation completes, remote deploys from a workstation work.
 
 From a workstation on the LAN:
 
