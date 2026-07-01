@@ -66,7 +66,7 @@
             #   live ISO: /home/nixos/.ssh/id_ed25519
             #   workstation: /home/krzysiek/.ssh/soyo_ed25519
             masterIdentities = [
-              "/home/nixos/.ssh/id_ed25519"
+              "/home/krzysiek/.ssh/soyo_ed25519"
             ];
             storageMode = "local";
             localStorageDir = ../../. + "/secrets/rekeyed/soyo";
