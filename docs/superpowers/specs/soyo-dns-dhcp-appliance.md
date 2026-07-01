@@ -324,9 +324,7 @@ The persisted-path inventory, `age.identityPaths`, and `neededForBoot` are there
 
 Baseline phasing matters here:
 
-- M1/M2 use standard `agenix` wiring with an explicit `secrets/secrets.nix` recipient map and `age.secrets.<name>.file`
-- do not mix `agenix-rekey`'s `rekeyFile` flow into the first production cut; it is a later migration path once a second host exists or secret-recipient churn becomes noisy enough to justify it
-- keep `agenix-rekey` available in the operator toolchain so that migration path is documented and ready, not improvised later
+- M1 uses `agenix-rekey`'s `rekeyFile` flow from day one — every secret is master-encrypted and rekeyed per host. The initial design deferred this to M2/M4 (see [design journey](/docs/learning/design-journey.md)), but `rekeyFile` was chosen upfront to avoid a painful migration later and because `agenix-rekey` is near-instant on already-rekeyed secrets.
 
 ### User Model
 
@@ -632,8 +630,8 @@ The Uptime Kuma watcher is NAS-side, documented as an operator step, not in the 
 Soyo should expose metrics, but it should not become its own metrics stack.
 
 - on-box exporters stay lightweight: Blocky's Prometheus endpoint, `node_exporter` for host metrics, and the Prometheus dnsmasq exporter for lease/DNS statistics
-- scrape, storage, dashboards, and long-retention alerting stay off-box
-- the preferred modern off-box path is either Grafana Cloud with Grafana Alloy or an external Prometheus/Grafana stack on the NAS or another host
+- Grafana, Prometheus, Loki, Tempo, and Alloy run **on-box** as resource-isolated guest services with `MemoryMax` and `CPUQuota` limits. This was initially designed as off-box (see [design journey](/docs/learning/design-journey.md)), but on-box was chosen for simplicity — Soyo's 16 GB RAM and single-NIC workload have ample headroom, and ruling out an off-box dependency keeps DNS/DHCP availability independent of NAS or WAN connectivity.
+- alerting routes through Grafana's ntfy contact point (disk space, backup failure, service health)
 
 That split preserves appliance focus: Soyo publishes a small metrics surface, while every heavier observability responsibility lives in an independent failure domain.
 
@@ -854,7 +852,7 @@ These do not change the design direction.
 
 A small, focused custom flake that borrows patterns from established NixOS repos without forking any large personal repo.
 
-Borrow: `flake-parts` with the dendritic pattern (`import-tree`, aspect modules) and thin host dirs; declarative hardware via `nixos-facter`; `nixos-anywhere` install; `disko` layout; `preservation` with a blank-snapshot rollback and a documented persisted-path inventory; plain `agenix` for the first production secret lifecycle, with `agenix-rekey` documented as the later migration path; native `nixos-rebuild --target-host` for routine remote activation (`deploy-rs` deferred to M4); systemd-native server/initrd patterns; TPM2 auto-unlock via `systemd-cryptenroll` hardened by Limine Secure Boot; headless Home Manager on a shared base; declarative `restic` backups via `services.restic.backups`.
+Borrow: `flake-parts` with the dendritic pattern (`import-tree`, aspect modules) and thin host dirs; declarative hardware via `nixos-facter`; `nixos-anywhere` install; `disko` layout; `preservation` with a blank-snapshot rollback and a documented persisted-path inventory; `agenix-rekey`'s `rekeyFile` flow (used from day one — master-encrypted files rekeyed per host at build time); native `nixos-rebuild --target-host` for routine remote activation (`deploy-rs` deferred to M4); systemd-native server/initrd patterns; TPM2 auto-unlock via `systemd-cryptenroll` hardened by Limine Secure Boot; headless Home Manager on a shared base; declarative `restic` backups via `services.restic.backups`.
 
 Avoid: desktop policy; broad self-hosting stacks; ZFS; legacy initrd shell hacks; over-automation of unattended updates.
 
@@ -871,8 +869,8 @@ Avoid: desktop policy; broad self-hosting stacks; ZFS; legacy initrd shell hacks
 9. systemd initrd break-glass unlock module: LAN address plus direct-link rescue address, with local console also available
 10. Headless Home Manager profile for the admin user, with user persistence declared explicitly
 11. Backup aspect: restic to the Synology via `services.restic.backups`, plus scheduled Btrfs snapshots
-12. Observability module: Blocky metrics retained, plus `node_exporter` and dnsmasq exporter on Soyo, with explicit documentation that Grafana/Alloy or Prometheus/Grafana stays off-box
-13. ntfy failure-notification wiring for systemd units, restic, and `smartd`
+12. Observability module: Blocky metrics retained, plus `node_exporter`, dnsmasq exporter, and on-box Grafana+Prometheus+Loki+Tempo+Alloy as resource-isolated guest services with Grafana alerting (disk, backup, service health) routed through ntfy
+13. ntfy failure-notification wiring for systemd units and smartd (in maintenance.nix); backup alerts now route through Grafana
 14. Update/deploy workflow on native `nixos-rebuild` (`--target-host` for remote: local build + remote activation; `test|switch` locally), with `nh` only as local convenience; `deploy-rs` deferred to M4
 15. Operator docs for install, update, validation, backup/restore, and outage recovery
 16. Learning-oriented documentation (first-class, see Learning Goals): a design-journey narrative deriving the design from basics through its important transient steps and rejected alternatives, a guided entry-point doc with an explicit reading order mapped to M1–M4, a glossary of the repo's non-obvious terms, per-concept explainer notes each linked to a canonical source (nix.dev, NixOS/Nixpkgs/Home Manager manuals, `flake.parts`, search.nixos.org), an explicit explanation of the dendritic aspect→host wiring, and modules commented with the idiom and the *why*

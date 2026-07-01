@@ -192,7 +192,8 @@ nix develop '.#' -c agenix rekey
 ```bash
 # Verify (b): rekeyed secrets exist
 ls -la secrets/rekeyed/soyo/
-# Expected: 4 .age files (root-password, krzysiek-password, restic-password, ntfy-token)
+# Expected: 7 .age files (root-password, krzysiek-password, restic-password,
+# ntfy-token, ntfy-topic, grafana-admin-password, tailscale-auth-key)
 ```
 
 ```bash

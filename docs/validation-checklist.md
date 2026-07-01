@@ -119,7 +119,14 @@ Run after first install and after significant updates. Each check has the exact 
   ```sh
   sudo ls /run/agenix/
   ```
-  Expected: `root-password`, `krzysiek-password`, `restic-password`, `ntfy-token`.
+  Expected: `root-password`, `krzysiek-password`, `restic-password`,
+  `ntfy-token`, `ntfy-topic`, `grafana-admin-password`, `tailscale-auth-key`.
+
+- [ ] **CI pipeline passes on push**
+  ```sh
+  # Check https://github.com/knirski/nix-config/actions
+  ```
+  Expected: the most recent push shows a green checkmark for the `CI` workflow.
 
 - [ ] **nix.gc configured**
   ```sh
@@ -203,6 +210,15 @@ Run after first install and after significant updates. Each check has the exact 
   curl -s -o /dev/null -w "%{http_code}" http://10.0.0.9:3000
   ```
   Expected: `200` or `302` (Grafana redirects to login). Prometheus datasource should be pre-provisioned.
+
+- [ ] **Grafana alert rules provisioned**
+  ```sh
+  curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" \
+    http://127.0.0.1:3000/api/v1/provisioning/alert-rules \
+    | jq '.[].title'
+  ```
+  Expected: four rule titles — "Disk space low on /persist", "Backup failed",
+  "Service down: Blocky DNS", "Service down: dnsmasq".
 
 - [ ] **Tailscale connected**
   ```sh
