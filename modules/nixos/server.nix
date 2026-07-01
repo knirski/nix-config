@@ -42,14 +42,14 @@
         # earlyoom: proactive OOM killer. If a service (e.g. Grafana, Loki) leaks
         # memory, the kernel OOM can freeze the box. earlyoom kills the culprit
         # while the system is still responsive, protecting critical services.
+        #
+        # Note: earlyoom 1.9.x uses -p/--prefer with a regex pattern. The NixOS
+        # module passes extraArgs as a flat list; verify with:
+        #   systemctl cat earlyoom | grep EARLYOOM_ARGS
         services.earlyoom = {
           enable = true;
-          freeMemThreshold = 10; # kill when <10% memory free
-          freeSwapThreshold = 10; # kill when <10% swap free
-          extraArgs = [
-            "--prefer '(^|/)blocky$|(^|/)dnsmasq$|(^|/)sshd?$" # protect critical services
-            "--ignore '(^|/)systemd|(^|/)X|(^|/)pipewire" # never kill core services
-          ];
+          freeMemThreshold = 10;
+          freeSwapThreshold = 10;
         };
 
         # Tailscale: secure mesh VPN for remote admin. No open ports, no DynDNS.
