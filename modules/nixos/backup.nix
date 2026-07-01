@@ -174,20 +174,6 @@
             EOF
                         fi
                         mv /var/lib/prometheus/textfiles/backup.prom.$$ /var/lib/prometheus/textfiles/backup.prom
-
-                        # ntfy notification on failure (unchanged)
-                        if [ "$RESULT" != "success" ]; then
-                          TOKEN=$(cat ${config.age.secrets.ntfy-token.path} 2>/dev/null || echo "")
-                          TOPIC=$(cat ${config.age.secrets.ntfy-topic.path} 2>/dev/null || echo "")
-                          if [ -n "$TOKEN" ] && [ -n "$TOPIC" ]; then
-                            curl -sS -o /dev/null \
-                              -H "Authorization: Bearer $TOKEN" \
-                              -H "Title: soyo backup failed" \
-                              -H "Tags: error" \
-                              -d "restic backup to Synology failed: $RESULT (exit $STATUS) — check 'journalctl -u restic-backups-soyo -n 30'" \
-                              "$TOPIC"
-                          fi
-                        fi
           '';
         };
 
