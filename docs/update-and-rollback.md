@@ -23,11 +23,13 @@ nix flake lock --update-input nixpkgs
 
 Then deploy normally. Confirm `enp1s0` still comes up after the deploy — the `dwmac_motorcomm` driver must survive each kernel bump.
 
-After a kernel/initrd/bootloader update, TPM PCRs may shift. If auto-unlock fails on next reboot, use break-glass passphrase unlock, then re-enroll:
+After a kernel/initrd/bootloader update, TPM PCRs should stay stable (Phase 2 binds
+PCR 0+2+7, which does not change across software updates). If auto-unlock still fails
+for another reason, use break-glass passphrase unlock, then re-enroll:
 
 ```sh
 sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
-sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/disk/by-partlabel/luks
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partlabel/luks
 ```
 
 See [recovery.md](./recovery.md) for the full break-glass flow.
@@ -84,5 +86,5 @@ git commit
 Secrets are rekeyed automatically by `deploy-soyo` as the first step. If you need a faster iteration without rekeying, run:
 
 ```sh
-nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
 ```

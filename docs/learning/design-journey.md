@@ -52,6 +52,19 @@ Traditional NixOS has a mutable `/` where services write state freely. That's si
 
 **First-deploy gotcha:** `trusted-users` and `wheelNeedsPassword = false` are required for `--target-host` to work (nix-copy-closure needs trusted-user, sudo needs no TTY). If you add these after `nixos-install`, the first remote deploy fails — you need one local build on Soyo first to activate them.
 
+## Observability: on-box Grafana (later addition)
+
+The spec originally kept dashboards off-box — exporters on Soyo, scraping and storage on the NAS or Grafana Cloud. That's the architecturally clean split: metrics stay up when Soyo is down.
+
+Grafana ended up on Soyo anyway. The reasons:
+
+- **It fits.** Grafana is a ~100 MB Go binary with SQLite. 256 MB MemoryMax and 20% CPUQuota is plenty. It's a guest, same as any other non-critical service.
+- **Prometheus** scrapes the local exporters on loopback (zero network overhead) and serves the query API to Grafana. Both are resource-isolated.
+- **Self-contained.** No dependency on the NAS or cloud for dashboards. If Soyo is down, the Synology Uptime Kuma probe still covers the liveness gap.
+- **The principle didn't justify the friction.** Having to spin up a separate Grafana instance to see CPU graphs for a single-host LAN appliance was more effort than it saved. The guest isolation pattern (MemoryMax, CPUQuota) already protects DNS/DHCP — the extra safety of a separate failure domain wasn't buying much at this scale.
+
+The off-box path stays documented as an alternative for when Soyo graduates to multi-host or the on-box stack becomes a bottleneck.
+
 ## What's deferred to M3/M4
 
 - **Secure Boot** (M3) — Limine secureBoot, sbctl key enrollment, PCR 0+2+7 re-enroll

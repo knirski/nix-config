@@ -58,19 +58,19 @@ The repo password is an agenix secret (`restic-password`). Transport is SFTP to 
 
 ### SSH key setup (required for unattended backups)
 
-Generate a keypair on Soyo after the first deploy:
+Generate a keypair on Soyo after the first deploy. The key must go under `/persist/etc/restic/` so it survives reboots (this path is declared in `hosts/soyo/persistence.nix`):
 
 ```sh
-sudo mkdir -p /etc/restic
-sudo ssh-keygen -t ed25519 -f /etc/restic/ssh-key -N "" -C "soyo-backup@soyo"
-sudo cat /etc/restic/ssh-key.pub
+sudo mkdir -p /persist/etc/restic
+sudo ssh-keygen -t ed25519 -f /persist/etc/restic/ssh-key -N "" -C "soyo-backup@soyo"
+sudo cat /persist/etc/restic/ssh-key.pub
 ```
 
 Copy the public key output and add it to the Synology user's authorized keys:
 
 1. SSH into the Synology: `ssh soyo-backup@czworaczki`
 2. Add the public key to `~/.ssh/authorized_keys`
-3. Confirm: `ssh -i /etc/restic/ssh-key soyo-backup@czworaczki echo "works"`
+3. Confirm: `ssh -i /persist/etc/restic/ssh-key soyo-backup@czworaczki echo "works"`
 
 The `ssh-key` file is persisted under `/persist/etc/restic/` (declared in `hosts/soyo/persistence.nix`) and survives reboots. The generated config in `hosts/soyo/backup.nix` references it as `sshKeyFile`. No password prompts during scheduled backups.
 
