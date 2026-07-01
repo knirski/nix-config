@@ -23,8 +23,9 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 15 | `modules/nixos/backup.nix`, `hosts/soyo/backup.nix` | M2 | restic to Synology, btrbk local snapshots |
 | 16 | `modules/nixos/observability.nix`, `hosts/soyo/observability.nix` | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces |
 | 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding |
-| 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, checks |
+| 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, checks, CI pipeline |
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
+| 20 | `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline, Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
 
 ## What is this repo?
 
@@ -89,3 +90,4 @@ Each name in that list is an aspect contributed by a file under `modules/nixos/`
 | dnsmasq | [thekelleys.org.uk/dnsmasq](https://thekelleys.org.uk/dnsmasq/doc.html) |
 | restic | [restic.readthedocs.io](https://restic.readthedocs.io/) |
 | btrbk | [digint.ch/btrbk](https://digint.ch/btrbk/) |
+| Best of Nix | [github.com/tolkonepiu/best-of-nix](https://github.com/tolkonepiu/best-of-nix) — curated tools and libraries |
