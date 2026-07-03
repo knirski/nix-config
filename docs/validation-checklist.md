@@ -1,6 +1,11 @@
 # Validation Checklist
 
-Run after first install and after significant updates. Each check has the exact command and expected result.
+Run after first install and after significant updates. Each check has the exact
+command and expected result.
+
+> **Hostname vs IP:** Most commands use `soyo` (resolved via Blocky from
+> `reservations.nix`). If DNS isn't working yet, fall back to the static IP
+> `10.0.0.9` (e.g. `ssh krzysiek@10.0.0.9`, `dig @10.0.0.9`).
 
 ## M1 — Bootable appliance
 

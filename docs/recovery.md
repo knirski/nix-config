@@ -2,6 +2,11 @@
 
 Consolidated runbook for every failure mode. Start here when Soyo is down.
 
+> **Hostname vs IP:** All examples use `soyo` (resolved via Blocky's `customDNS`
+> from `reservations.nix`). If DNS is the problem you're troubleshooting, fall
+> back to the static IP: `krzysiek@10.0.0.9` for SSH, `10.0.0.9:3000` for
+> Grafana, etc.
+
 ## Enable Tailscale
 
 Tailscale is pre-installed and configured on Soyo. After the first deploy, it

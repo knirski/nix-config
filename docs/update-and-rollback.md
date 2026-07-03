@@ -13,7 +13,7 @@ The day-2 remote deploy uses native `nixos-rebuild --target-host` — your works
 This runs:
 
 1. `agenix rekey` — re-encrypts every master `.age` secret for Soyo's host key. Run this on your workstation with your SSH private key available (the `masterIdentities` in `modules/parts/soyo.nix` must point to it). Failure here means Soyo gets stale secrets.
-2. `nixos-rebuild switch --target-host krzysiek@soyo --use-remote-sudo` — builds the full closure locally, copies it to Soyo over SSH, activates it remotely. Soyo's N150 never compiles.
+2. `nixos-rebuild switch --target-host krzysiek@soyo --use-remote-sudo` — builds the full closure locally, copies it to Soyo over SSH, activates it remotely. Soyo's N150 never compiles. If DNS isn't working, use `krzysiek@10.0.0.9`.
 
 ## Updating nixpkgs
 
