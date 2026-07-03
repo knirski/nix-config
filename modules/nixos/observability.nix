@@ -285,40 +285,58 @@
                     options.path =
                       pkgs.runCommand "soyo-grafana-dashboards"
                         {
-                          nativeBuildInputs = [ pkgs.gnused ];
+                          nativeBuildInputs = [
+                            pkgs.gnused
+                            pkgs.jq
+                          ];
                         }
                         ''
                           mkdir -p $out
 
-                          # Community dashboards reference their Prometheus
-                          # datasource through case-inconsistent template
-                          # variables. Inject our real UID everywhere.
-                          inject_uid() {
-                            sed \
-                              -e "s/\x24{DS_PROMETHEUS}/soyo-prometheus/g" \
-                              -e "s/\x24{ds_prometheus}/soyo-prometheus/g" \
-                              "$1" > "$2"
-                          }
-
                           cp ${../../hosts/soyo/grafana/soyo-dashboard.json} $out/
-                          inject_uid ${
-                            builtins.fetchurl {
-                              url = "https://grafana.com/api/dashboards/13768/revisions/latest/download";
-                              sha256 = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
-                            }
-                          } $out/blocky.json
-                          inject_uid ${
-                            builtins.fetchurl {
-                              url = "https://grafana.com/api/dashboards/1860/revisions/latest/download";
-                              sha256 = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
-                            }
-                          } $out/node-exporter-full.json
-                          inject_uid ${
+
+                          # Community dashboards use __inputs that create
+                          # template variables ($datasource, $instance, $job)
+                          # with empty defaults. File provisioning skips the
+                          # import UI so variables stay empty and panels show
+                          # "No data". Inject real defaults so they auto-resolve.
+
+                          # --- dnsmasq (18796) ---
+                          sed "s/\x24{DS_PROMETHEUS}/soyo-prometheus/g" ${
                             builtins.fetchurl {
                               url = "https://grafana.com/api/dashboards/18796/revisions/latest/download";
                               sha256 = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
                             }
-                          } $out/dnsmasq.json
+                          } | jq '
+                            (.templating.list[] | select(.name=="datasource").current) = {"selected":true,"text":"soyo-prometheus","value":"soyo-prometheus"}
+                          | (.templating.list[] | select(.name=="job").current) = {"selected":true,"text":"dnsmasq","value":"dnsmasq"}
+                          | (.templating.list[] | select(.name=="instance").current) = {"selected":true,"text":"127.0.0.1:9153","value":"127.0.0.1:9153"}
+                          ' > $out/dnsmasq.json
+
+                          # --- blocky (13768) ---
+                          sed "s/\x24{DS_PROMETHEUS}/soyo-prometheus/g" ${
+                            builtins.fetchurl {
+                              url = "https://grafana.com/api/dashboards/13768/revisions/latest/download";
+                              sha256 = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
+                            }
+                          } | jq '
+                            (.templating.list[] | select(.name=="datasource").current) = {"selected":true,"text":"soyo-prometheus","value":"soyo-prometheus"}
+                          | (.templating.list[] | select(.name=="job").current) = {"selected":true,"text":"blocky","value":"blocky"}
+                          | (.templating.list[] | select(.name=="instance").current) = {"selected":true,"text":"127.0.0.1:4000","value":"127.0.0.1:4000"}
+                          ' > $out/blocky.json
+
+                          # --- node-exporter-full (1860) ---
+                          sed "s/\x24{ds_prometheus}/soyo-prometheus/g" ${
+                            builtins.fetchurl {
+                              url = "https://grafana.com/api/dashboards/1860/revisions/latest/download";
+                              sha256 = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
+                            }
+                          } | jq '
+                            (.templating.list[] | select(.name=="DS_PROMETHEUS").current) = {"selected":true,"text":"soyo-prometheus","value":"soyo-prometheus"}
+                          | (.templating.list[] | select(.name=="job").current) = {"selected":true,"text":"node","value":"node"}
+                          | (.templating.list[] | select(.name=="hostname" or .name=="node").current) = {"selected":true,"text":"soyo","value":"soyo"}
+                          | (.templating.list[] | select(.name=="port").current) = {"selected":true,"text":"9100","value":"9100"}
+                          ' > $out/node-exporter-full.json
                         '';
                   }
                 ];
