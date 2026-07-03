@@ -168,6 +168,52 @@ The `services.tempo.settings` module converts attrsets to the Tempo YAML config,
 - **Static user** (`users.users.tempo`) instead of `DynamicUser` — Tempo needs writes to `/var/lib/tempo/traces` (OWNED by tempo, not a runtime bind-mount), which DynamicUser breaks. `lib.mkForce false` on the module's DynamicUser default.
 - **Resource isolation** matching the rest of the stack (`MemoryMax=512M`, `CPUQuota=20%`, `Nice=10`).
 
+### Tempo metrics-generator: why it's needed even in single-binary mode
+
+TraceQL's `rate()` function needs pre-computed span metrics. Without a metrics-generator, the querier returns `"empty ring"` — there's no module registered to process rate queries. This isn't documented anywhere obvious; the Grafana Explore UI shows the error before you know the config is missing.
+
+Adding the metrics-generator in single-binary mode requires three things:
+
+1. **`metrics_generator.storage.path`** — the generator writes its own WAL (separate from the ingester WAL)
+2. **`metrics_generator.processor.{span_metrics,service_graphs}`** — enables the processors that compute metrics from spans
+3. **`metrics_generator.ring.kvstore.store = "inmemory"`** — single-node ring, same pattern as the ingester
+
+The `metrics_generator.processors` override goes at the top-level config, **not** inside `overrides` — Tempo 2.10.x rejects it there with `field metrics_generator not found in type overrides.legacyConfig`. Defaults to `["span-metrics", "service-graphs"]` when the generator is configured.
+
+Also needed: `querier.frontend_worker.frontend_address` pointing at the `query_frontend` module address — without this the querier can't reach the frontend in single-binary mode.
+
+### `localhost` vs `127.0.0.1`: why the hard-coded IP
+
+Soyo's observability stack uses `127.0.0.1` everywhere — not `localhost`. The reason isn't vanity; it's reliability.
+
+`localhost` resolves to both `127.0.0.1` (IPv4) and `::1` (IPv6) via `/etc/hosts`. `curl http://localhost:4318` might pick `::1` in a dual-stack environment. But Tempo (and most Go services) bind to a specific address via `http_listen_address` — if that's `127.0.0.1`, an IPv6 connection fails. The symptom is silent: curl connects, nothing responds, trace generators silently drop data.
+
+The fix (`0af140c`): 20 replacements across Prometheus scrape targets, Loki bind addresses, Alloy push URLs, Grafana datasource URLs, dashboard templating values, trace generator curl targets, and the grafana-alert-setup base URL. Every internal loopback connection uses the explicit IPv4 address.
+
+### ntfy alert rendering: templates over attachments
+
+Grafana's webhook contact point sends the full alerting JSON payload to the configured URL. Without templating, ntfy shows that raw JSON as the notification body — unreadable, with sensitive data visible.
+
+The fix uses ntfy's built-in Go template engine (`?template=yes` query parameter on the topic URL):
+
+```
+https://ntfy.sh/soyo-alerts?template=yes&title=%7B%7B.title%7D%7D&message=%7B%7B.message%7D%7D&priority=5&tags=warning,soyo
+```
+
+Grafana's webhook JSON includes `title` and `message` fields at the top level — already populated by Grafana's default notification template. ntfy extracts them, renders them as the notification title and body, and consumes the JSON payload. No attachment, no raw JSON, no proxy needed.
+
+The `%7B%7B` is URL-encoded `{{` (Golang template syntax). jq constructs the URL via string concatenation in the provisioning script.
+
+### Alert tolerance: 5m not 2m
+
+Blocky and dnsmasq `for` was 2 minutes — enough for a `nixos-rebuild` to trigger spurious alerts when services restart. Raised to 5 minutes. A genuine outage still fires quickly (5m), but a deployment restart is invisible.
+
+Prometheus scrapes every 60s, so 5m means at most 5 consecutive failed scrapes before alerting — two more than 2m, which is the right extra margin for scheduled maintenance without trading off real outage detection speed.
+
+### Dashboard folder over tags
+
+Three community dashboards (Blocky, dnsmasq, Node Exporter) used `tags = ["soyo"]` to group them under a common label. Grafana's folder system (`folder = "soyo"` on the provider) groups them natively in the UI sidebar. Tags stay for functional search (e.g. `dnsmask`, `blocky`, `linux`, `node-exporter`) — organizational grouping moves to the folder.
+
 ## Trace generators: Python → shell + `writeShellApplication`
 
 Soyo sends structured traces into Tempo so we can see service lifecycle events (boot, activation, health checks, backups) alongside metrics and logs. Four generators run on timers.

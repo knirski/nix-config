@@ -223,7 +223,8 @@ command and expected result.
     | jq '.[].title'
   ```
   Expected: four rule titles — "Disk space low on /persist", "Backup failed",
-  "Service down: Blocky DNS", "Service down: dnsmasq".
+  "Service down: Blocky DNS", "Service down: dnsmasq". All have `for: 5m`
+  (tolerates `nixos-rebuild` service restarts without false alerts).
 
 - [ ] **Tailscale connected**
   ```sh
