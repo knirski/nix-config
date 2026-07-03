@@ -415,7 +415,6 @@
                       type = "file";
                       options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
                         mkdir -p $out
-                        cp ${../../hosts/soyo/grafana/soyo-dashboard.json} $out/
                         cp ${dnsmasqJson} $out/dnsmasq.json
                         cp ${blockyJson} $out/blocky.json
                         cp ${nodeExporterJson} $out/node-exporter-full.json
