@@ -436,8 +436,8 @@
                     panels =
                       let
                         ds = "soyo-prometheus";
-                        grid = { h = 8; w = 12; };
-                        stat = { h = 4; w = 6; };
+                        grid = { h = 10; w = 24; };
+                        stat = { h = 4; w = 8; };
 
                         timeseries = { title, expr, legend ? "", format ? "short", ... }@extra: grid // {
                           type = "timeseries";
@@ -494,13 +494,11 @@
                           title = "CPU Usage %";
                           expr = ''100 - avg by (mode) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100'';
                           format = "percent";
-                          h = 6;
                         })
                         (timeseries {
                           title = "Memory";
                           expr = ''node_memory_MemAvailable_bytes'';
                           format = "bytes";
-                          h = 6;
                         })
                         (statPanel {
                           title = "Uptime";
@@ -524,12 +522,10 @@
                           title = "Network Traffic";
                           expr = ''rate(node_network_receive_bytes_total{device="enp1s0"}[5m])'';
                           format = "Bps";
-                          h = 6;
                         })
                         (timeseries {
                           title = "DNS Queries (dnsmasq)";
                           expr = ''rate(dnsmasq_servers_queries[5m])'';
-                          h = 6;
                         })
                         (statPanel {
                           title = "DNS Cache Hit Rate";
@@ -542,12 +538,10 @@
                         (timeseries {
                           title = "Blocky Queries";
                           expr = ''rate(blocky_query_total[5m])'';
-                          h = 6;
                         })
                         (timeseries {
                           title = "Blocked Queries";
                           expr = ''rate(blocky_query_total{reason="BLOCKED"}[5m])'';
-                          h = 6;
                         })
                         (statPanel {
                           title = "DHCP Leases";
