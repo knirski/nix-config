@@ -450,10 +450,7 @@
             # runtime paths — no secrets leaked into the Nix store.
             systemd.services.grafana-alert-setup = {
               description = "Provision Grafana alerting rules and ntfy contact point";
-              after = [
-                "grafana.service"
-                "network.target"
-              ];
+              after = [ "grafana.service" ];
               wants = [ "grafana.service" ];
               wantedBy = [ "multi-user.target" ];
               serviceConfig = {
@@ -462,76 +459,120 @@
                 MemoryMax = "64M";
                 CPUQuota = "10%";
                 Nice = 10;
-                Restart = "on-failure";
-                RestartSec = "10s";
-                Path = lib.mkForce [
-                  "${pkgs.curl}/bin"
-                  "${pkgs.coreutils}/bin"
+                ExecStart =
+                  let
+                    script = pkgs.writeShellApplication {
+                      name = "grafana-alert-setup";
+                      runtimeInputs = [ pkgs.curl pkgs.jq ];
+                      excludeShellChecks = [ "SC2086" ];
+                      text = ''
+                        set -eu
+                        : "''${CREDENTIALS_DIRECTORY:=/dev/null}"
+                        PASS=$(<"$CREDENTIALS_DIRECTORY"/admin_password)
+                        AUTH="admin:$PASS"
+                        BASE=http://localhost:3000
+                        curl() { command curl -sf -u "$AUTH" "$@"; }
+
+                        wait_ready() {
+                          for _ in $(seq 1 30); do
+                            curl "$BASE/api/health" >/dev/null 2>&1 && return 0
+                            sleep 2
+                          done
+                          exit 1
+                        }
+
+                        # Folder: alert rules need a folder UID in Grafana 13
+                        ensure_folder() {
+                          # Create if absent (404), ignore if exists (409)
+                          curl -s -o /dev/null -w '%{http_code}' \
+                            -X POST -H 'Content-Type: application/json' \
+                            -d '{"uid":"soyo","title":"Soyo"}' \
+                            "$BASE/api/folders" | grep -qE '^200|^409'
+                        }
+
+                        # Contact point: ntfy webhook
+                        provision_contact_point() {
+                          ${pkgs.jq}/bin/jq -nc \
+                            --arg url "$(<''${CREDENTIALS_DIRECTORY}/ntfy_topic)" \
+                            --arg token "$(<''${CREDENTIALS_DIRECTORY}/ntfy_token)" \
+                            '{name: "ntfy", type: "webhook", settings: {
+                              url: $url, httpMethod: "POST",
+                              authorization: {type: "Bearer", credentials: $token}}}' \
+                            | curl -X POST -H 'Content-Type: application/json' \
+                              -d @- "$BASE/api/v1/provisioning/contact-points"
+                        }
+
+                        # Notification policy: route all alerts to ntfy
+                        provision_policy() {
+                          ${pkgs.jq}/bin/jq -nc \
+                            '{receiver: "ntfy", group_by: ["severity", "team"],
+                              group_wait: "30s", group_interval: "5m",
+                              repeat_interval: "4h", routes: []}' \
+                            | curl -X PUT -H 'Content-Type: application/json' \
+                              -d @- "$BASE/api/v1/provisioning/policies"
+                        }
+
+                        # Alert rules (Grafana 13 /api/v1: the new /apis/v0alpha1 is broken
+                        # in 13.0.3, old API stays operative. Requires ruleGroup + orgID.)
+                        post_rule() {
+                          ${pkgs.jq}/bin/jq -nc \
+                            --arg uid "$1" --arg title "$2" \
+                            --arg expr "$3" --arg for "$4" \
+                            --arg noData "$5" --arg summary "$6" \
+                            '{uid: $uid, title: $title,
+                              folderUID: "soyo", ruleGroup: "soyo", orgID: 1,
+                              condition: "A", noDataState: $noData,
+                              execErrState: "Error", for: $for,
+                              data: [{
+                                refId: "A",
+                                relativeTimeRange: {from: 600, to: 0},
+                                datasourceUid: "prometheus",
+                                model: {type: "prometheus", expr: $expr}
+                              }],
+                              annotations: {summary: $summary},
+                              labels: {severity: "critical", team: "soyo"},
+                              isPaused: false}' \
+                            | curl -X POST -H 'Content-Type: application/json' \
+                              -d @- "$BASE/api/v1/provisioning/alert-rules"
+                        }
+
+                        provision_rules() {
+                          post_rule soyo_blocky_down \
+                            "Service down: Blocky DNS" \
+                            'up{job="blocky"} == 0' \
+                            2m Alerting "Blocky DNS is unreachable"
+
+                          post_rule soyo_dnsmasq_down \
+                            "Service down: dnsmasq" \
+                            'up{job="dnsmasq"} == 0' \
+                            2m Alerting "dnsmasq unreachable — DHCP and reverse DNS down"
+
+                          post_rule soyo_backup_failed \
+                            "Backup failed" \
+                            "restic_backup_success == 0" \
+                            30m Alerting "restic backup to Synology failed — check journalctl"
+
+                          post_rule soyo_disk_space_low \
+                            "Disk space low on /persist" \
+                            'node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""} * 100 < 10' \
+                            5m NoData "/persist disk usage below 10%"
+                        }
+
+                        wait_ready
+                        ensure_folder || :
+                        provision_contact_point || :
+                        provision_policy || :
+                        provision_rules || :
+                      '';
+                    };
+                  in
+                  "${script}/bin/grafana-alert-setup";
+                LoadCredential = [
+                  "ntfy_topic:${config.age.secrets.ntfy-topic.path}"
+                  "ntfy_token:${config.age.secrets.ntfy-token.path}"
+                  "admin_password:${config.age.secrets.grafana-admin-password.path}"
                 ];
               };
-              script =
-                let
-                  setupScript = pkgs.writeShellScript "grafana-alert-setup" ''
-                    set -euo pipefail
-
-                    ADMIN_PASS=$(cat ${config.age.secrets.grafana-admin-password.path})
-                    AUTH="admin:$ADMIN_PASS"
-                    BASE="http://localhost:3000"
-
-                    # Wait for Grafana to be ready
-                    for i in $(seq 1 30); do
-                      if curl -sf -u "$AUTH" "$BASE/api/health" > /dev/null 2>&1; then
-                        break
-                      fi
-                      sleep 2
-                    done
-
-                    # --- Contact point: ntfy webhook ---
-                    NTFY_TOPIC=$(cat ${config.age.secrets.ntfy-topic.path} 2>/dev/null || echo "")
-                    NTFY_TOKEN=$(cat ${config.age.secrets.ntfy-token.path} 2>/dev/null || echo "")
-
-                    if [ -n "$NTFY_TOPIC" ] && [ -n "$NTFY_TOKEN" ]; then
-                      curl -sf -X POST -u "$AUTH" "$BASE/api/v1/provisioning/contact-points" \
-                        -H "Content-Type: application/json" \
-                        -d '{
-                          "name": "ntfy",
-                          "type": "webhook",
-                          "settings": {
-                            "url": "'"$NTFY_TOPIC"'",
-                            "httpMethod": "POST",
-                            "authorization": { "type": "Bearer", "credentials": "'"$NTFY_TOKEN"'" }
-                          }
-                        }' || true
-                    fi
-
-                    # --- Notification policy: route all alerts to ntfy ---
-                    POLICY=$(curl -sf -u "$AUTH" "$BASE/api/v1/provisioning/policies" 2>/dev/null || echo 'null')
-                    if [ "$POLICY" != "null" ]; then
-                      curl -sf -X PUT -u "$AUTH" "$BASE/api/v1/provisioning/policies" \
-                        -H "Content-Type: application/json" \
-                        -d '{
-                          "receiver": "ntfy",
-                          "group_by": ["severity", "team"],
-                          "group_wait": "30s",
-                          "group_interval": "5m",
-                          "repeat_interval": "4h",
-                          "routes": []
-                        }' || true
-                    fi
-
-                    # --- Alert rules ---
-                    for RULE_JSON in \
-                      '{"uid":"soyo_disk_space_low","title":"Disk space low on /persist","condition":"C","data":[{"refId":"A","queryType":"","relativeTimeRange":{"from":600,"to":0},"datasourceUid":"__expr__","model":{"type":"math","expression":"$B / $C * 100"}},{"refId":"B","queryType":"","relativeTimeRange":{"from":600,"to":0},"datasourceUid":"prometheus","model":{"type":"prometheus","expr":"node_filesystem_avail_bytes{mountpoint=\"/persist\",fstype!=\"\"}","intervalMs":60000,"maxDataPoints":1}},{"refId":"C","queryType":"","relativeTimeRange":{"from":600,"to":0},"datasourceUid":"prometheus","model":{"type":"prometheus","expr":"node_filesystem_size_bytes{mountpoint=\"/persist\",fstype!=\"\"}","intervalMs":60000,"maxDataPoints":1}}],"noDataState":"NoData","execErrState":"Error","for":"5m","annotations":{"summary":"/persist disk usage below 10%"},"labels":{"severity":"critical","team":"soyo"},"isPaused":false}' \
-                      '{"uid":"soyo_backup_failed","title":"Backup failed","condition":"A","data":[{"refId":"A","queryType":"","relativeTimeRange":{"from":90000,"to":0},"datasourceUid":"prometheus","model":{"type":"prometheus","expr":"restic_backup_success == 0","intervalMs":60000,"maxDataPoints":1}}],"noDataState":"Alerting","execErrState":"Error","for":"30m","annotations":{"summary":"restic backup to Synology failed — check journalctl"},"labels":{"severity":"critical","team":"soyo"},"isPaused":false}' \
-                      '{"uid":"soyo_blocky_down","title":"Service down: Blocky DNS","condition":"A","data":[{"refId":"A","queryType":"","relativeTimeRange":{"from":600,"to":0},"datasourceUid":"prometheus","model":{"type":"prometheus","expr":"up{job=\"blocky\"} == 0","intervalMs":60000,"maxDataPoints":1}}],"noDataState":"Alerting","execErrState":"Error","for":"2m","annotations":{"summary":"Blocky DNS is unreachable"},"labels":{"severity":"critical","team":"soyo"},"isPaused":false}' \
-                      '{"uid":"soyo_dnsmasq_down","title":"Service down: dnsmasq","condition":"A","data":[{"refId":"A","queryType":"","relativeTimeRange":{"from":600,"to":0},"datasourceUid":"prometheus","model":{"type":"prometheus","expr":"up{job=\"dnsmasq\"} == 0","intervalMs":60000,"maxDataPoints":1}}],"noDataState":"Alerting","execErrState":"Error","for":"2m","annotations":{"summary":"dnsmasq unreachable — DHCP and reverse DNS down"},"labels":{"severity":"critical","team":"soyo"},"isPaused":false}'; do
-                      echo "$RULE_JSON" | curl -sf -X POST -u "$AUTH" "$BASE/api/v1/provisioning/alert-rules" \
-                        -H "Content-Type: application/json" \
-                        -d @- || true
-                    done
-                  '';
-                in
-                "${setupScript}";
             };
 
             # Resource isolation: Grafana, Loki, Prometheus, and Alloy are guest
