@@ -81,7 +81,7 @@
         nodeExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "localhost";
+            default = "127.0.0.1";
             description = "Listen address (IP only, no port — the module appends its default :9100).";
           };
         };
@@ -89,7 +89,7 @@
         dnsmasqExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "localhost";
+            default = "127.0.0.1";
             description = "Listen address (IP only, no port — the module appends its default :9153).";
           };
           dnsmasqListenAddress = lib.mkOption {
@@ -168,20 +168,20 @@
             # local exporters and serves that API on loopback :9090.
             services.prometheus = {
               enable = true;
-              listenAddress = "localhost";
+              listenAddress = "127.0.0.1";
               port = 9090;
               scrapeConfigs = [
                 {
                   job_name = "node";
-                  static_configs = [ { targets = [ "localhost:9100" ]; } ];
+                  static_configs = [ { targets = [ "127.0.0.1:9100" ]; } ];
                 }
                 {
                   job_name = "dnsmasq";
-                  static_configs = [ { targets = [ "localhost:9153" ]; } ];
+                  static_configs = [ { targets = [ "127.0.0.1:9153" ]; } ];
                 }
                 {
                   job_name = "blocky";
-                  static_configs = [ { targets = [ "localhost:4000" ]; } ];
+                  static_configs = [ { targets = [ "127.0.0.1:4000" ]; } ];
                 }
               ];
             };
@@ -196,7 +196,7 @@
 
                 server = {
                   http_listen_port = 3100;
-                  http_listen_address = "localhost";
+                  http_listen_address = "127.0.0.1";
                   log_level = "warn";
                 };
 
@@ -205,7 +205,7 @@
                 # writes with HTTP 500 ("at least 2 live replicas required").
                 ingester = {
                   lifecycler = {
-                    address = "localhost";
+                    address = "127.0.0.1";
                     ring = {
                       kvstore.store = "inmemory";
                       replication_factor = 1;
@@ -221,7 +221,7 @@
                 };
 
                 # Disable scheduler ring — single node doesn't need it.
-                # Without this, Loki probes localhost:8500 (Consul) and
+                # Without this, Loki probes 127.0.0.1:8500 (Consul) and
                 # the query API hangs indefinitely.
                 query_scheduler.use_scheduler_ring = false;
 
@@ -284,7 +284,7 @@
               // Push to local Loki on loopback
               loki.write "local_loki" {
                 endpoint {
-                  url = "http://localhost:3100/loki/api/v1/push"
+                  url = "http://127.0.0.1:3100/loki/api/v1/push"
                 }
               }
             '';
@@ -313,7 +313,7 @@
                     name = "Prometheus";
                     type = "prometheus";
                     access = "proxy";
-                    url = "http://localhost:9090";
+                    url = "http://127.0.0.1:9090";
                     uid = "soyo-prometheus";
                     isDefault = true;
                   }
@@ -321,14 +321,14 @@
                     name = "Loki";
                     type = "loki";
                     access = "proxy";
-                    url = "http://localhost:3100";
+                    url = "http://127.0.0.1:3100";
                     uid = "soyo-loki";
                   }
                   {
                     name = "Tempo";
                     type = "tempo";
                     access = "proxy";
-                    url = "http://localhost:3200";
+                    url = "http://127.0.0.1:3200";
                     uid = "soyo-tempo";
                   }
                 ];
@@ -351,7 +351,7 @@
                       }
                       {
                         key = "instance";
-                        value = "localhost:9153";
+                        value = "127.0.0.1:9153";
                       }
                     ];
                     tags = [
@@ -381,7 +381,7 @@
                       }
                       {
                         key = "instance";
-                        value = "localhost:4000";
+                        value = "127.0.0.1:4000";
                       }
                     ];
                     tags = [
@@ -411,7 +411,7 @@
                       }
                       {
                         key = "node";
-                        value = "localhost:9100";
+                        value = "127.0.0.1:9100";
                       }
                     ];
                     tags = [
@@ -470,7 +470,7 @@
                         : "''${CREDENTIALS_DIRECTORY:=/dev/null}"
                         PASS=$(<"$CREDENTIALS_DIRECTORY"/admin_password)
                         AUTH="admin:$PASS"
-                        BASE=http://localhost:3000
+                        BASE=http://127.0.0.1:3000
                         curl() { command curl -sf -u "$AUTH" "$@"; }
 
                         wait_ready() {
@@ -591,6 +591,7 @@
               "d /persist/var/lib/grafana 0750 grafana grafana -"
               "d /persist/var/lib/loki 0750 loki loki -"
               "d /persist/var/lib/tempo 0750 tempo tempo -"
+              "d /persist/var/lib/tempo/generator-wal 0750 tempo tempo -"
             ];
 
             systemd.services.prometheus.serviceConfig = {
@@ -645,10 +646,28 @@
                   };
                 };
 
+                querier.frontend_worker.frontend_address = "127.0.0.1:9095";
+                query_frontend = {
+                  max_outstanding_per_tenant = 2000;
+                };
+
                 storage.trace = {
                   backend = "local";
                   local.path = "/var/lib/tempo/traces";
                   wal.path = "/var/lib/tempo/wal";
+                };
+
+                # Metrics-generator: computes span metrics for TraceQL rate()
+                # and service graph queries. Enabled even in single-binary mode
+                # — without it, `rate()` returns "empty ring".
+                metrics_generator = {
+                  storage.path = "/var/lib/tempo/generator-wal";
+                  processor.span_metrics.enable_target_info = true;
+                  processor.service_graphs = {
+                    dimensions = [ "service.name" ];
+                    histogram_buckets = [ 0.1 0.4 1.6 6.4 25.6 102.4 409.6 ];
+                  };
+                  ring.kvstore.store = "inmemory";
                 };
 
                 overrides = {
@@ -706,7 +725,7 @@
                              }' \
                           | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
                             -H 'Content-Type: application/json' \
-                            -d @- http://localhost:4318/v1/traces
+                            -d @- http://127.0.0.1:4318/v1/traces
                       '';
                     };
                   in
@@ -770,7 +789,7 @@
                           }' \
                           | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
                             -H 'Content-Type: application/json' \
-                            -d @- http://localhost:4318/v1/traces
+                            -d @- http://127.0.0.1:4318/v1/traces
                       '';
                     };
                   in
@@ -860,7 +879,7 @@
                           }' \
                           | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
                             -H 'Content-Type: application/json' \
-                            -d @- http://localhost:4318/v1/traces
+                            -d @- http://127.0.0.1:4318/v1/traces
                       '';
                     };
                   in
