@@ -65,6 +65,65 @@ Grafana ended up on Soyo anyway. The reasons:
 
 The off-box path stays documented as an alternative for when Soyo graduates to multi-host or the on-box stack becomes a bottleneck.
 
+### Dashboard provisioning: community dashboards vs Grafana's import wizard
+
+Community dashboards from grafana.com bind template variables (`$job`, `$instance`, `$datasource`) that Grafana's UI import wizard resolves interactively. File-based provisioning skips that wizard — variables stay empty and panels show "No data." Four attempts at fixing this, only one survived.
+
+**Attempt 1: sed-only (`\x24{DS_PROMETHEUS}` → `soyo-prometheus`).** Replaced the `${VAR}` form in datasource UIDs. Failed because community dashboards use bare `$job`/`$instance` in PromQL selectors (`instance=~"$node"`, `job=~"$job"`) — these stayed unresolved, and removing them from templating left PromQL like `instance=~""` which matched nothing.
+
+**Attempt 2: sed + jq to set template variable defaults.** Injected current values into `.templating.list[].current` via `jq` so Grafana would resolve them normally. Worked functionally but pulled in `jq` as a build dependency — violating the "pure Nix, no build inputs" constraint. Also fragile: each dashboard's template variable names varied (`ds_prometheus` vs `DS_PROMETHEUS`, `node` meaning "instance" on dashboard 1860).
+
+**Attempt 3: `fillTemplating` — the one that stuck.** A pure-Nix function that walks the entire JSON tree and replaces three patterns using `builtins.replaceStrings`:
+
+1. `${KEY}` → value — datasource UIDs and JSON-embedded refs
+2. `"$key"` → `"value"` — bare PromQL template refs in quoted selectors
+3. `$key` → value — Grafana builtins like `$__rate_interval` (always → `4m`; see below)
+
+After replacement, template variables are deleted from `templating.list` so Grafana never tries to resolve orphaned references. No `jq`, no `sed`, no build inputs — just `builtins.fromJSON`, `builtins.replaceStrings`, and `lib.mapAttrsRecursive`.
+
+**The guideline that mattered: "Pure Nix, no build inputs."** The jq detour (Attempt 2) was a 6-commit round-trip that got reverted. Each time the solution drifted toward build-time tooling, the constraint pulled it back. The final `fillTemplating` is 30 lines of pure Nix that handles all three community dashboards identically.
+
+### `$__rate_interval` — the 4-hour rabbit hole
+
+Grafana's `$__rate_interval` is a built-in that auto-selects a range vector duration based on scrape interval and time window. On a 5-minute window with 1-minute scrape intervals, it resolved to ~15s — so `rate(…[$__rate_interval])` became `rate(…[15s])`, which returned zero data (1m scrape interval produces only 5 raw data points; a 15s window needs at least 2).
+
+Tested with `gcx`:
+```
+# Fails at 5m window, returns data at 15m window:
+rate(node_pressure_cpu_waiting_seconds_total[1m])   → No data
+rate(node_pressure_cpu_waiting_seconds_total[3m])   → data ✓
+```
+
+Hardcoding `$__rate_interval` → `4m` in `fillTemplating` (4× scrape interval) gives enough samples without being too coarse. All three community dashboards use it (dnsmasq: 4 refs, blocky: 23, node-exporter: 153). Setting `timeInterval = "60s"` on the datasource would let Grafana auto-resolve correctly, but provisioned datasources are read-only — the hardcode is the actual fix.
+
+### `enabledCollectors` — restrictive, not additive
+
+Another rabbit hole. The original config had:
+
+```nix
+enabledCollectors = [ "textfile" "systemd" "processes" "filesystem" ];
+```
+
+Commit `0297126` removed it to "let node_exporter enable its full default set." This did restore defaults (CPU, memory, disk, network, hwmon) but **killed `processes` and `interrupts`** — those collectors are opt-in, not default. Dashboard 1860 has panels for both (process counts, interrupt rates, context switches, file descriptors), which went blank.
+
+The NixOS module's `enabledCollectors` is a **restrictive list** — it tells node_exporter which collectors to run via individual `--collector.X` flags, but only activates those explicitly listed. The old list was coincidentally right for the wrong reason (it restricted to four, accidentally including two non-default ones). The correct approach: no `enabledCollectors` (let defaults flow) + `extraFlags` for opt-in collectors:
+
+```nix
+extraFlags = [
+  "--collector.textfile.directory=/var/lib/prometheus/textfiles"
+  "--collector.processes"
+  "--collector.interrupts"
+];
+```
+
+`systemd` was intentionally skipped — it needs `/var/run/dbus/system_bus_socket`, which is blocked by the hardened service sandbox (`ProtectSystem=strict`). Only one panel on dashboard 1860 uses it, and the N150 has no `node_hwmon_fan_*` sensors or `node_power_supply_*` to warrant weakening the sandbox.
+
+### What didn't get added — and why
+
+- **Prometheus self-monitoring (dashboard 19268).** 1,300+ metrics from `localhost:9090/metrics` covering TSDB, query latency, WAL. Low signal-to-noise for 3 scrape targets and ~2,500 series — nothing to optimize.
+- **Grafana self-monitoring.** Community dashboards target v10/v11 naming; Grafana 13 renamed half the metrics. `systemctl status grafana` already tells you it's running.
+- **Custom "Soyo Appliance" dashboard.** 600 lines of hand-maintained JSON covering CPU, memory, disk, and service status. Node Exporter Full (1860) covers all of it plus 130 more panels. Dropped in `0b8e703`.
+
 ## What's deferred to M3/M4
 
 - **Secure Boot** (M3) — Limine secureBoot, sbctl key enrollment, PCR 0+2+7 re-enroll
