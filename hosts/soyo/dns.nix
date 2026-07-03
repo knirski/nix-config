@@ -128,6 +128,10 @@ in
         maxTime = "30m";
         prefetching = true;
       };
+
+      prometheus = {
+        enable = true;
+      };
     };
   };
 
