@@ -129,3 +129,101 @@ extraFlags = [
 - **Secure Boot** (M3) — Limine secureBoot, sbctl key enrollment, PCR 0+2+7 re-enroll
 - **Laptop host and deploy-rs** (M4) — desktop modules, multi-host orchestration
 - **Services** (M4) — Jellyfin, Home Assistant, etc. over NFS to the Synology
+
+## Observability backend config: researching against real production repos
+
+Loki, Alloy, and Tempo are complex — their configs are deep and poorly documented. Each went through a research-then-apply cycle.
+
+### The research method: `gh` over `web_search`
+
+Searched GitHub for production-grade configs from organizations that run these tools at scale. For Loki, searched for `filename:loki-config.yaml repo:grafana/...` and `language:yaml target: all` on respectable repos. For Alloy, searched for `otlp.enabled path:config.alloy` and `loki.source.journal` across the grafana org and third-party NixOS configs. For Tempo, the `services.tempo.settings` module from nixpkgs was the authoritative source.
+
+**The guideline: check what production users actually ship, not what the docs say you can do.** Docs show every possible knob; production configs show what matters.
+
+### Loki: dropping `common.ring` and `-target=all`
+
+Early config had a `common.ring` stanza and ran Loki with `-target=all`. Both are unnecessary at single-node scale.
+
+**`common.ring`** configures the hash ring for multi-tenant ingesters — it emits warnings even on single-node deployments because Loki tries to join the ring regardless. Production single-node configs (grafana/loki examples, `reference-loki-config.yaml`) don't configure rings — they let defaults handle it. Dropped it. Warnings gone.
+
+**`-target=all`** is the documented way to run single-binary mode, but Loki `3.7.2` defaults to `all` when no target is specified. Explicitly specifying it just adds a redundant CLI flag. Dropped it — one less thing to maintain.
+
+Other production-aligned defaults:
+- `allow_structured_metadata = false` — avoids unnecessary parsing overhead
+- `analytics.reporting_enabled = false` — no telemetry home
+- `compactor.retention_enabled = true` — enable log retention via the compactor (not just the table manager)
+- `ingester.lifecycler.final_sleep = "0s"` — speeds up shutdown; production configs set this
+
+### Alloy: loopback-only and `--disable-reporting`
+
+Alloy's config was already idiomatic — `loki.source.journal` scraping local systemd journals and forwarding to `loki.write`, with `prometheus.exporter.unix` for node metrics. Two production patterns confirmed:
+- **Loopback ports only** (`127.0.0.1:xxxxx`) for all collectors — no LAN-facing listeners. The collectors serve local scrapers (Prometheus, Loki write), not the network.
+- **`--disable-reporting`** CLI flag — Alloy phones home by default. Production configs suppress this.
+
+### Tempo: from raw systemd to `services.tempo`
+
+Tempo was the last observability component to get idiomatic. The original config defined Tempo as a manual systemd service with raw YAML — skipping the nixpkgs module entirely.
+
+The `services.tempo.settings` module converts attrsets to the Tempo YAML config, handles user/group creation, and generates the systemd unit. Moving to it fixed several things:
+- **Static user** (`users.users.tempo`) instead of `DynamicUser` — Tempo needs writes to `/var/lib/tempo/traces` (OWNED by tempo, not a runtime bind-mount), which DynamicUser breaks. `lib.mkForce false` on the module's DynamicUser default.
+- **Resource isolation** matching the rest of the stack (`MemoryMax=512M`, `CPUQuota=20%`, `Nice=10`).
+
+## Trace generators: Python → shell + `writeShellApplication`
+
+Soyo sends structured traces into Tempo so we can see service lifecycle events (boot, activation, health checks, backups) alongside metrics and logs. Four generators run on timers.
+
+### The rewrite: from Python to shell
+
+The first implementation used Python `writeShellApplication` scripts. Each tracer imported `subprocess`, `json`, `uuid`, and `datetime` — four Python modules to construct an HTTP POST with a JSON body. For something that boils down to `uuidgen | jq | curl`, this was overbuilt.
+
+The rewrite followed a simple principle: **"For HTTP calls use simplest possible commands."**
+
+Every tracer now follows this pattern:
+```bash
+TRACE_ID=$(uuidgen | tr -d -)
+SPAN_ID=$(uuidgen | tr -d - | cut -c1-16)
+NOW_NS=$(date +%s%N)
+jq -nc --arg id "$TRACE_ID" --arg span "$SPAN_ID" --arg ts "$NOW_NS" '...' \
+  | curl -sS -X POST -H 'Content-Type: application/json' -d @- http://localhost:4318/v1/traces
+```
+
+Dependencies: `curl`, `jq`, `util-linux` (for `uuidgen`). No Python, no Go, no interpreters beyond bash.
+
+### Four tracers, four patterns
+
+- **`boot-trace`** (oneshot, runs at boot): parses `systemd-analyze blame` with `awk`, extracts the top 20 slowest services, builds a trace with child spans for each. The `head -20` + `set -o pipefail` combo caused exit 141 (SIGPIPE) — fixed by appending `|| true` to the piped pipeline.
+- **`activation-trace`** (path unit, triggers on `/run/current-system`): reports NixOS activation latency. Simple `stat` on the system symlink and an uptime check.
+- **`health-trace`** (timer, every 60s): runs `systemctl is-active --quiet multi-user.target` as a span. Replaced the original `systemctl is-system-running --wait` which blocks indefinitely.
+- **`backup-trace`** (timer, daily): simple trace span marking backup window start. Stub — actual backup metrics come from the restic Prometheus exporter.
+
+### `writeShellApplication` over raw `writeShellScript`
+
+`writeShellApplication` wraps the script in `shellcheck` validation and adds runtime dependencies to `PATH`.
+
+**Three recurring gotchas** with `writeShellApplication`:
+1. **Missing `runtimeInputs`** — `uuidgen` lives in `util-linux`, not in bash. Each tracer that uses `uuidgen` needs `pkgs.util-linux` in `runtimeInputs`. Forgetting this produces `command not found` at runtime, not at build time (shellcheck can't know about commands used in `$(…)` expansions).
+2. **`set -o pipefail` + `head` = SIGPIPE** — `head -N` closes its stdin after N lines, which sends SIGPIPE to the producer. With `pipefail`, this becomes exit 141. The fix is `producer | head -N || true`. Only `boot-trace` hits this (parsing `systemd-analyze blame`).
+3. **`CREDENTIALS_DIRECTORY` only exists under systemd** — `LoadCredential=` mounts secrets into a per-unit directory at `$CREDENTIALS_DIRECTORY`. Running the script directly (e.g. for debugging) means the variable is unset. The `set -eu` fix: `: "${CREDENTIALS_DIRECTORY:=/dev/null}"` at script top.
+
+## Grafana alert rule provisioning: old API vs new API
+
+Grafana 13 replaced the legacy `/api/v1/provisioning/alert-rules` with `/apis/rules.alerting.grafana.app/v0alpha1/namespaces/{ns}/alertrules`. The docs say to use the new one. The reality is different.
+
+### The new API is broken in 13.0.3
+
+Tested two formats against the `/apis/v0alpha1` endpoint:
+
+1. **Kubernetes-style** (`apiVersion: "rules.alerting.grafana.app/v0alpha1"`, `kind: "AlertRule"`, `metadata.name`, `spec.expressions`, `spec.trigger.interval`): returned `valid orgId expected in namespace` (the namespace parser can't parse its own namespace format).
+2. **Minimal payload** with `spec.for: "5m"`: returned `forbidden: invalid duration format: empty duration string` — the duration validator rejects `"5m"` as empty.
+
+Both 403/500 errors, neither actionable. The old API works perfectly with two missing fields:
+
+### What was actually broken: `ruleGroup` and `orgID`
+
+The alert rule POST body was missing `ruleGroup` (required for grouping rules) and `orgID` (required for multi-org installations). Both are `required` fields in the API schema but neither was in the error messages. The old config copied the format from pre-13 docs and added `folderUID`, but skipped these two.
+
+The fix (`65edb12`): add `"ruleGroup": "soyo", "orgID": 1` to every rule payload. All four rules provision successfully.
+
+### `LoadCredential` over `cat` on agenix paths
+
+The original script read secrets via `$(cat /run/agenix/...)` inline. This leaks the agenix internal path into the script text (stored in the Nix store). `LoadCredential=` mounts secrets at `$CREDENTIALS_DIRECTORY` at runtime — the agenix path never appears in the script. This is the idiomatic systemd pattern for secret injection.
