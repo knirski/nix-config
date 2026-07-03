@@ -135,6 +135,12 @@ in
       prometheus = {
         enable = true;
       };
+
+      # Disable per-query logging — Prometheus metrics already give
+      # aggregated counts (queries, responses, block reasons).  Default
+      # "console" dumps every DNS query to journald at INFO level, which
+      # is noisy (~1200 lines/min at idle) with no diagnostic value.
+      queryLog.type = "none";
     };
   };
 
