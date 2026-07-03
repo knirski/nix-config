@@ -258,6 +258,7 @@
                     type = "prometheus";
                     access = "proxy";
                     url = "http://127.0.0.1:9090";
+                    uid = "soyo-prometheus";
                     isDefault = true;
                   }
                   {
