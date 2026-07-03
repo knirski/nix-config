@@ -16,23 +16,23 @@
   "timepicker": {},
   "panels": [
     {
-      "id": 1,
-      "type": "row",
       "title": "Overview",
+      "type": "row",
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
       },
-      "collapsed": false
+      "id": 1
     },
     {
       "id": 2,
       "type": "stat",
       "title": "Uptime",
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 4,
         "x": 0,
         "y": 1
@@ -78,171 +78,12 @@
     },
     {
       "id": 3,
-      "type": "gauge",
-      "title": "CPU Usage",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 4,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 60,
-                "color": "orange"
-              },
-              {
-                "value": 85,
-                "color": "red"
-              }
-            ]
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "100 - (avg by(instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])) * 100)",
-          "legendFormat": "CPU",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      }
-    },
-    {
-      "id": 4,
-      "type": "gauge",
-      "title": "Memory Usage",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 70,
-                "color": "orange"
-              },
-              {
-                "value": 90,
-                "color": "red"
-              }
-            ]
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "Memory",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      }
-    },
-    {
-      "id": 5,
-      "type": "gauge",
-      "title": "Disk Usage (/)",
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 70,
-                "color": "orange"
-              },
-              {
-                "value": 90,
-                "color": "red"
-              }
-            ]
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "((node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"\"} - node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"\"}) / node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"\"}) * 100",
-          "legendFormat": "root",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      }
-    },
-    {
-      "id": 6,
       "type": "stat",
       "title": "DNS Queries",
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 4,
-        "x": 16,
+        "x": 4,
         "y": 1
       },
       "fieldConfig": {
@@ -285,13 +126,13 @@
       }
     },
     {
-      "id": 7,
+      "id": 4,
       "type": "stat",
       "title": "DHCP Leases",
       "gridPos": {
-        "h": 4,
+        "h": 3,
         "w": 4,
-        "x": 20,
+        "x": 8,
         "y": 1
       },
       "fieldConfig": {
@@ -334,242 +175,26 @@
       }
     },
     {
-      "id": 8,
-      "type": "row",
-      "title": "System Resources",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 5
-      },
-      "collapsed": false
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "CPU Usage",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 6
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "custom": {
-            "showPoints": "never",
-            "lineInterpolation": "smooth"
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "100 - avg by(cpu)(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])) * 100",
-          "legendFormat": "{{cpu}}",
-          "refId": "A"
-        },
-        {
-          "expr": "avg by(instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])) * 100",
-          "legendFormat": "idle (avg)",
-          "refId": "B"
-        }
-      ],
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      }
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Memory",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "showPoints": "never",
-            "lineInterpolation": "smooth"
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "node_memory_MemTotal_bytes",
-          "legendFormat": "total",
-          "refId": "A"
-        },
-        {
-          "expr": "node_memory_MemAvailable_bytes",
-          "legendFormat": "available",
-          "refId": "B"
-        },
-        {
-          "expr": "node_memory_MemFree_bytes",
-          "legendFormat": "free",
-          "refId": "C"
-        },
-        {
-          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
-          "legendFormat": "used",
-          "refId": "D"
-        }
-      ],
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "last"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      }
-    },
-    {
-      "id": 11,
-      "type": "row",
-      "title": "Network & Disk",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 14
-      },
-      "collapsed": false
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "Network Bandwidth (enp1s0)",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 15
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "custom": {
-            "showPoints": "never",
-            "lineInterpolation": "smooth"
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "rate(node_network_receive_bytes_total{device=\"enp1s0\"}[$__rate_interval]) * 8",
-          "legendFormat": "receive",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(node_network_transmit_bytes_total{device=\"enp1s0\"}[$__rate_interval]) * 8",
-          "legendFormat": "transmit",
-          "refId": "B"
-        }
-      ],
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
-      "tooltip": {
-        "mode": "multi",
-        "sort": "desc"
-      }
-    },
-    {
-      "id": 13,
-      "type": "timeseries",
-      "title": "Disk I/O (LUKS)",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 15
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "custom": {
-            "showPoints": "never",
-            "lineInterpolation": "smooth"
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "rate(node_disk_read_bytes_total{device=\"dm-0\"}[$__rate_interval])",
-          "legendFormat": "read",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(node_disk_written_bytes_total{device=\"dm-0\"}[$__rate_interval])",
-          "legendFormat": "write",
-          "refId": "B"
-        }
-      ],
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      },
-      "tooltip": {
-        "mode": "multi",
-        "sort": "desc"
-      }
-    },
-    {
-      "id": 14,
-      "type": "row",
       "title": "DNS & DHCP",
+      "type": "row",
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 4
       },
-      "collapsed": false
+      "id": 5
     },
     {
-      "id": 15,
+      "id": 6,
       "type": "timeseries",
       "title": "DNS Query Rate",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
@@ -612,14 +237,14 @@
       }
     },
     {
-      "id": 16,
+      "id": 7,
       "type": "timeseries",
       "title": "Blocked Queries",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
@@ -653,14 +278,14 @@
       }
     },
     {
-      "id": 17,
+      "id": 8,
       "type": "stat",
       "title": "Active DHCP Leases",
       "gridPos": {
-        "h": 4,
-        "w": 4,
+        "h": 8,
+        "w": 12,
         "x": 0,
-        "y": 32
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -706,26 +331,26 @@
       }
     },
     {
-      "id": 18,
-      "type": "row",
       "title": "System Logs",
+      "type": "row",
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 21
       },
-      "collapsed": false
+      "id": 9
     },
     {
-      "id": 19,
+      "id": 10,
       "type": "logs",
       "title": "Recent Journal",
       "gridPos": {
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 22
       },
       "datasource": {
         "type": "loki",
@@ -749,26 +374,26 @@
       }
     },
     {
-      "id": 20,
-      "type": "row",
       "title": "Traces",
+      "type": "row",
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 34
       },
-      "collapsed": false
+      "id": 11
     },
     {
-      "id": 21,
+      "id": 12,
       "type": "stat",
       "title": "Boot Traces Available",
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 6,
         "x": 0,
-        "y": 50
+        "y": 35
       },
       "datasource": {
         "type": "tempo",
@@ -814,14 +439,14 @@
       }
     },
     {
-      "id": 22,
+      "id": 13,
       "type": "stat",
       "title": "Backup Traces",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
-        "y": 50
+        "w": 6,
+        "x": 6,
+        "y": 35
       },
       "datasource": {
         "type": "tempo",
@@ -867,14 +492,14 @@
       }
     },
     {
-      "id": 23,
+      "id": 14,
       "type": "stat",
       "title": "Activation Traces",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 50
+        "w": 6,
+        "x": 12,
+        "y": 35
       },
       "datasource": {
         "type": "tempo",
@@ -920,14 +545,14 @@
       }
     },
     {
-      "id": 24,
+      "id": 15,
       "type": "stat",
       "title": "Health Check Traces",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 50
+        "w": 6,
+        "x": 18,
+        "y": 35
       },
       "datasource": {
         "type": "tempo",
