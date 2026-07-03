@@ -129,6 +129,15 @@
               enable = true;
               configuration = {
                 auth_enabled = false;
+                # Single-node mode — inmemory ring store so Loki doesn't
+                # probe localhost:8500 for Consul.
+                common = {
+                  ring = {
+                    kvstore = {
+                      store = "inmemory";
+                    };
+                  };
+                };
                 server = {
                   http_listen_port = 3100;
                   http_listen_address = "127.0.0.1";
@@ -182,29 +191,11 @@
             environment.etc."alloy/config.alloy".text = ''
               // Ship systemd journal to local Loki
               loki.source.journal "soyo" {
-                max_age  = "12h"
-                forward_to = [loki.write.local_loki]
-                labels = {
+                max_age    = "12h"
+                forward_to = [loki.write.local_loki.receiver]
+                labels     = {
                   job  = "systemd-journal",
                   host = "soyo",
-                }
-                relabel_rules {
-                  rule {
-                    source_labels = ["__journal__systemd_unit"]
-                    target_label  = "unit"
-                  }
-                  rule {
-                    source_labels = ["__journal__hostname"]
-                    target_label  = "hostname"
-                  }
-                  rule {
-                    source_labels = ["__journal__priority"]
-                    target_label  = "priority"
-                  }
-                  rule {
-                    source_labels = ["__journal__transport"]
-                    target_label  = "transport"
-                  }
                 }
               }
 
@@ -212,22 +203,6 @@
               loki.write "local_loki" {
                 endpoint {
                   url = "http://127.0.0.1:3100/loki/api/v1/push"
-                }
-              }
-
-              // OTLP receiver: accepts traces from local sources (boot tracer)
-              // and forwards to Tempo on loopback.
-              otelcol.receiver.otlp "soyo" {
-                grpc { endpoint = "127.0.0.1:4317" }
-                http { endpoint = "127.0.0.1:4318" }
-                output {
-                  traces = [otelcol.exporter.otlp.tempo.input]
-                }
-              }
-
-              otelcol.exporter.otlp "tempo" {
-                client {
-                  endpoint = "127.0.0.1:4319"
                 }
               }
             '';
@@ -558,7 +533,7 @@
 
                       # Push via OTLP HTTP to Tempo (Alloy forwarder on :4318)
                       subprocess.run(
-                          ["curl", "-sS", "-o", "/dev/null", "-X", "POST",
+                          [${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
                            "-H", "Content-Type: application/json",
                            "--data", json.dumps(trace),
                            "http://127.0.0.1:4318/v1/traces"],
@@ -638,7 +613,7 @@
                               "scopeSpans": [{"scope": {"name": "nixos"}, "spans": spans}]
                           }]
                       }
-                      subprocess.run(["curl", "-sS", "-o", "/dev/null", "-X", "POST",
+                      subprocess.run([${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
                           "-H", "Content-Type: application/json",
                           "--data", json.dumps(trace),
                           "http://127.0.0.1:4318/v1/traces"], timeout=10, capture_output=True)
@@ -728,7 +703,7 @@
                               "scopeSpans": [{"scope": {"name": "health"}, "spans": spans}]
                           }]
                       }
-                      subprocess.run(["curl", "-sS", "-o", "/dev/null", "-X", "POST",
+                      subprocess.run([${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
                           "-H", "Content-Type: application/json",
                           "--data", json.dumps(trace),
                           "http://127.0.0.1:4318/v1/traces"], timeout=10, capture_output=True)
