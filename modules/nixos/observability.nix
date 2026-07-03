@@ -479,13 +479,18 @@
                           exit 1
                         }
 
-                        # Folder: alert rules need a folder UID in Grafana 13
+                        # Folder: alert rules need a folder UID in Grafana 13.
+                        # Create if absent, then PUT to enforce the title
+                        # (Grafana ignores title changes on POST for existing folders).
                         ensure_folder() {
-                          # Create if absent (404), ignore if exists (409)
                           curl -s -o /dev/null -w '%{http_code}' \
                             -X POST -H 'Content-Type: application/json' \
                             -d '{"uid":"soyo","title":"soyo"}' \
                             "$BASE/api/folders" | grep -qE '^200|^409'
+                          curl -sS -o /dev/null -X PUT \
+                            -H 'Content-Type: application/json' \
+                            -d '{"uid":"soyo","title":"soyo","overwrite":true}' \
+                            "$BASE/api/folders/soyo" || :
                         }
 
                         # Contact point: ntfy webhook with template-based rendering.
