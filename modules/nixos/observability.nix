@@ -282,28 +282,44 @@
                   {
                     name = "soyo";
                     type = "file";
-                    options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
-                      mkdir -p $out
-                      cp ${../../hosts/soyo/grafana/soyo-dashboard.json} $out/
-                      cp ${
-                        builtins.fetchurl {
-                          url = "https://grafana.com/api/dashboards/13768/revisions/latest/download";
-                          sha256 = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
+                    options.path =
+                      pkgs.runCommand "soyo-grafana-dashboards"
+                        {
+                          nativeBuildInputs = [ pkgs.gnused ];
                         }
-                      } $out/blocky.json
-                      cp ${
-                        builtins.fetchurl {
-                          url = "https://grafana.com/api/dashboards/1860/revisions/latest/download";
-                          sha256 = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
-                        }
-                      } $out/node-exporter-full.json
-                      cp ${
-                        builtins.fetchurl {
-                          url = "https://grafana.com/api/dashboards/18796/revisions/latest/download";
-                          sha256 = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
-                        }
-                      } $out/dnsmasq.json
-                    '';
+                        ''
+                          mkdir -p $out
+
+                          # Community dashboards reference their Prometheus
+                          # datasource through case-inconsistent template
+                          # variables. Inject our real UID everywhere.
+                          inject_uid() {
+                            sed \
+                              -e "s/\x24{DS_PROMETHEUS}/soyo-prometheus/g" \
+                              -e "s/\x24{ds_prometheus}/soyo-prometheus/g" \
+                              "$1" > "$2"
+                          }
+
+                          cp ${../../hosts/soyo/grafana/soyo-dashboard.json} $out/
+                          inject_uid ${
+                            builtins.fetchurl {
+                              url = "https://grafana.com/api/dashboards/13768/revisions/latest/download";
+                              sha256 = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
+                            }
+                          } $out/blocky.json
+                          inject_uid ${
+                            builtins.fetchurl {
+                              url = "https://grafana.com/api/dashboards/1860/revisions/latest/download";
+                              sha256 = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
+                            }
+                          } $out/node-exporter-full.json
+                          inject_uid ${
+                            builtins.fetchurl {
+                              url = "https://grafana.com/api/dashboards/18796/revisions/latest/download";
+                              sha256 = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
+                            }
+                          } $out/dnsmasq.json
+                        '';
                   }
                 ];
               };
