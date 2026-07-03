@@ -9,6 +9,55 @@
     let
       cfg = config.lanAppliance.services.observability;
       grafanaCfg = cfg.grafana;
+
+      # --- grafana-dashboards.nix patterns ---
+      # Community dashboards use ${DS_PROMETHEUS} template variables that
+      # only resolve during the Grafana import wizard. File provisioning
+      # skips that wizard, so we replace the placeholders and remove the
+      # variables from the templating list — adapted from:
+      # https://github.com/blackheaven/grafana-dashboards.nix
+
+      fetchDashboard =
+        { id, hash }:
+        pkgs.fetchurl {
+          url = "https://grafana.com/api/dashboards/${toString id}/revisions/latest/download";
+          sha256 = hash;
+        };
+
+      # Replace ${KEY} with value everywhere, then drop those template variables.
+      # Also handles bare $key references in PromQL selectors (community
+      # dashboards use both "${KEY}" inside JSON and "key=~\"$key\"").
+      fillTemplating =
+        replacements: dashboard:
+        let
+          raw = builtins.fromJSON (builtins.readFile dashboard);
+          templateNames = map (r: r.key) replacements;
+
+          # Two replacement forms: ${KEY} in datasource UIDs, " $key" in PromQL
+          dolBracePairs = map (r: "\${${r.key}}") replacements;
+          dolBraceValues = map (r: r.value) replacements;
+          barePairs = map (r: "\"\$${r.key}\"") replacements;
+          bareValues = map (r: "\"${r.value}\"") replacements;
+
+          replaceStrings =
+            x:
+            if builtins.isString x then
+              builtins.replaceStrings (dolBracePairs ++ barePairs) (dolBraceValues ++ bareValues) x
+            else if builtins.isList x then
+              map replaceStrings x
+            else if builtins.isAttrs x then
+              lib.mapAttrsRecursive (_: replaceStrings) x
+            else
+              x;
+
+          cleaned = replaceStrings raw;
+          withoutTemplates = cleaned // {
+            templating = cleaned.templating // {
+              list = builtins.filter (v: !(builtins.elem v.name templateNames)) cleaned.templating.list;
+            };
+          };
+        in
+        pkgs.writeText "dashboard.json" (builtins.toJSON withoutTemplates);
     in
     {
       options.lanAppliance.services.observability = {
@@ -17,7 +66,7 @@
         nodeExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "127.0.0.1";
+            default = "localhost";
             description = "Listen address (IP only, no port — the module appends its default :9100).";
           };
         };
@@ -25,12 +74,12 @@
         dnsmasqExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "127.0.0.1";
+            default = "localhost";
             description = "Listen address (IP only, no port — the module appends its default :9153).";
           };
           dnsmasqListenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "10.0.0.9:5353";
+            default = "soyo:5353";
             description = "dnsmasq address for lease stats; must match where dnsmasq is reachable from Soyo.";
           };
           leasesPath = lib.mkOption {
@@ -43,12 +92,12 @@
           enable = lib.mkEnableOption "on-box Grafana dashboards (adds a local Prometheus scraper; resource-isolated as a guest service)";
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "10.0.0.9";
+            default = "soyo";
             description = "Grafana listen address (the module appends :3000).";
           };
           domain = lib.mkOption {
             type = lib.types.str;
-            default = "soyo.home.arpa";
+            default = "soyo";
             description = "Grafana root URL domain (used for redirects and links).";
           };
         };
@@ -100,20 +149,20 @@
             # local exporters and serves that API on loopback :9090.
             services.prometheus = {
               enable = true;
-              listenAddress = "127.0.0.1";
+              listenAddress = "localhost";
               port = 9090;
               scrapeConfigs = [
                 {
                   job_name = "node";
-                  static_configs = [ { targets = [ "127.0.0.1:9100" ]; } ];
+                  static_configs = [ { targets = [ "localhost:9100" ]; } ];
                 }
                 {
                   job_name = "dnsmasq";
-                  static_configs = [ { targets = [ "127.0.0.1:9153" ]; } ];
+                  static_configs = [ { targets = [ "localhost:9153" ]; } ];
                 }
                 {
                   job_name = "blocky";
-                  static_configs = [ { targets = [ "127.0.0.1:4000" ]; } ];
+                  static_configs = [ { targets = [ "localhost:4000" ]; } ];
                 }
               ];
             };
@@ -153,7 +202,7 @@
                 };
                 server = {
                   http_listen_port = 3100;
-                  http_listen_address = "127.0.0.1";
+                  http_listen_address = "localhost";
                 };
                 ingester = {
                   chunk_idle_period = "5m";
@@ -222,7 +271,7 @@
               // Push to local Loki on loopback
               loki.write "local_loki" {
                 endpoint {
-                  url = "http://127.0.0.1:3100/loki/api/v1/push"
+                  url = "http://localhost:3100/loki/api/v1/push"
                 }
               }
             '';
@@ -251,7 +300,7 @@
                     name = "Prometheus";
                     type = "prometheus";
                     access = "proxy";
-                    url = "http://127.0.0.1:9090";
+                    url = "http://localhost:9090";
                     uid = "soyo-prometheus";
                     isDefault = true;
                   }
@@ -259,83 +308,109 @@
                     name = "Loki";
                     type = "loki";
                     access = "proxy";
-                    url = "http://127.0.0.1:3100";
+                    url = "http://localhost:3100";
                     uid = "soyo-loki";
                   }
                   {
                     name = "Tempo";
                     type = "tempo";
                     access = "proxy";
-                    url = "http://127.0.0.1:3200";
+                    url = "http://localhost:3200";
                     uid = "soyo-tempo";
                   }
                 ];
               };
-              provision.dashboards.settings = {
-                apiVersion = 1;
-                providers = [
-                  {
-                    name = "soyo";
-                    type = "file";
-                    options.path =
-                      pkgs.runCommand "soyo-grafana-dashboards"
+              provision.dashboards.settings =
+                let
+                  dnsmasqJson =
+                    fillTemplating
+                      [
                         {
-                          nativeBuildInputs = [
-                            pkgs.gnused
-                            pkgs.jq
-                          ];
+                          key = "DS_PROMETHEUS";
+                          value = "soyo-prometheus";
                         }
-                        ''
-                          mkdir -p $out
-
-                          cp ${../../hosts/soyo/grafana/soyo-dashboard.json} $out/
-
-                          # Community dashboards use __inputs that create
-                          # template variables ($datasource, $instance, $job)
-                          # with empty defaults. File provisioning skips the
-                          # import UI so variables stay empty and panels show
-                          # "No data". Inject real defaults so they auto-resolve.
-
-                          # --- dnsmasq (18796) ---
-                          sed "s/\x24{DS_PROMETHEUS}/soyo-prometheus/g" ${
-                            builtins.fetchurl {
-                              url = "https://grafana.com/api/dashboards/18796/revisions/latest/download";
-                              sha256 = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
-                            }
-                          } | jq '
-                            (.templating.list[] | select(.name=="datasource").current) = {"selected":true,"text":"soyo-prometheus","value":"soyo-prometheus"}
-                          | (.templating.list[] | select(.name=="job").current) = {"selected":true,"text":"dnsmasq","value":"dnsmasq"}
-                          | (.templating.list[] | select(.name=="instance").current) = {"selected":true,"text":"127.0.0.1:9153","value":"127.0.0.1:9153"}
-                          ' > $out/dnsmasq.json
-
-                          # --- blocky (13768) ---
-                          sed "s/\x24{DS_PROMETHEUS}/soyo-prometheus/g" ${
-                            builtins.fetchurl {
-                              url = "https://grafana.com/api/dashboards/13768/revisions/latest/download";
-                              sha256 = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
-                            }
-                          } | jq '
-                            (.templating.list[] | select(.name=="datasource").current) = {"selected":true,"text":"soyo-prometheus","value":"soyo-prometheus"}
-                          | (.templating.list[] | select(.name=="job").current) = {"selected":true,"text":"blocky","value":"blocky"}
-                          | (.templating.list[] | select(.name=="instance").current) = {"selected":true,"text":"127.0.0.1:4000","value":"127.0.0.1:4000"}
-                          ' > $out/blocky.json
-
-                          # --- node-exporter-full (1860) ---
-                          sed "s/\x24{ds_prometheus}/soyo-prometheus/g" ${
-                            builtins.fetchurl {
-                              url = "https://grafana.com/api/dashboards/1860/revisions/latest/download";
-                              sha256 = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
-                            }
-                          } | jq '
-                            (.templating.list[] | select(.name=="ds_prometheus").current) = {"selected":true,"text":"soyo-prometheus","value":"soyo-prometheus"}
-                          | (.templating.list[] | select(.name=="job").current) = {"selected":true,"text":"node","value":"node"}
-                          | (.templating.list[] | select(.name=="nodename").current) = {"selected":true,"text":"soyo","value":"soyo"}
-                          | (.templating.list[] | select(.name=="node").current) = {"selected":true,"text":"127.0.0.1:9100","value":"127.0.0.1:9100"}
-                          ' > $out/node-exporter-full.json
-                        '';
-                  }
-                ];
-              };
+                        {
+                          key = "datasource";
+                          value = "soyo-prometheus";
+                        }
+                        {
+                          key = "job";
+                          value = "dnsmasq";
+                        }
+                        {
+                          key = "instance";
+                          value = "127.0.0.1:9153";
+                        }
+                      ]
+                      (fetchDashboard {
+                        id = 18796;
+                        hash = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
+                      });
+                  blockyJson =
+                    fillTemplating
+                      [
+                        {
+                          key = "DS_PROMETHEUS";
+                          value = "soyo-prometheus";
+                        }
+                        {
+                          key = "datasource";
+                          value = "soyo-prometheus";
+                        }
+                        {
+                          key = "job";
+                          value = "blocky";
+                        }
+                        {
+                          key = "instance";
+                          value = "127.0.0.1:4000";
+                        }
+                      ]
+                      (fetchDashboard {
+                        id = 13768;
+                        hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
+                      });
+                  nodeExporterJson =
+                    fillTemplating
+                      [
+                        {
+                          key = "ds_prometheus";
+                          value = "soyo-prometheus";
+                        }
+                        {
+                          key = "job";
+                          value = "node";
+                        }
+                        {
+                          key = "nodename";
+                          value = "soyo";
+                        }
+                        {
+                          key = "node";
+                          value = "127.0.0.1:9100";
+                        }
+                      ]
+                      (fetchDashboard {
+                        id = 1860;
+                        hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
+                      });
+                in
+                {
+                  apiVersion = 1;
+                  providers = [
+                    {
+                      name = "soyo";
+                      type = "file";
+                      options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
+                        mkdir -p $out
+                        cp ${../../hosts/soyo/grafana/soyo-dashboard.json} $out/
+                        cp ${dnsmasqJson} $out/dnsmasq.json
+                        cp ${blockyJson} $out/blocky.json
+                        cp ${nodeExporterJson} $out/node-exporter-full.json
+                      '';
+                    }
+                  ];
+                };
               # Alert rules provisioned via the Grafana API at boot
               # (see grafana-alert-setup.service below).
             };
@@ -372,7 +447,7 @@
 
                     ADMIN_PASS=$(cat ${config.age.secrets.grafana-admin-password.path})
                     AUTH="admin:$ADMIN_PASS"
-                    BASE="http://127.0.0.1:3000"
+                    BASE="http://localhost:3000"
 
                     # Wait for Grafana to be ready
                     for i in $(seq 1 30); do
@@ -480,12 +555,12 @@
 
                     server:
                       http_listen_port: 3200
-                      http_listen_address: 127.0.0.1
+                      http_listen_address: localhost
                       # Use different gRPC port than Alloy (which owns :4317 for OTLP intake).
                       # Alloy receives OTLP from trace generators and forwards to Tempo
                       # on this port via otelcol.exporter.otlp.tempo.
                       grpc_listen_port: 4319
-                      grpc_listen_address: 127.0.0.1
+                      grpc_listen_address: localhost
 
                     distributor:
                       receivers:
@@ -609,7 +684,7 @@
                           [${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
                            "-H", "Content-Type: application/json",
                            "--data", json.dumps(trace),
-                           "http://127.0.0.1:4318/v1/traces"],
+                           "http://localhost:4318/v1/traces"],
                           timeout=10, capture_output=True)
                       print(f"soyo-boot-trace: {len(units)} units traced", flush=True)
                       PYEOF
@@ -690,7 +765,7 @@
                       subprocess.run([${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
                           "-H", "Content-Type: application/json",
                           "--data", json.dumps(trace),
-                          "http://127.0.0.1:4318/v1/traces"], timeout=10, capture_output=True)
+                          "http://localhost:4318/v1/traces"], timeout=10, capture_output=True)
                     '';
                   in
                   "${tracer}";
@@ -780,7 +855,7 @@
                       subprocess.run([${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
                           "-H", "Content-Type: application/json",
                           "--data", json.dumps(trace),
-                          "http://127.0.0.1:4318/v1/traces"], timeout=10, capture_output=True)
+                          "http://localhost:4318/v1/traces"], timeout=10, capture_output=True)
                     '';
                   in
                   "${tracer}";
