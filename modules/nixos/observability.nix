@@ -25,15 +25,16 @@
         };
 
       # Replace ${KEY} with value everywhere, then drop those template variables.
-      # Three replacement passes:
+      # Handles three patterns:
       # 1. ${KEY} — datasource UIDs and JSON-embedded template refs
-      # 2. "$key" — bare PromQL template refs (quoted, in selector context)
-      # 3. $key at word boundaries — unquoted builtins like $__rate_interval
-      #
-      # Pass 3 is a separate builtins arg: { key = "$__rate_interval"; value = "4m"; }
-      # for unquoted patterns in PromQL range vectors (e.g. [$__rate_interval] → [4m]).
+      # 2. "$key"  — bare PromQL template refs (quoted, in selector context)
+      # 3. $key    — Grafana builtins like $__rate_interval (always → "4m")
+      #    Community dashboards use this in PromQL range vectors, but
+      #    Grafana resolves it to ~15s on short windows while Prometheus
+      #    scrapes every 1m — rate(...[15s]) gets zero data. 4m gives
+      #    enough samples without being too coarse.
       fillTemplating =
-        replacements: builtinReplacements: dashboard:
+        replacements: dashboard:
         let
           raw = builtins.fromJSON (builtins.readFile dashboard);
           templateNames = map (r: r.key) replacements;
@@ -43,15 +44,13 @@
           barePairs = map (r: "\"\$${r.key}\"") replacements;
           bareValues = map (r: "\"${r.value}\"") replacements;
 
-          builtinPairs = map (r: r.key) builtinReplacements;
-          builtinValues = map (r: r.value) builtinReplacements;
+          allPairs = dolBracePairs ++ barePairs ++ [ "$__rate_interval" ];
+          allValues = dolBraceValues ++ bareValues ++ [ "4m" ];
 
           replaceStrings =
             x:
             if builtins.isString x then
-              builtins.replaceStrings (dolBracePairs ++ barePairs ++ builtinPairs) (
-                dolBraceValues ++ bareValues ++ builtinValues
-              ) x
+              builtins.replaceStrings allPairs allValues x
             else if builtins.isList x then
               map replaceStrings x
             else if builtins.isAttrs x then
@@ -316,7 +315,6 @@
                     url = "http://localhost:9090";
                     uid = "soyo-prometheus";
                     isDefault = true;
-                    timeInterval = "60s";
                   }
                   {
                     name = "Loki";
@@ -356,7 +354,6 @@
                           value = "localhost:9153";
                         }
                       ]
-                      [ ]
                       (fetchDashboard {
                         id = 18796;
                         hash = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
@@ -381,7 +378,6 @@
                           value = "localhost:4000";
                         }
                       ]
-                      [ ]
                       (fetchDashboard {
                         id = 13768;
                         hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
@@ -404,12 +400,6 @@
                         {
                           key = "node";
                           value = "localhost:9100";
-                        }
-                      ]
-                      [
-                        {
-                          key = "$__rate_interval";
-                          value = "4m";
                         }
                       ]
                       (fetchDashboard {
