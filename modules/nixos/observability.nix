@@ -34,7 +34,11 @@
       #    scrapes every 1m — rate(...[15s]) gets zero data. 4m gives
       #    enough samples without being too coarse.
       fillTemplating =
-        replacements: dashboard:
+        {
+          replacements,
+          dashboard,
+          tags ? [ ],
+        }:
         let
           raw = builtins.fromJSON (builtins.readFile dashboard);
           templateNames = map (r: r.key) replacements;
@@ -64,8 +68,11 @@
               list = builtins.filter (v: !(builtins.elem v.name templateNames)) cleaned.templating.list;
             };
           };
+          withTags = withoutTemplates // {
+            inherit tags;
+          };
         in
-        pkgs.writeText "dashboard.json" (builtins.toJSON withoutTemplates);
+        pkgs.writeText "dashboard.json" (builtins.toJSON withTags);
     in
     {
       options.lanAppliance.services.observability = {
@@ -334,78 +341,95 @@
               };
               provision.dashboards.settings =
                 let
-                  dnsmasqJson =
-                    fillTemplating
-                      [
-                        {
-                          key = "DS_PROMETHEUS";
-                          value = "soyo-prometheus";
-                        }
-                        {
-                          key = "datasource";
-                          value = "soyo-prometheus";
-                        }
-                        {
-                          key = "job";
-                          value = "dnsmasq";
-                        }
-                        {
-                          key = "instance";
-                          value = "localhost:9153";
-                        }
-                      ]
-                      (fetchDashboard {
-                        id = 18796;
-                        hash = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
-                      });
-                  blockyJson =
-                    fillTemplating
-                      [
-                        {
-                          key = "DS_PROMETHEUS";
-                          value = "soyo-prometheus";
-                        }
-                        {
-                          key = "datasource";
-                          value = "soyo-prometheus";
-                        }
-                        {
-                          key = "job";
-                          value = "blocky";
-                        }
-                        {
-                          key = "instance";
-                          value = "localhost:4000";
-                        }
-                      ]
-                      (fetchDashboard {
-                        id = 13768;
-                        hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
-                      });
-                  nodeExporterJson =
-                    fillTemplating
-                      [
-                        {
-                          key = "ds_prometheus";
-                          value = "soyo-prometheus";
-                        }
-                        {
-                          key = "job";
-                          value = "node";
-                        }
-                        {
-                          key = "nodename";
-                          value = "soyo";
-                        }
-                        {
-                          key = "node";
-                          value = "localhost:9100";
-                        }
-                      ]
-                      (fetchDashboard {
-                        id = 1860;
-                        hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
-                      });
+                  dnsmasqJson = fillTemplating {
+                    replacements = [
+                      {
+                        key = "DS_PROMETHEUS";
+                        value = "soyo-prometheus";
+                      }
+                      {
+                        key = "datasource";
+                        value = "soyo-prometheus";
+                      }
+                      {
+                        key = "job";
+                        value = "dnsmasq";
+                      }
+                      {
+                        key = "instance";
+                        value = "localhost:9153";
+                      }
+                    ];
+                    tags = [
+                      "dnsmasq"
+                      "dhcp"
+                      "dns"
+                      "soyo"
+                    ];
+                    dashboard = fetchDashboard {
+                      id = 18796;
+                      hash = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
+                    };
+                  };
+                  blockyJson = fillTemplating {
+                    replacements = [
+                      {
+                        key = "DS_PROMETHEUS";
+                        value = "soyo-prometheus";
+                      }
+                      {
+                        key = "datasource";
+                        value = "soyo-prometheus";
+                      }
+                      {
+                        key = "job";
+                        value = "blocky";
+                      }
+                      {
+                        key = "instance";
+                        value = "localhost:4000";
+                      }
+                    ];
+                    tags = [
+                      "blocky"
+                      "dns"
+                      "adblock"
+                      "soyo"
+                    ];
+                    dashboard = fetchDashboard {
+                      id = 13768;
+                      hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
+                    };
+                  };
+                  nodeExporterJson = fillTemplating {
+                    replacements = [
+                      {
+                        key = "ds_prometheus";
+                        value = "soyo-prometheus";
+                      }
+                      {
+                        key = "job";
+                        value = "node";
+                      }
+                      {
+                        key = "nodename";
+                        value = "soyo";
+                      }
+                      {
+                        key = "node";
+                        value = "localhost:9100";
+                      }
+                    ];
+                    tags = [
+                      "linux"
+                      "node-exporter"
+                      "soyo"
+                    ];
+                    dashboard = fetchDashboard {
+                      id = 1860;
+                      hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
+                    };
+                  };
                 in
                 {
                   apiVersion = 1;
