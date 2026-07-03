@@ -192,38 +192,26 @@
               enable = true;
               configuration = {
                 auth_enabled = false;
-                # Single-node mode: use inmemory ring, disable replication.
-                # Without this, Loki requires 2+ ingester replicas and rejects
-                # writes with HTTP 500 ("at least 2 live replicas required").
-                common = {
-                  ring = {
-                    kvstore = {
-                      store = "inmemory";
-                    };
-                    replication_factor = 1;
-                  };
-                };
-                # Disable scheduler ring — single node doesn't need it.
-                # Without this, the query scheduler probes localhost:8500 (Consul)
-                # and Loki's query API hangs.
-                query_scheduler = {
-                  use_scheduler_ring = false;
-                };
-                ingester = {
-                  lifecycler = {
-                    ring = {
-                      kvstore = {
-                        store = "inmemory";
-                      };
-                      replication_factor = 1;
-                    };
-                  };
-                };
+                analytics.reporting_enabled = false;
+
                 server = {
                   http_listen_port = 3100;
                   http_listen_address = "localhost";
+                  log_level = "warn";
                 };
+
+                # Single-node mode: inmemory ring, no replication.
+                # Without this, Loki requires 2+ ingester replicas and rejects
+                # writes with HTTP 500 ("at least 2 live replicas required").
                 ingester = {
+                  lifecycler = {
+                    address = "127.0.0.1";
+                    ring = {
+                      kvstore.store = "inmemory";
+                      replication_factor = 1;
+                    };
+                    final_sleep = "0s";
+                  };
                   chunk_idle_period = "5m";
                   chunk_retain_period = "30s";
                   wal = {
@@ -231,6 +219,12 @@
                     dir = "/var/lib/loki/wal";
                   };
                 };
+
+                # Disable scheduler ring — single node doesn't need it.
+                # Without this, Loki probes localhost:8500 (Consul) and
+                # the query API hangs indefinitely.
+                query_scheduler.use_scheduler_ring = false;
+
                 schema_config.configs = [
                   {
                     from = "2025-01-01";
@@ -243,31 +237,31 @@
                     };
                   }
                 ];
+
                 storage_config = {
                   tsdb_shipper = {
-                    active_index_directory = "/var/lib/loki/index";
-                    cache_location = "/var/lib/loki/cache";
+                    active_index_directory = "/var/lib/loki/tsdb-index";
+                    cache_location = "/var/lib/loki/tsdb-cache";
+                    cache_ttl = "24h";
                   };
                   filesystem.directory = "/var/lib/loki/chunks";
                 };
+
                 compactor = {
                   working_directory = "/var/lib/loki/compactor";
                   retention_enabled = true;
                   delete_request_store = "filesystem";
                 };
+
                 limits_config = {
                   reject_old_samples = true;
                   reject_old_samples_max_age = "168h";
                   retention_period = "720h"; # 30 days
-                  volume_enabled = true;
-                  # Single-instance mode — only need 1 ingester
+                  allow_structured_metadata = false;
                   ingestion_rate_mb = 12;
                   ingestion_burst_size_mb = 18;
                 };
               };
-
-              # Force single-node: disable scheduler ring and set target
-              extraFlags = [ "-target=all" ];
             };
 
             # Grafana Alloy: ships systemd journal logs to Loki. Replaces the
