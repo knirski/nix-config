@@ -84,9 +84,6 @@ in
       };
 
       conditional.mapping = {
-        # NoAds may block these Huawei test domains; route around it via the
-        # non-ad-filtering encrypted fallback.
-        "hwcloudtest.cn" = "https://dns.quad9.net/dns-query";
         # LAN reverse zone -> dnsmasq, which owns lease-aware PTR. dnsmasq is
         # bound to the LAN interface, not loopback, so forward to that address.
         "0.0.10.in-addr.arpa" = "10.0.0.9:5353";
@@ -107,6 +104,11 @@ in
           ];
         };
         allowlists.pl = [
+          # AUX AC units (BroadLink WiFi modules, AC Freedom app) phone home
+          # to a Huawei Cloud test endpoint.  DNS4EU NoAds blocks the
+          # *.hwcloudtest.cn domain as a Huawei tracker.  The allowlist
+          # overrides that block — without it, the units lose remote control
+          # (local LAN control still works).
           "whiomplatform.hwcloudtest.cn"
           "*.hwcloudtest.cn"
         ];
