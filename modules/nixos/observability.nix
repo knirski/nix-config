@@ -205,7 +205,7 @@
                 # writes with HTTP 500 ("at least 2 live replicas required").
                 ingester = {
                   lifecycler = {
-                    address = "127.0.0.1";
+                    address = "localhost";
                     ring = {
                       kvstore.store = "inmemory";
                       replication_factor = 1;
@@ -549,6 +549,7 @@
             systemd.tmpfiles.rules = [
               "d /persist/var/lib/grafana 0750 grafana grafana -"
               "d /persist/var/lib/loki 0750 loki loki -"
+              "d /persist/var/lib/tempo 0750 tempo tempo -"
             ];
 
             systemd.services.prometheus.serviceConfig = {
@@ -569,75 +570,64 @@
               Nice = 10;
             };
 
-            # Tempo: distributed tracing backend. Stores traces locally with
-            # filesystem backend — no S3 needed at single-host scale.
-            systemd.services.tempo = {
-              description = "Grafana Tempo trace storage";
-              after = [ "network.target" ];
-              wantedBy = [ "multi-user.target" ];
-              serviceConfig = {
-                ExecStart = ''
-                  ${pkgs.tempo}/bin/tempo -config.file=${pkgs.writeText "tempo-config.yaml" ''
-                    target: all
-                    # Single-binary mode: run all Tempo components (distributor,
-                    # ingester, querier, compactor) in one process.
+            systemd.services.tempo.serviceConfig = {
+              MemoryMax = "512M";
+              CPUQuota = "20%";
+              Nice = 10;
+            };
 
-                    server:
-                      http_listen_port: 3200
-                      http_listen_address: localhost
-                      # Use different gRPC port than Alloy (which owns :4317 for OTLP intake).
-                      # Alloy receives OTLP from trace generators and forwards to Tempo
-                      # on this port via otelcol.exporter.otlp.tempo.
-                      grpc_listen_port: 4319
-                      grpc_listen_address: localhost
+            # Tempo: distributed tracing backend. Single-binary mode for
+            # single-host scale — no S3, no memberlist, no complex ring setup.
+            services.tempo = {
+              enable = true;
+              settings = {
+                target = "all";
 
-                    distributor:
-                      receivers:
-                        otlp:
-                          protocols:
-                            grpc:
-                            http:
+                server = {
+                  http_listen_port = 3200;
+                  http_listen_address = "127.0.0.1";
+                  grpc_listen_port = 4319;
+                  grpc_listen_address = "127.0.0.1";
+                };
 
-                    ingester:
-                      lifecycler:
-                        ring:
-                          kvstore:
-                            store: inmemory
-                          replication_factor: 1
+                distributor.receivers = {
+                  otlp.protocols = {
+                    grpc = { };
+                    http = { };
+                  };
+                };
 
-                    storage:
-                      trace:
-                        backend: local
-                        local:
-                          path: /var/lib/tempo/blocks
-                        wal:
-                          path: /var/lib/tempo/wal
+                ingester = {
+                  lifecycler.ring = {
+                    kvstore.store = "inmemory";
+                    replication_factor = 1;
+                  };
+                };
 
-                    compactor: {}
+                storage.trace = {
+                  backend = "local";
+                  local.path = "/var/lib/tempo/traces";
+                  wal.path = "/var/lib/tempo/wal";
+                };
 
-                    overrides:
-                      max_bytes_per_trace: 5_000_000
-                  ''}
-                '';
-                Restart = "always";
-                User = "tempo";
-                Group = "tempo";
-                StateDirectory = "tempo";
-                WorkingDirectory = "/var/lib/tempo";
-                MemoryMax = "512M";
-                CPUQuota = "20%";
-                Nice = 10;
+                overrides = {
+                  max_bytes_per_trace = 5000000;
+                };
               };
             };
+
+            # Tempo needs a static UID across boots — DynamicUser (nixpkgs
+            # default) reassigns UIDs, breaking ownership of persisted data.
             users.users.tempo = {
               description = "Tempo trace storage user";
               group = "tempo";
               isSystemUser = true;
             };
             users.groups.tempo = { };
+            systemd.services.tempo.serviceConfig.DynamicUser = lib.mkForce false;
 
             # Boot trace generator: runs once after each boot, captures
-            # systemd-analyze data as an OTLP trace, pushes to Tempo via Alloy.
+            # systemd-analyze data as an OTLP trace, pushes to Tempo.
             systemd.services.soyo-boot-trace = {
               description = "Generate boot trace from systemd-analyze";
               after = [ "multi-user.target" ];
@@ -646,9 +636,12 @@
                 Type = "oneshot";
                 ExecStart =
                   let
-                    tracer = pkgs.writeShellScript "soyo-boot-trace" ''
-                          set -euo pipefail
-                          exec ${pkgs.python3}/bin/python3 << 'PYEOF'
+                    tracer = pkgs.writeShellApplication {
+                      name = "soyo-boot-trace";
+                      runtimeInputs = [ pkgs.curl pkgs.python3 ];
+                      text = ''
+                        export CURL='${pkgs.curl}/bin/curl'
+                        exec ${pkgs.python3}/bin/python3 << 'PYEOF'
                       import json, subprocess, re, os, uuid
 
                       def get_boot_units():
@@ -671,21 +664,18 @@
                           capture_output=True, text=True, shell=True).stdout.strip()) * 1000
                       now_ns = int(subprocess.run(
                           ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
-                      # If timestamp parsing failed, estimate from journal
                       if boot_ns < 1000000000:
-                          boot_ns = now_ns - 120_000_000_000  # assume ~2 min ago
+                          boot_ns = now_ns - 120_000_000_000
 
                       trace_id = uuid.uuid4().hex
                       spans = []
                       span_ts = boot_ns
-                      for i, (name, dur) in enumerate(units):
+                      for name, dur in units:
                           dur_ns = int(dur * 1e9)
                           sid = uuid.uuid4().hex[:16]
                           spans.append({
-                              "traceId": trace_id,
-                              "spanId": sid,
-                              "name": name,
-                              "kind": 2,
+                              "traceId": trace_id, "spanId": sid,
+                              "name": name, "kind": 2,
                               "startTimeUnixNano": str(span_ts),
                               "endTimeUnixNano": str(span_ts + dur_ns),
                               "attributes": [
@@ -695,31 +685,24 @@
                           })
                           span_ts += dur_ns
 
-                      trace = {
-                          "resourceSpans": [{
-                              "resource": {"attributes": [
-                                  {"key": "service.name", "value": {"stringValue": "systemd-boot"}},
-                                  {"key": "host.name", "value": {"stringValue": "soyo"}}
-                              ]},
-                              "scopeSpans": [{
-                                  "scope": {"name": "systemd-analyze"},
-                                  "spans": spans
-                              }]
-                          }]
-                      }
+                      trace = {"resourceSpans": [{
+                          "resource": {"attributes": [
+                              {"key": "service.name", "value": {"stringValue": "systemd-boot"}},
+                              {"key": "host.name", "value": {"stringValue": "soyo"}}
+                          ]},
+                          "scopeSpans": [{"scope": {"name": "systemd-analyze"}, "spans": spans}]
+                      }]}
 
-                      # Push via OTLP HTTP to Tempo
-                      subprocess.run(
-                          [${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
-                           "-H", "Content-Type: application/json",
-                           "--data", json.dumps(trace),
-                           "http://localhost:4318/v1/traces"],
-                          timeout=10, capture_output=True)
+                      subprocess.run([os.environ["CURL"], "-sS", "-o", "/dev/null", "-X", "POST",
+                          "-H", "Content-Type: application/json",
+                          "--data", json.dumps(trace),
+                          "http://localhost:4318/v1/traces"], timeout=10)
                       print(f"soyo-boot-trace: {len(units)} units traced", flush=True)
                       PYEOF
-                    '';
+                      '';
+                    };
                   in
-                  "${tracer}";
+                  "${tracer}/bin/soyo-boot-trace";
                 MemoryMax = "64M";
                 CPUQuota = "10%";
                 Nice = 19;
@@ -735,19 +718,20 @@
                 Type = "oneshot";
                 ExecStart =
                   let
-                    tracer = pkgs.writeScript "soyo-activation-trace" ''
-                      #!${pkgs.python3}/bin/python3
+                    tracer = pkgs.writeShellApplication {
+                      name = "soyo-activation-trace";
+                      runtimeInputs = [ pkgs.curl pkgs.python3 ];
+                      text = ''
+                        export CURL='${pkgs.curl}/bin/curl'
+                        exec ${pkgs.python3}/bin/python3 << 'PYEOF'
                       import json, os, subprocess, uuid
 
-                      # Read the current generation from the profile symlink
                       gen_path = "/run/current-system"
                       if not os.path.isdir(gen_path):
                           raise SystemExit(0)
 
-                      # Try to get build timestamp from the store path
                       try:
                           store_path = os.readlink(gen_path) if os.path.islink(gen_path) else gen_path
-                          # Parse timestamp from the store path or use mtime
                           mtime = os.path.getmtime(gen_path)
                       except:
                           mtime = subprocess.run(
@@ -756,10 +740,8 @@
 
                       now_ns = int(subprocess.run(
                           ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
-                      # Activation happened at mtime (generation created)
                       start_ns = int(mtime * 1_000_000_000) if mtime > 1000000000 else now_ns - 300_000_000_000
 
-                      # Get generation number
                       gen = "unknown"
                       try:
                           gen_result = subprocess.run(
@@ -782,22 +764,23 @@
                           ]
                       }]
 
-                      trace = {
-                          "resourceSpans": [{
-                              "resource": {"attributes": [
-                                  {"key": "service.name", "value": {"stringValue": "nixos-activation"}},
-                                  {"key": "host.name", "value": {"stringValue": "soyo"}}
-                              ]},
-                              "scopeSpans": [{"scope": {"name": "nixos"}, "spans": spans}]
-                          }]
-                      }
-                      subprocess.run([${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
+                      trace = {"resourceSpans": [{
+                          "resource": {"attributes": [
+                              {"key": "service.name", "value": {"stringValue": "nixos-activation"}},
+                              {"key": "host.name", "value": {"stringValue": "soyo"}}
+                          ]},
+                          "scopeSpans": [{"scope": {"name": "nixos"}, "spans": spans}]
+                      }]}
+
+                      subprocess.run([os.environ["CURL"], "-sS", "-o", "/dev/null", "-X", "POST",
                           "-H", "Content-Type: application/json",
                           "--data", json.dumps(trace),
-                          "http://localhost:4318/v1/traces"], timeout=10, capture_output=True)
-                    '';
+                          "http://localhost:4318/v1/traces"], timeout=10)
+                      PYEOF
+                      '';
+                    };
                   in
-                  "${tracer}";
+                  "${tracer}/bin/soyo-activation-trace";
                 MemoryMax = "32M";
                 CPUQuota = "5%";
                 Nice = 19;
@@ -822,8 +805,12 @@
                 Type = "oneshot";
                 ExecStart =
                   let
-                    tracer = pkgs.writeScript "soyo-health-trace" ''
-                      #!${pkgs.python3}/bin/python3
+                    tracer = pkgs.writeShellApplication {
+                      name = "soyo-health-trace";
+                      runtimeInputs = [ pkgs.curl pkgs.python3 ];
+                      text = ''
+                        export CURL='${pkgs.curl}/bin/curl'
+                        exec ${pkgs.python3}/bin/python3 << 'PYEOF'
                       import json, subprocess, os, uuid
 
                       now_ns = int(subprocess.run(
@@ -840,10 +827,8 @@
                                   ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
                               ok = r.returncode == 0
                               output = (r.stdout + r.stderr)[:200]
-                              return {
-                                  "ok": ok, "start": start, "end": end,
-                                  "output": output, "rc": r.returncode
-                              }
+                              return {"ok": ok, "start": start, "end": end,
+                                      "output": output, "rc": r.returncode}
                           except Exception as e:
                               return {"ok": False, "start": now_ns, "end": now_ns,
                                       "output": str(e)[:200], "rc": -1}
@@ -872,22 +857,23 @@
                               ]
                           })
 
-                      trace = {
-                          "resourceSpans": [{
-                              "resource": {"attributes": [
-                                  {"key": "service.name", "value": {"stringValue": "soyo-health"}},
-                                  {"key": "host.name", "value": {"stringValue": "soyo"}}
-                              ]},
-                              "scopeSpans": [{"scope": {"name": "health"}, "spans": spans}]
-                          }]
-                      }
-                      subprocess.run([${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
+                      trace = {"resourceSpans": [{
+                          "resource": {"attributes": [
+                              {"key": "service.name", "value": {"stringValue": "soyo-health"}},
+                              {"key": "host.name", "value": {"stringValue": "soyo"}}
+                          ]},
+                          "scopeSpans": [{"scope": {"name": "health"}, "spans": spans}]
+                      }]}
+
+                      subprocess.run([os.environ["CURL"], "-sS", "-o", "/dev/null", "-X", "POST",
                           "-H", "Content-Type: application/json",
                           "--data", json.dumps(trace),
-                          "http://localhost:4318/v1/traces"], timeout=10, capture_output=True)
-                    '';
+                          "http://localhost:4318/v1/traces"], timeout=10)
+                      PYEOF
+                      '';
+                    };
                   in
-                  "${tracer}";
+                  "${tracer}/bin/soyo-health-trace";
                 MemoryMax = "64M";
                 CPUQuota = "10%";
                 Nice = 19;
