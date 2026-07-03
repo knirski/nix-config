@@ -130,12 +130,30 @@
               enable = true;
               configuration = {
                 auth_enabled = false;
-                # Single-node mode — inmemory ring store so Loki doesn't
-                # probe localhost:8500 for Consul.
+                # Single-node mode: use inmemory ring, disable replication.
+                # Without this, Loki requires 2+ ingester replicas and rejects
+                # writes with HTTP 500 ("at least 2 live replicas required").
                 common = {
                   ring = {
                     kvstore = {
                       store = "inmemory";
+                    };
+                    replication_factor = 1;
+                  };
+                };
+                # Disable scheduler ring — single node doesn't need it.
+                # Without this, the query scheduler probes localhost:8500 (Consul)
+                # and Loki's query API hangs.
+                query_scheduler = {
+                  use_scheduler_ring = false;
+                };
+                ingester = {
+                  lifecycler = {
+                    ring = {
+                      kvstore = {
+                        store = "inmemory";
+                      };
+                      replication_factor = 1;
                     };
                   };
                 };
@@ -179,8 +197,15 @@
                   reject_old_samples = true;
                   reject_old_samples_max_age = "168h";
                   retention_period = "720h"; # 30 days
+                  volume_enabled = true;
+                  # Single-instance mode — only need 1 ingester
+                  ingestion_rate_mb = 12;
+                  ingestion_burst_size_mb = 18;
                 };
               };
+
+              # Force single-node: disable scheduler ring and set target
+              extraFlags = [ "-target=all" ];
             };
 
             # Grafana Alloy: ships systemd journal logs to Loki. Replaces the
