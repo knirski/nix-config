@@ -421,6 +421,148 @@
                       hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
                     };
                   };
+
+                  homeJson = pkgs.writeText "home.json" (builtins.toJSON {
+                    title = "Soyo Home";
+                    uid = "soyo-home";
+                    tags = [ "home" ];
+                    editable = false;
+                    time = {
+                      from = "now-12h";
+                      to = "now";
+                    };
+                    refresh = "30s";
+                    templating.list = [ ];
+                    panels =
+                      let
+                        ds = "soyo-prometheus";
+                        grid = { h = 8; w = 12; };
+                        stat = { h = 4; w = 6; };
+
+                        timeseries = { title, expr, legend ? "", format ? "short", ... }@extra: grid // {
+                          type = "timeseries";
+                          inherit title;
+                          fieldConfig.defaults = {
+                            custom = {
+                              fillOpacity = 10;
+                              lineWidth = 1;
+                            };
+                            unit = format;
+                          };
+                          targets = [
+                            {
+                              expr = expr;
+                              datasource = { type = "prometheus"; uid = ds; };
+                              refId = "A";
+                            }
+                          ];
+                          options.legend = { displayMode = "list"; showLegend = legend != ""; };
+                        } // extra;
+
+                        gaugeStat = { title, expr, format ? "short" }: stat // {
+                          type = "stat";
+                          inherit title;
+                          fieldConfig.defaults.unit = format;
+                          options = { reduceOptions = { calcs = [ "lastNotNull" ]; }; };
+                          targets = [
+                            {
+                              expr = expr;
+                              datasource = { type = "prometheus"; uid = ds; };
+                              refId = "A";
+                            }
+                          ];
+                        };
+
+                        statPanel = { title, expr, format ? "short", desc ? "" }: stat // {
+                          type = "stat";
+                          inherit title;
+                          fieldConfig.defaults.unit = format;
+                          options = { reduceOptions = { calcs = [ "lastNotNull" ]; }; textMode = "value"; };
+                          targets = [
+                            {
+                              expr = expr;
+                              datasource = { type = "prometheus"; uid = ds; };
+                              refId = "A";
+                            }
+                          ];
+                          fieldConfig.defaults.description = desc;
+                        };
+                      in
+                      [
+                        # Row 1: CPU, Memory, Uptime, Disk
+                        (timeseries {
+                          title = "CPU Usage %";
+                          expr = ''100 - avg by (mode) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100'';
+                          format = "percent";
+                          h = 6;
+                        })
+                        (timeseries {
+                          title = "Memory";
+                          expr = ''node_memory_MemAvailable_bytes'';
+                          format = "bytes";
+                          h = 6;
+                        })
+                        (statPanel {
+                          title = "Uptime";
+                          expr = ''node_time_seconds - node_boot_time_seconds'';
+                          format = "s";
+                          desc = "Seconds since last boot";
+                        })
+                        (gaugeStat {
+                          title = "/ Disk Usage";
+                          expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""}) * 100'';
+                          format = "percent";
+                        })
+                        (gaugeStat {
+                          title = "/persist Disk Usage";
+                          expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""}) * 100'';
+                          format = "percent";
+                        })
+
+                        # Row 2: Network, DNS queries
+                        (timeseries {
+                          title = "Network Traffic";
+                          expr = ''rate(node_network_receive_bytes_total{device="enp1s0"}[5m])'';
+                          format = "Bps";
+                          h = 6;
+                        })
+                        (timeseries {
+                          title = "DNS Queries (dnsmasq)";
+                          expr = ''rate(dnsmasq_servers_queries[5m])'';
+                          h = 6;
+                        })
+                        (statPanel {
+                          title = "DNS Cache Hit Rate";
+                          expr = ''(dnsmasq_cache_hits / (dnsmasq_cache_hits + dnsmasq_cache_misses)) * 100'';
+                          format = "percent";
+                          desc = "% of queries served from cache";
+                        })
+
+                        # Row 3: Blocky, DHCP
+                        (timeseries {
+                          title = "Blocky Queries";
+                          expr = ''rate(blocky_query_total[5m])'';
+                          h = 6;
+                        })
+                        (timeseries {
+                          title = "Blocked Queries";
+                          expr = ''rate(blocky_query_total{reason="BLOCKED"}[5m])'';
+                          h = 6;
+                        })
+                        (statPanel {
+                          title = "DHCP Leases";
+                          expr = ''dnsmasq_leases'';
+                          format = "none";
+                          desc = "Active DHCP leases";
+                        })
+                        (statPanel {
+                          title = "Blocked Total";
+                          expr = ''blocky_query_total{reason="BLOCKED"}'';
+                          format = "none";
+                          desc = "Total blocked queries since start";
+                        })
+                      ];
+                  });
                 in
                 {
                   apiVersion = 1;
@@ -431,6 +573,7 @@
                       folder = "soyo";
                       options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
                         mkdir -p $out
+                        cp ${homeJson} $out/001-home.json
                         cp ${dnsmasqJson} $out/dnsmasq.json
                         cp ${blockyJson} $out/blocky.json
                         cp ${nodeExporterJson} $out/node-exporter-full.json
@@ -485,11 +628,11 @@
                         ensure_folder() {
                           curl -s -o /dev/null -w '%{http_code}' \
                             -X POST -H 'Content-Type: application/json' \
-                            -d '{"uid":"soyo","title":"soyo"}' \
+                            -d '{"uid":"soyo","title":"Soyo"}' \
                             "$BASE/api/folders" | grep -qE '^200|^409'
                           curl -sS -o /dev/null -X PUT \
                             -H 'Content-Type: application/json' \
-                            -d '{"uid":"soyo","title":"soyo","overwrite":true}' \
+                            -d '{"uid":"soyo","title":"Soyo","overwrite":true}' \
                             "$BASE/api/folders/soyo" || :
                         }
 
@@ -572,6 +715,13 @@
                         provision_contact_point || :
                         provision_policy || :
                         provision_rules || :
+
+                        # Star & set as org home — Grafana requires a starred
+                        # dashboard before it appears in the home dropdown.
+                        curl -X POST "$BASE/api/user/stars/dashboard/soyo-home" || :
+                        curl -X PUT -H 'Content-Type: application/json' \
+                          -d '{"homeDashboardUID":"soyo-home"}' \
+                          "$BASE/api/org/preferences" || :
                       '';
                     };
                   in
