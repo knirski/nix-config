@@ -358,7 +358,6 @@
                       "dnsmasq"
                       "dhcp"
                       "dns"
-                      "soyo"
                     ];
                     dashboard = fetchDashboard {
                       id = 18796;
@@ -388,7 +387,6 @@
                       "blocky"
                       "dns"
                       "adblock"
-                      "soyo"
                     ];
                     dashboard = fetchDashboard {
                       id = 13768;
@@ -417,7 +415,6 @@
                     tags = [
                       "linux"
                       "node-exporter"
-                      "soyo"
                     ];
                     dashboard = fetchDashboard {
                       id = 1860;
@@ -431,6 +428,7 @@
                     {
                       name = "soyo";
                       type = "file";
+                      folder = "soyo";
                       options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
                         mkdir -p $out
                         cp ${dnsmasqJson} $out/dnsmasq.json
@@ -486,17 +484,23 @@
                           # Create if absent (404), ignore if exists (409)
                           curl -s -o /dev/null -w '%{http_code}' \
                             -X POST -H 'Content-Type: application/json' \
-                            -d '{"uid":"soyo","title":"Soyo"}' \
+                            -d '{"uid":"soyo","title":"soyo"}' \
                             "$BASE/api/folders" | grep -qE '^200|^409'
                         }
 
-                        # Contact point: ntfy webhook
+                        # Contact point: ntfy webhook with template-based rendering.
+                        # Grafana sends raw alert JSON; ntfy extracts title/message
+                        # from the payload via its Go template engine.
                         provision_contact_point() {
+                          local topic token
+                          topic=$(<"$CREDENTIALS_DIRECTORY"/ntfy_topic)
+                          token=$(<"$CREDENTIALS_DIRECTORY"/ntfy_token)
                           ${pkgs.jq}/bin/jq -nc \
-                            --arg url "$(<''${CREDENTIALS_DIRECTORY}/ntfy_topic)" \
-                            --arg token "$(<''${CREDENTIALS_DIRECTORY}/ntfy_token)" \
+                            --arg url "$topic" \
+                            --arg token "$token" \
                             '{name: "ntfy", type: "webhook", settings: {
-                              url: $url, httpMethod: "POST",
+                              url: ($url + "?template=yes&title=%7B%7B.title%7D%7D&message=%7B%7B.message%7D%7D&priority=5&tags=warning,soyo"),
+                              httpMethod: "POST",
                               authorization: {type: "Bearer", credentials: $token}}}' \
                             | curl -X POST -H 'Content-Type: application/json' \
                               -d @- "$BASE/api/v1/provisioning/contact-points"
@@ -540,12 +544,12 @@
                           post_rule soyo_blocky_down \
                             "Service down: Blocky DNS" \
                             'up{job="blocky"} == 0' \
-                            2m Alerting "Blocky DNS is unreachable"
+                            5m Alerting "Blocky DNS is unreachable"
 
                           post_rule soyo_dnsmasq_down \
                             "Service down: dnsmasq" \
                             'up{job="dnsmasq"} == 0' \
-                            2m Alerting "dnsmasq unreachable — DHCP and reverse DNS down"
+                            5m Alerting "dnsmasq unreachable — DHCP and reverse DNS down"
 
                           post_rule soyo_backup_failed \
                             "Backup failed" \
