@@ -280,7 +280,7 @@
               enable = true;
               settings = {
                 server = {
-                  http_addr = grafanaCfg.listenAddress;
+                  http_addr = "0.0.0.0";
                   http_port = 3000;
                   domain = grafanaCfg.domain;
                   root_url = "http://${grafanaCfg.domain}:3000";
@@ -339,7 +339,7 @@
                         }
                         {
                           key = "instance";
-                          value = "127.0.0.1:9153";
+                          value = "localhost:9153";
                         }
                       ]
                       (fetchDashboard {
@@ -363,7 +363,7 @@
                         }
                         {
                           key = "instance";
-                          value = "127.0.0.1:4000";
+                          value = "localhost:4000";
                         }
                       ]
                       (fetchDashboard {
@@ -387,7 +387,7 @@
                         }
                         {
                           key = "node";
-                          value = "127.0.0.1:9100";
+                          value = "localhost:9100";
                         }
                       ]
                       (fetchDashboard {
