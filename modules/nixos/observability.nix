@@ -25,24 +25,33 @@
         };
 
       # Replace ${KEY} with value everywhere, then drop those template variables.
-      # Also handles bare $key references in PromQL selectors (community
-      # dashboards use both "${KEY}" inside JSON and "key=~\"$key\"").
+      # Three replacement passes:
+      # 1. ${KEY} — datasource UIDs and JSON-embedded template refs
+      # 2. "$key" — bare PromQL template refs (quoted, in selector context)
+      # 3. $key at word boundaries — unquoted builtins like $__rate_interval
+      #
+      # Pass 3 is a separate builtins arg: { key = "$__rate_interval"; value = "4m"; }
+      # for unquoted patterns in PromQL range vectors (e.g. [$__rate_interval] → [4m]).
       fillTemplating =
-        replacements: dashboard:
+        replacements: builtinReplacements: dashboard:
         let
           raw = builtins.fromJSON (builtins.readFile dashboard);
           templateNames = map (r: r.key) replacements;
 
-          # Two replacement forms: ${KEY} in datasource UIDs, " $key" in PromQL
           dolBracePairs = map (r: "\${${r.key}}") replacements;
           dolBraceValues = map (r: r.value) replacements;
           barePairs = map (r: "\"\$${r.key}\"") replacements;
           bareValues = map (r: "\"${r.value}\"") replacements;
 
+          builtinPairs = map (r: r.key) builtinReplacements;
+          builtinValues = map (r: r.value) builtinReplacements;
+
           replaceStrings =
             x:
             if builtins.isString x then
-              builtins.replaceStrings (dolBracePairs ++ barePairs) (dolBraceValues ++ bareValues) x
+              builtins.replaceStrings (dolBracePairs ++ barePairs ++ builtinPairs) (
+                dolBraceValues ++ bareValues ++ builtinValues
+              ) x
             else if builtins.isList x then
               map replaceStrings x
             else if builtins.isAttrs x then
@@ -115,7 +124,11 @@
             services.prometheus.exporters.node = {
               enable = true;
               listenAddress = cfg.nodeExporter.listenAddress;
-              extraFlags = [ "--collector.textfile.directory=/var/lib/prometheus/textfiles" ];
+              extraFlags = [
+                "--collector.textfile.directory=/var/lib/prometheus/textfiles"
+                "--collector.processes"
+                "--collector.interrupts"
+              ];
             };
 
             services.prometheus.exporters.dnsmasq = {
@@ -303,6 +316,7 @@
                     url = "http://localhost:9090";
                     uid = "soyo-prometheus";
                     isDefault = true;
+                    timeInterval = "60s";
                   }
                   {
                     name = "Loki";
@@ -342,6 +356,7 @@
                           value = "localhost:9153";
                         }
                       ]
+                      [ ]
                       (fetchDashboard {
                         id = 18796;
                         hash = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
@@ -366,6 +381,7 @@
                           value = "localhost:4000";
                         }
                       ]
+                      [ ]
                       (fetchDashboard {
                         id = 13768;
                         hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
@@ -388,6 +404,12 @@
                         {
                           key = "node";
                           value = "localhost:9100";
+                        }
+                      ]
+                      [
+                        {
+                          key = "$__rate_interval";
+                          value = "4m";
                         }
                       ]
                       (fetchDashboard {
