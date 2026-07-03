@@ -568,6 +568,7 @@
                       folder = "soyo";
                       options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
                         mkdir -p $out
+                        cp ${homeJson} $out/001-home.json
                         cp ${dnsmasqJson} $out/dnsmasq.json
                         cp ${blockyJson} $out/blocky.json
                         cp ${nodeExporterJson} $out/node-exporter-full.json
