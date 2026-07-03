@@ -9,7 +9,7 @@ echo "==> Rekeying agenix secrets..."
 agenix rekey
 
 echo "==> Deploying to soyo..."
-nixos-rebuild switch --flake .#soyo --target-host "krzysiek@10.0.0.9" --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host "krzysiek@soyo" --use-remote-sudo
 
 echo "==> Done"
 SCRIPT

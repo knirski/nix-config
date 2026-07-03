@@ -18,19 +18,19 @@ Run after first install and after significant updates. Each check has the exact 
 
 - [ ] **Static LAN IP reachable**
   ```sh
-  ping -c 3 10.0.0.9
+  ping -c 3 soyo
   ```
   Expected: replies from Soyo.
 
 - [ ] **SSH by IP works**
   ```sh
-  ssh krzysiek@10.0.0.9 hostname
+  ssh krzysiek@soyo hostname
   ```
   Expected: key-only auth, outputs `soyo`. Root SSH should be refused.
 
 - [ ] **`soyo.home.arpa` resolves**
   ```sh
-  dig +short soyo.home.arpa @10.0.0.9
+  dig +short soyo.home.arpa @soyo
   ```
   Expected: `10.0.0.9`.
 
@@ -56,19 +56,19 @@ Run after first install and after significant updates. Each check has the exact 
 
 - [ ] **Blocky answers from upstream**
   ```sh
-  dig +short example.com @10.0.0.9
+  dig +short example.com @soyo
   ```
   Expected: resolves (not blocked or NXDOMAIN).
 
 - [ ] **Ad/tracker blocking works**
   ```sh
-  dig +short doubleclick.net @10.0.0.9
+  dig +short doubleclick.net @soyo
   ```
   Expected: `0.0.0.0` (Blocky zeroIP block).
 
 - [ ] **Local reverse lookup works**
   ```sh
-  dig +short -x 10.0.0.9 @10.0.0.9
+  dig +short -x 10.0.0.9 @soyo
   ```
   Expected: `soyo.home.arpa` or hostname.
 
@@ -78,7 +78,7 @@ Run after first install and after significant updates. Each check has the exact 
   ls /persist/etc/ssh/ssh_host_ed25519_key
 
   # After reboot: verify it's still there AND agenix succeeded
-  ssh krzysiek@10.0.0.9 hostname
+  ssh krzysiek@soyo hostname
   ```
   Expected: SSH key stable, SSH login still works.
 
@@ -86,7 +86,7 @@ Run after first install and after significant updates. Each check has the exact 
   ```sh
   sudo systemctl reboot
   # Wait ~60 seconds, then:
-  ssh krzysiek@10.0.0.9 hostname
+  ssh krzysiek@soyo hostname
   ```
   Expected: reaches stage-2 without passphrase. If this fails, use break-glass and re-enroll TPM.
 
@@ -103,7 +103,7 @@ Run after first install and after significant updates. Each check has the exact 
 
 - [ ] **LAN initrd SSH unlock**
   ```sh
-  ssh -p 2222 root@10.0.0.9
+  ssh -p 2222 root@soyo
   ```
   Expected: initrd SSH prompt (enter passphrase). Only works when system is at the initrd unlock stage.
 
@@ -195,19 +195,19 @@ Run after first install and after significant updates. Each check has the exact 
 
 - [ ] **node_exporter metrics available**
   ```sh
-  curl -s 10.0.0.9:9100/metrics | head
+  curl -s soyo:9100/metrics | head
   ```
   Expected: Prometheus metrics output.
 
 - [ ] **dnsmasq exporter metrics available**
   ```sh
-  curl -s 10.0.0.9:9153/metrics | head
+  curl -s soyo:9153/metrics | head
   ```
   Expected: Prometheus metrics output (DHCP lease count, DNS query stats).
 
 - [ ] **Grafana dashboard reachable**
   ```sh
-  curl -s -o /dev/null -w "%{http_code}" http://10.0.0.9:3000
+  curl -so /dev/null -w '%{http_code}' http://soyo:3000
   ```
   Expected: `200` or `302` (Grafana redirects to login). Prometheus datasource should be pre-provisioned.
 
@@ -222,12 +222,12 @@ Run after first install and after significant updates. Each check has the exact 
 
 - [ ] **Tailscale connected**
   ```sh
-  ssh krzysiek@10.0.0.9 tailscale status
+  ssh krzysiek@soyo tailscale status
   ```
   Expected: shows "soyo" as connected with a Tailscale IP. The auth key auto-authenticates on first boot.
 
 - [ ] **Synology Uptime Kuma probe**
-  On the Synology: add a DNS monitor in Uptime Kuma querying `10.0.0.9:53` for `soyo.home.arpa`. Power off Soyo. Expected: probe reports DNS down.
+  On the Synology: add a DNS monitor in Uptime Kuma querying `soyo:53` for `soyo.home.arpa`. Power off Soyo. Expected: probe reports DNS down.
 
 - [ ] **Rollback documented and tested**
   Follow `docs/update-and-rollback.md`. Expected: previous generation boots.
@@ -262,3 +262,5 @@ Run after first install and after significant updates. Each check has the exact 
   sudo systemctl reboot
   ```
   Expected: auto-unlocks again.
+.
+d: auto-unlocks again.

@@ -304,7 +304,7 @@ nix develop '.#' -c agenix rekey
 # 4. Commit and deploy
 git add secrets/root-password.age secrets/rekeyed/
 git commit -m "chore: update root password"
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
 ```
 
 ### Add a new secret
@@ -383,7 +383,7 @@ nix develop '.#' -c agenix rekey
 # 4. Commit and deploy
 git add secrets/ntfy-token.age secrets/rekeyed/
 git commit -m "chore: update ntfy token"
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
 ```
 
 After deploy, the new value is live. No reboot needed.
@@ -424,7 +424,7 @@ git add secrets/
 git commit -m "fix: rotate compromised master key"
 
 # 7. Deploy to every host
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
 ```
 
 **After deploy:**
@@ -462,7 +462,7 @@ nix develop '.#' -c agenix rekey
 # 4. Commit and deploy
 git add secrets/soyo.pub secrets/rekeyed/
 git commit -m "fix: rotate compromised soyo host key"
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
 ```
 
 **After deploy:**
