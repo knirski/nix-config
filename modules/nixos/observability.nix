@@ -260,9 +260,6 @@
                   allow_structured_metadata = false;
                   ingestion_rate_mb = 12;
                   ingestion_burst_size_mb = 18;
-                  # Enable TSDB volume API for Explore Logs drilldown
-                  # (service name mapping, volume stats).
-                  volume_enabled = true;
                 };
               };
             };
