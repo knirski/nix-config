@@ -66,7 +66,12 @@
             services.prometheus.exporters.node = {
               enable = true;
               listenAddress = cfg.nodeExporter.listenAddress;
-              enabledCollectors = [ "textfile" ];
+              enabledCollectors = [
+                "textfile"
+                "systemd"
+                "processes"
+                "filesystem"
+              ];
               extraFlags = [ "--collector.textfile.directory=/var/lib/prometheus/textfiles" ];
             };
 
@@ -259,6 +264,8 @@
                     options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
                       mkdir -p $out
                       cp ${../../hosts/soyo/grafana/soyo-dashboard.json} $out/
+                      cp ${../../hosts/soyo/grafana/blocky-dashboard.json} $out/
+                      cp ${../../hosts/soyo/grafana/node-exporter-full.json} $out/
                     '';
                   }
                 ];
@@ -531,13 +538,14 @@
                           }]
                       }
 
-                      # Push via OTLP HTTP to Tempo (Alloy forwarder on :4318)
+                      # Push via OTLP HTTP to Tempo
                       subprocess.run(
                           [${pkgs.lib.escapeShellArg "${pkgs.curl}/bin/curl"}, "-sS", "-o", "/dev/null", "-X", "POST",
                            "-H", "Content-Type: application/json",
                            "--data", json.dumps(trace),
                            "http://127.0.0.1:4318/v1/traces"],
                           timeout=10, capture_output=True)
+                      print(f"soyo-boot-trace: {len(units)} units traced", flush=True)
                       PYEOF
                     '';
                   in
