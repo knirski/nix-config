@@ -116,47 +116,43 @@
             date +%s%N > /run/restic-backup-start
           '';
           backupCleanupCommand = ''
-                        START_NS=$(cat /run/restic-backup-start 2>/dev/null || echo "0")
-                        END_NS=$(date +%s%N)
-                        RESULT="''${SERVICE_RESULT:-unknown}"
-                        STATUS="''${EXIT_STATUS:-0}"
-
-                        # Push OTLP trace to Tempo via Alloy
-                        ${pkgs.python3}/bin/python3 -c "
-            import json, os, uuid, subprocess
-            start = int(os.environ.get('START_NS', '0'))
-            end = int(os.environ.get('END_NS', '0'))
-            if start <= 0:
-                start = end - 120_000_000_000  # assume 2 min if no start recorded
-            result = os.environ.get('RESULT', 'unknown')
-            status = os.environ.get('STATUS', '0')
-            trace_id = uuid.uuid4().hex
-            root_id = uuid.uuid4().hex[:16]
-            spans = [{
-                'traceId': trace_id, 'spanId': root_id,
-                'name': 'restic-backup', 'kind': 2,
-                'startTimeUnixNano': str(start), 'endTimeUnixNano': str(end),
-                'status': {'code': 1 if result != 'success' else 0},
-                'attributes': [
-                    {'key': 'service.name', 'value': {'stringValue': 'restic-backup'}},
-                    {'key': 'result', 'value': {'stringValue': result}},
-                    {'key': 'exit_status', 'value': {'stringValue': status}}
-                ]
-            }]
-            trace = {
-                'resourceSpans': [{
-                    'resource': {'attributes': [
-                        {'key': 'service.name', 'value': {'stringValue': 'restic-backup'}},
-                        {'key': 'host.name', 'value': {'stringValue': 'soyo'}}
-                    ]},
-                    'scopeSpans': [{'scope': {'name': 'restic'}, 'spans': spans}]
+            START_NS=$(cat /run/restic-backup-start 2>/dev/null || echo "0")
+            END_NS=$(date +%s%N)
+            RESULT="''${SERVICE_RESULT:-unknown}"
+            TRACE_ID=$(${pkgs.util-linux}/bin/uuidgen | tr -d -)
+            SPAN_ID=$(${pkgs.util-linux}/bin/uuidgen | tr -d - | cut -c1-16)
+            OK=0; [ "$RESULT" = "success" ] || OK=1
+            ${pkgs.jq}/bin/jq -nc \
+              --arg trace_id "$TRACE_ID" \
+              --arg span_id "$SPAN_ID" \
+              --arg start_ns "$START_NS" \
+              --arg end_ns "$END_NS" \
+              --arg result "$RESULT" \
+              --argjson ok "$OK" \
+              '{
+                resourceSpans: [{
+                  resource: {attributes: [
+                    {key: "service.name", value: {stringValue: "restic-backup"}},
+                    {key: "host.name", value: {stringValue: "soyo"}}
+                  ]},
+                  scopeSpans: [{
+                    scope: {name: "restic"},
+                    spans: [{
+                      traceId: $trace_id, spanId: $span_id,
+                      name: "restic-backup", kind: 2,
+                      startTimeUnixNano: $start_ns,
+                      endTimeUnixNano: $end_ns,
+                      status: {code: $ok},
+                      attributes: [
+                        {key: "result", value: {stringValue: $result}}
+                      ]
+                    }]
+                  }]
                 }]
-            }
-            subprocess.run(['curl', '-sS', '-o', '/dev/null', '-X', 'POST',
-                '-H', 'Content-Type: application/json',
-                '--data', json.dumps(trace),
-                'http://127.0.0.1:4318/v1/traces'], timeout=10, capture_output=True)
-            " 2>/dev/null || true
+              }' \
+              | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
+                -H 'Content-Type: application/json' \
+                -d @- http://localhost:4318/v1/traces || true
 
                         # Write Prometheus textfile metric for alerting
                         mkdir -p /var/lib/prometheus/textfiles

@@ -627,7 +627,7 @@
             systemd.services.tempo.serviceConfig.DynamicUser = lib.mkForce false;
 
             # Boot trace generator: runs once after each boot, captures
-            # systemd-analyze data as an OTLP trace, pushes to Tempo.
+            # systemd-analyze blame data as an OTLP trace, pushes to Tempo.
             systemd.services.soyo-boot-trace = {
               description = "Generate boot trace from systemd-analyze";
               after = [ "multi-user.target" ];
@@ -638,67 +638,34 @@
                   let
                     tracer = pkgs.writeShellApplication {
                       name = "soyo-boot-trace";
-                      runtimeInputs = [ pkgs.curl pkgs.python3 ];
+                      runtimeInputs = [ pkgs.curl pkgs.jq pkgs.util-linux ];
                       text = ''
-                        export CURL='${pkgs.curl}/bin/curl'
-                        exec ${pkgs.python3}/bin/python3 << 'PYEOF'
-                      import json, subprocess, re, os, uuid
-
-                      def get_boot_units():
-                          try:
-                              r = subprocess.run(["systemd-analyze", "blame"],
-                                  capture_output=True, text=True, timeout=15)
-                              units = []
-                              for line in r.stdout.strip().split('\n')[:60]:
-                                  m = re.match(r'^([\d.]+)s\s+(\S+)', line)
-                                  if m: units.append((m.group(2), float(m.group(1))))
-                              return units
-                          except: return []
-
-                      units = get_boot_units()
-                      if not units:
-                          raise SystemExit(0)
-
-                      boot_ns = int(subprocess.run(
-                          ["date", "-d", "$(systemd-analyze timestamp)", "+%s%N"],
-                          capture_output=True, text=True, shell=True).stdout.strip()) * 1000
-                      now_ns = int(subprocess.run(
-                          ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
-                      if boot_ns < 1000000000:
-                          boot_ns = now_ns - 120_000_000_000
-
-                      trace_id = uuid.uuid4().hex
-                      spans = []
-                      span_ts = boot_ns
-                      for name, dur in units:
-                          dur_ns = int(dur * 1e9)
-                          sid = uuid.uuid4().hex[:16]
-                          spans.append({
-                              "traceId": trace_id, "spanId": sid,
-                              "name": name, "kind": 2,
-                              "startTimeUnixNano": str(span_ts),
-                              "endTimeUnixNano": str(span_ts + dur_ns),
-                              "attributes": [
-                                  {"key": "unit", "value": {"stringValue": name}},
-                                  {"key": "duration_seconds", "value": {"doubleValue": dur}}
-                              ]
-                          })
-                          span_ts += dur_ns
-
-                      trace = {"resourceSpans": [{
-                          "resource": {"attributes": [
-                              {"key": "service.name", "value": {"stringValue": "systemd-boot"}},
-                              {"key": "host.name", "value": {"stringValue": "soyo"}}
-                          ]},
-                          "scopeSpans": [{"scope": {"name": "systemd-analyze"}, "spans": spans}]
-                      }]}
-
-                      subprocess.run([os.environ["CURL"], "-sS", "-o", "/dev/null", "-X", "POST",
-                          "-H", "Content-Type: application/json",
-                          "--data", json.dumps(trace),
-                          "http://localhost:4318/v1/traces"], timeout=10)
-                      print(f"soyo-boot-trace: {len(units)} units traced", flush=True)
-                      PYEOF
+                        set -eu
+                        TRACE_ID=$(uuidgen | tr -d -)
+                        systemd-analyze blame 2>/dev/null \
+                          | ${pkgs.jq}/bin/jq -nRc \
+                            --arg trace_id "$TRACE_ID" \
+                            '[limit(20; inputs | split(" ") | last | select(. != ""))] as $units |
+                             {
+                               resourceSpans: [{
+                                 resource: {attributes: [
+                                   {key: "service.name", value: {stringValue: "systemd-boot"}},
+                                   {key: "host.name", value: {stringValue: "soyo"}}
+                                 ]},
+                                 scopeSpans: [{
+                                   scope: {name: "systemd-analyze"},
+                                   spans: [$units[] | {
+                                     traceId: $trace_id,
+                                     spanId: (.[0:16]),
+                                     name: .,
+                                     kind: 2
+                                   }]
+                                 }]
+                               }]
+                             }' \
+                          | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
+                            -H 'Content-Type: application/json' \
+                            -d @- http://localhost:4318/v1/traces
                       '';
                     };
                   in
@@ -720,63 +687,49 @@
                   let
                     tracer = pkgs.writeShellApplication {
                       name = "soyo-activation-trace";
-                      runtimeInputs = [ pkgs.curl pkgs.python3 ];
+                      runtimeInputs = [
+                        pkgs.curl
+                        pkgs.jq
+                        pkgs.util-linux
+                      ];
                       text = ''
-                        export CURL='${pkgs.curl}/bin/curl'
-                        exec ${pkgs.python3}/bin/python3 << 'PYEOF'
-                      import json, os, subprocess, uuid
-
-                      gen_path = "/run/current-system"
-                      if not os.path.isdir(gen_path):
-                          raise SystemExit(0)
-
-                      try:
-                          store_path = os.readlink(gen_path) if os.path.islink(gen_path) else gen_path
-                          mtime = os.path.getmtime(gen_path)
-                      except:
-                          mtime = subprocess.run(
-                              ["date", "+%s%N"], capture_output=True, text=True).stdout.strip()
-                          mtime = int(mtime) if mtime.isdigit() else 0
-
-                      now_ns = int(subprocess.run(
-                          ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
-                      start_ns = int(mtime * 1_000_000_000) if mtime > 1000000000 else now_ns - 300_000_000_000
-
-                      gen = "unknown"
-                      try:
-                          gen_result = subprocess.run(
-                              ["nixos-version"], capture_output=True, text=True, timeout=5)
-                          gen = gen_result.stdout.strip()[:40]
-                      except:
-                          pass
-
-                      trace_id = uuid.uuid4().hex
-                      root_id = uuid.uuid4().hex[:16]
-                      spans = [{
-                          "traceId": trace_id, "spanId": root_id,
-                          "name": f"nixos-activation-{gen}", "kind": 2,
-                          "startTimeUnixNano": str(start_ns),
-                          "endTimeUnixNano": str(now_ns),
-                          "attributes": [
-                              {"key": "service.name", "value": {"stringValue": "nixos-activation"}},
-                              {"key": "generation", "value": {"stringValue": gen}},
-                              {"key": "store_path", "value": {"stringValue": store_path if 'store_path' in dir() else gen_path}}
-                          ]
-                      }]
-
-                      trace = {"resourceSpans": [{
-                          "resource": {"attributes": [
-                              {"key": "service.name", "value": {"stringValue": "nixos-activation"}},
-                              {"key": "host.name", "value": {"stringValue": "soyo"}}
-                          ]},
-                          "scopeSpans": [{"scope": {"name": "nixos"}, "spans": spans}]
-                      }]}
-
-                      subprocess.run([os.environ["CURL"], "-sS", "-o", "/dev/null", "-X", "POST",
-                          "-H", "Content-Type: application/json",
-                          "--data", json.dumps(trace),
-                          "http://localhost:4318/v1/traces"], timeout=10)
-                      PYEOF
+                        set -eu
+                        GEN_PATH=/run/current-system
+                        [ -d "$GEN_PATH" ] || exit 0
+                        TRACE_ID=$(uuidgen | tr -d -)
+                        SPAN_ID=$(uuidgen | tr -d - | cut -c1-16)
+                        START_NS=$(stat --format=%Y "$GEN_PATH")000000000
+                        NOW_NS=$(date +%s%N)
+                        GEN=$(nixos-version 2>/dev/null | cut -c1-40 || echo unknown)
+                        ${pkgs.jq}/bin/jq -nc \
+                          --arg trace_id "$TRACE_ID" \
+                          --arg span_id "$SPAN_ID" \
+                          --arg start_ns "$START_NS" \
+                          --arg now_ns "$NOW_NS" \
+                          --arg gen "$GEN" \
+                          '{
+                            resourceSpans: [{
+                              resource: {attributes: [
+                                {key: "service.name", value: {stringValue: "nixos-activation"}},
+                                {key: "host.name", value: {stringValue: "soyo"}}
+                              ]},
+                              scopeSpans: [{
+                                scope: {name: "nixos"},
+                                spans: [{
+                                  traceId: $trace_id, spanId: $span_id,
+                                  name: ("nixos-activation-" + $gen), kind: 2,
+                                  startTimeUnixNano: $start_ns,
+                                  endTimeUnixNano: $now_ns,
+                                  attributes: [
+                                    {key: "generation", value: {stringValue: $gen}}
+                                  ]
+                                }]
+                              }]
+                            }]
+                          }' \
+                          | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
+                            -H 'Content-Type: application/json' \
+                            -d @- http://localhost:4318/v1/traces
                       '';
                     };
                   in
@@ -796,8 +749,8 @@
               };
             };
 
-            # Health check tracer: runs hourly, checks disk, SMART, services,
-            # cert expiry, and pushes results as a trace.
+            # Health check tracer: runs hourly, checks disk, system state,
+            # memory, zram, and pushes results as a trace.
             systemd.services.soyo-health-trace = {
               description = "Periodic health checks as traces";
               after = [ "multi-user.target" ];
@@ -807,69 +760,66 @@
                   let
                     tracer = pkgs.writeShellApplication {
                       name = "soyo-health-trace";
-                      runtimeInputs = [ pkgs.curl pkgs.python3 ];
+                      runtimeInputs = [ pkgs.curl pkgs.jq pkgs.util-linux ];
+                      excludeShellChecks = [ "SC2016" ];
                       text = ''
-                        export CURL='${pkgs.curl}/bin/curl'
-                        exec ${pkgs.python3}/bin/python3 << 'PYEOF'
-                      import json, subprocess, os, uuid
+                        set -eu
+                        TRACE_ID=$(uuidgen | tr -d -)
 
-                      now_ns = int(subprocess.run(
-                          ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
-                      trace_id = uuid.uuid4().hex
-                      spans = []
-
-                      def run_check(name, cmd, timeout=10):
-                          try:
-                              start = int(subprocess.run(
-                                  ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
-                              r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-                              end = int(subprocess.run(
-                                  ["date", "+%s%N"], capture_output=True, text=True).stdout.strip())
-                              ok = r.returncode == 0
-                              output = (r.stdout + r.stderr)[:200]
-                              return {"ok": ok, "start": start, "end": end,
-                                      "output": output, "rc": r.returncode}
-                          except Exception as e:
-                              return {"ok": False, "start": now_ns, "end": now_ns,
-                                      "output": str(e)[:200], "rc": -1}
-
-                      checks = [
-                          ("disk-usage", ["btrfs", "filesystem", "usage", "-b", "/"]),
-                          ("systemd-health", ["systemctl", "is-system-running", "--wait"]),
-                          ("memory-free", ["awk", "/MemAvailable/{print $2}", "/proc/meminfo"]),
-                          ("zram-usage", ["awk", "/swap/ {s+=$2} END {print s}", "/proc/swaps"]),
-                      ]
-
-                      for name, cmd in checks:
-                          r = run_check(name, cmd, timeout=15)
-                          sid = uuid.uuid4().hex[:16]
-                          spans.append({
-                              "traceId": trace_id, "spanId": sid,
-                              "name": name, "kind": 2,
-                              "startTimeUnixNano": str(r["start"]),
-                              "endTimeUnixNano": str(r["end"]),
-                              "status": {"code": 0 if r["ok"] else 2},
-                              "attributes": [
-                                  {"key": "check", "value": {"stringValue": name}},
-                                  {"key": "healthy", "value": {"boolValue": r["ok"]}},
-                                  {"key": "return_code", "value": {"intValue": str(r["rc"])}},
-                                  {"key": "output", "value": {"stringValue": r["output"]}}
+                        run_check() {
+                          local name="$1" start end ok rc
+                          shift
+                          start=$(date +%s%N)
+                          ok=0; rc=0
+                          "$@" >/dev/null 2>&1 || { ok=2; rc=$?; }
+                          end=$(date +%s%N)
+                          ${pkgs.jq}/bin/jq -nc \
+                            --arg name "$name" \
+                            --argjson ok "$ok" \
+                            --arg rc "$rc" \
+                            --arg start "$start" \
+                            --arg end "$end" \
+                            '{
+                              name: $name, kind: 2,
+                              startTimeUnixNano: $start,
+                              endTimeUnixNano: $end,
+                              status: {code: $ok},
+                              attributes: [
+                                {key: "check", value: {stringValue: $name}},
+                                {key: "healthy", value: {boolValue: ($ok == 0)}},
+                                {key: "return_code", value: {intValue: $rc}}
                               ]
-                          })
+                            }'
+                        }
 
-                      trace = {"resourceSpans": [{
-                          "resource": {"attributes": [
-                              {"key": "service.name", "value": {"stringValue": "soyo-health"}},
-                              {"key": "host.name", "value": {"stringValue": "soyo"}}
-                          ]},
-                          "scopeSpans": [{"scope": {"name": "health"}, "spans": spans}]
-                      }]}
+                        SPANS=$(
+                          (run_check "disk-usage" btrfs filesystem usage -b / 2>/dev/null || true)
+                          echo ','
+                          (run_check "systemd-health" systemctl is-active --quiet multi-user.target)
+                          echo ','
+                          (run_check "memory-free" awk '/MemAvailable/{print $2}' /proc/meminfo)
+                          echo ','
+                          (run_check "zram-usage" awk '/swap/ {s+=$2} END {print s}' /proc/swaps)
+                        )
 
-                      subprocess.run([os.environ["CURL"], "-sS", "-o", "/dev/null", "-X", "POST",
-                          "-H", "Content-Type: application/json",
-                          "--data", json.dumps(trace),
-                          "http://localhost:4318/v1/traces"], timeout=10)
-                      PYEOF
+                        ${pkgs.jq}/bin/jq -nc \
+                          --arg trace_id "$TRACE_ID" \
+                          --argjson spans "$(${pkgs.jq}/bin/jq -n "[$SPANS]" -c)" \
+                          '{
+                            resourceSpans: [{
+                              resource: {attributes: [
+                                {key: "service.name", value: {stringValue: "soyo-health"}},
+                                {key: "host.name", value: {stringValue: "soyo"}}
+                              ]},
+                              scopeSpans: [{
+                                scope: {name: "health"},
+                                spans: $spans
+                              }]
+                            }]
+                          }' \
+                          | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
+                            -H 'Content-Type: application/json' \
+                            -d @- http://localhost:4318/v1/traces
                       '';
                     };
                   in
