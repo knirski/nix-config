@@ -266,6 +266,7 @@
                       cp ${../../hosts/soyo/grafana/soyo-dashboard.json} $out/
                       cp ${../../hosts/soyo/grafana/blocky-dashboard.json} $out/
                       cp ${../../hosts/soyo/grafana/node-exporter-full.json} $out/
+                      cp ${../../hosts/soyo/grafana/dnsmasq-dashboard.json} $out/
                     '';
                   }
                 ];
