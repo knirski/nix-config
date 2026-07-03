@@ -289,7 +289,97 @@
               }
             '';
 
-            services.grafana = {
+            services.grafana =
+              let
+                dnsmasqJson = fillTemplating {
+                  replacements = [
+                    { key = "DS_PROMETHEUS"; value = "soyo-prometheus"; }
+                    { key = "datasource"; value = "soyo-prometheus"; }
+                    { key = "job"; value = "dnsmasq"; }
+                    { key = "instance"; value = "127.0.0.1:9153"; }
+                  ];
+                  tags = [ "dnsmasq" "dhcp" "dns" ];
+                  dashboard = fetchDashboard {
+                    id = 18796;
+                    hash = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
+                  };
+                };
+                blockyJson = fillTemplating {
+                  replacements = [
+                    { key = "DS_PROMETHEUS"; value = "soyo-prometheus"; }
+                    { key = "datasource"; value = "soyo-prometheus"; }
+                    { key = "job"; value = "blocky"; }
+                    { key = "instance"; value = "127.0.0.1:4000"; }
+                  ];
+                  tags = [ "blocky" "dns" "adblock" ];
+                  dashboard = fetchDashboard {
+                    id = 13768;
+                    hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
+                  };
+                };
+                nodeExporterJson = fillTemplating {
+                  replacements = [
+                    { key = "ds_prometheus"; value = "soyo-prometheus"; }
+                    { key = "job"; value = "node"; }
+                    { key = "nodename"; value = "soyo"; }
+                    { key = "node"; value = "127.0.0.1:9100"; }
+                  ];
+                  tags = [ "linux" "node-exporter" ];
+                  dashboard = fetchDashboard {
+                    id = 1860;
+                    hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
+                  };
+                };
+                homeJson = pkgs.writeText "soyo-home.json" (builtins.toJSON {
+                  title = "Soyo Home";
+                  uid = "soyo-home";
+                  tags = [ "home" ];
+                  editable = false;
+                  time = { from = "now-12h"; to = "now"; };
+                  refresh = "30s";
+                  templating.list = [ ];
+                  panels =
+                    let
+                      ds = "soyo-prometheus";
+                      ts = x: y: w: h: t: e: f: {
+                        gridPos = { inherit x y w h; }; type = "timeseries"; title = t;
+                        fieldConfig.defaults = { custom = { fillOpacity = 10; lineWidth = 1; }; unit = f; };
+                        targets = [ { expr = e; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; } ];
+                      };
+                      g = x: y: w: h: t: e: f: {
+                        gridPos = { inherit x y w h; }; type = "stat"; title = t;
+                        fieldConfig.defaults.unit = f;
+                        options.reduceOptions = { calcs = [ "lastNotNull" ]; };
+                        targets = [ { expr = e; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; } ];
+                      };
+                      st = x: y: w: h: t: e: f: d: {
+                        gridPos = { inherit x y w h; }; type = "stat"; title = t;
+                        fieldConfig.defaults = { unit = f; description = d; };
+                        options = { reduceOptions = { calcs = [ "lastNotNull" ]; }; textMode = "value"; };
+                        targets = [ { expr = e; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; } ];
+                      };
+                    in [
+                      (ts 0  0  24 10 "CPU Usage %"
+                        ''100 - avg by (mode) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100'' "percent")
+                      (ts 0  10 24 10 "Memory" ''node_memory_MemAvailable_bytes'' "bytes")
+                      (st 0  20  8  4 "Uptime" ''node_time_seconds - node_boot_time_seconds'' "s" "Seconds since last boot")
+                      (g  8  20  8  4 "/ Disk"
+                        ''100 - (node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""}) * 100'' "percent")
+                      (g  16 20  8  4 "/persist"
+                        ''100 - (node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""}) * 100'' "percent")
+                      (ts 0  24 24 10 "Network Traffic"
+                        ''rate(node_network_receive_bytes_total{device="enp1s0"}[5m])'' "Bps")
+                      (ts 0  34 24 10 "DNS Queries (dnsmasq)" ''rate(dnsmasq_servers_queries[5m])'' "short")
+                      (st 0  44  8  4 "DNS Cache Hit Rate"
+                        ''(dnsmasq_cache_hits / (dnsmasq_cache_hits + dnsmasq_cache_misses)) * 100'' "percent" "% of queries served from cache")
+                      (ts 0  48 24 10 "Blocky Queries" ''rate(blocky_query_total[5m])'' "short")
+                      (ts 0  58 24 10 "Blocked Queries" ''rate(blocky_query_total{reason="BLOCKED"}[5m])'' "short")
+                      (st 0  68  8  4 "DHCP Leases" ''dnsmasq_leases'' "none" "Active DHCP leases")
+                      (st 8  68  8  4 "Blocked Total" ''blocky_query_total{reason="BLOCKED"}'' "none" "Total blocked queries since start")
+                    ];
+                });
+              in
+              {
               enable = true;
               settings = {
                 server = {
@@ -305,6 +395,7 @@
                 # Admin password from agenix-encrypted secret.
                 security.admin_password = "$__file{${config.age.secrets.grafana-admin-password.path}}";
                 unified_alerting.enabled = true;
+                dashboards.default_home_dashboard_path = "${homeJson}";
               };
               provision.datasources.settings = {
                 apiVersion = 1;
@@ -333,214 +424,22 @@
                   }
                 ];
               };
-              provision.dashboards.settings =
-                let
-                  dnsmasqJson = fillTemplating {
-                    replacements = [
-                      {
-                        key = "DS_PROMETHEUS";
-                        value = "soyo-prometheus";
-                      }
-                      {
-                        key = "datasource";
-                        value = "soyo-prometheus";
-                      }
-                      {
-                        key = "job";
-                        value = "dnsmasq";
-                      }
-                      {
-                        key = "instance";
-                        value = "127.0.0.1:9153";
-                      }
-                    ];
-                    tags = [
-                      "dnsmasq"
-                      "dhcp"
-                      "dns"
-                    ];
-                    dashboard = fetchDashboard {
-                      id = 18796;
-                      hash = "1nn4nvbq7q2d4cbsmlr1796if3j6ndpyh0r19w6xy2iwxmxdx0a2";
-                    };
-                  };
-                  blockyJson = fillTemplating {
-                    replacements = [
-                      {
-                        key = "DS_PROMETHEUS";
-                        value = "soyo-prometheus";
-                      }
-                      {
-                        key = "datasource";
-                        value = "soyo-prometheus";
-                      }
-                      {
-                        key = "job";
-                        value = "blocky";
-                      }
-                      {
-                        key = "instance";
-                        value = "127.0.0.1:4000";
-                      }
-                    ];
-                    tags = [
-                      "blocky"
-                      "dns"
-                      "adblock"
-                    ];
-                    dashboard = fetchDashboard {
-                      id = 13768;
-                      hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
-                    };
-                  };
-                  nodeExporterJson = fillTemplating {
-                    replacements = [
-                      {
-                        key = "ds_prometheus";
-                        value = "soyo-prometheus";
-                      }
-                      {
-                        key = "job";
-                        value = "node";
-                      }
-                      {
-                        key = "nodename";
-                        value = "soyo";
-                      }
-                      {
-                        key = "node";
-                        value = "127.0.0.1:9100";
-                      }
-                    ];
-                    tags = [
-                      "linux"
-                      "node-exporter"
-                    ];
-                    dashboard = fetchDashboard {
-                      id = 1860;
-                      hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
-                    };
-                  };
-
-                  homeJson = pkgs.writeText "home.json" (builtins.toJSON {
-                    title = "Soyo Home";
-                    uid = "soyo-home";
-                    tags = [ "home" ];
-                    editable = false;
-                    time = {
-                      from = "now-12h";
-                      to = "now";
-                    };
-                    refresh = "30s";
-                    templating.list = [ ];
-                    panels =
-                      let
-                        ds = "soyo-prometheus";
-                        g = x: y: w: h: { inherit x y w h; };
-
-                        tsTitle = x: y: w: h: title: expr: format: {
-                          gridPos = g x y w h;
-                          type = "timeseries";
-                          inherit title;
-                          fieldConfig.defaults = {
-                            custom = { fillOpacity = 10; lineWidth = 1; };
-                            unit = format;
-                          };
-                          targets = [
-                            { expr = expr; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; }
-                          ];
-                        };
-
-                        gauge = x: y: w: h: title: expr: format: {
-                          gridPos = g x y w h;
-                          type = "stat";
-                          inherit title;
-                          fieldConfig.defaults.unit = format;
-                          options.reduceOptions = { calcs = [ "lastNotNull" ]; };
-                          targets = [
-                            { expr = expr; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; }
-                          ];
-                        };
-
-                        stat = x: y: w: h: title: expr: format: desc: {
-                          gridPos = g x y w h;
-                          type = "stat";
-                          inherit title;
-                          fieldConfig.defaults = { unit = format; description = desc; };
-                          options = { reduceOptions = { calcs = [ "lastNotNull" ]; }; textMode = "value"; };
-                          targets = [
-                            { expr = expr; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; }
-                          ];
-                        };
-                      in
-                      [
-                        # Row 1: CPU + Memory — full width
-                        (tsTitle 0  0  24 10 "CPU Usage %"
-                          ''100 - avg by (mode) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100''
-                          "percent")
-                        (tsTitle 0  10 24 10 "Memory"
-                          ''node_memory_MemAvailable_bytes''
-                          "bytes")
-
-                        # Row 2: Stats row — uptime + / + /persist
-                        (stat 0   20 8 4 "Uptime"
-                          ''node_time_seconds - node_boot_time_seconds''
-                          "s" "Seconds since last boot")
-                        (gauge 8  20 8 4 "/ Disk"
-                          ''100 - (node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""}) * 100''
-                          "percent")
-                        (gauge 16 20 8 4 "/persist"
-                          ''100 - (node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""}) * 100''
-                          "percent")
-
-                        # Row 3: Network + DNS — full width
-                        (tsTitle 0  24 24 10 "Network Traffic"
-                          ''rate(node_network_receive_bytes_total{device="enp1s0"}[5m])''
-                          "Bps")
-                        (tsTitle 0  34 24 10 "DNS Queries (dnsmasq)"
-                          ''rate(dnsmasq_servers_queries[5m])''
-                          "short")
-
-                        # Row 4: DNS cache hit rate
-                        (stat 0 44 8 4 "DNS Cache Hit Rate"
-                          ''(dnsmasq_cache_hits / (dnsmasq_cache_hits + dnsmasq_cache_misses)) * 100''
-                          "percent" "% of queries served from cache")
-
-                        # Row 5: Blocky queries — full width
-                        (tsTitle 0  48 24 10 "Blocky Queries"
-                          ''rate(blocky_query_total[5m])''
-                          "short")
-                        (tsTitle 0  58 24 10 "Blocked Queries"
-                          ''rate(blocky_query_total{reason="BLOCKED"}[5m])''
-                          "short")
-
-                        # Row 6: DHCP leases + total blocked
-                        (stat 0  68 8 4 "DHCP Leases"
-                          ''dnsmasq_leases''
-                          "none" "Active DHCP leases")
-                        (stat 8  68 8 4 "Blocked Total"
-                          ''blocky_query_total{reason="BLOCKED"}''
-                          "none" "Total blocked queries since start")
-                      ];
-                  });
-                in
-                {
-                  apiVersion = 1;
-                  providers = [
-                    {
-                      name = "soyo";
-                      type = "file";
-                      folder = "soyo";
-                      options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
-                        mkdir -p $out
-                        cp ${homeJson} $out/001-home.json
-                        cp ${dnsmasqJson} $out/dnsmasq.json
-                        cp ${blockyJson} $out/blocky.json
-                        cp ${nodeExporterJson} $out/node-exporter-full.json
-                      '';
-                    }
-                  ];
-                };
+              provision.dashboards.settings = {
+                apiVersion = 1;
+                providers = [
+                  {
+                    name = "soyo";
+                    type = "file";
+                    folder = "soyo";
+                    options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
+                      mkdir -p $out
+                      cp ${dnsmasqJson} $out/dnsmasq.json
+                      cp ${blockyJson} $out/blocky.json
+                      cp ${nodeExporterJson} $out/node-exporter-full.json
+                    '';
+                  }
+                ];
+              };
               # Alert rules provisioned via the Grafana API at boot
               # (see grafana-alert-setup.service below).
             };
@@ -675,13 +574,6 @@
                         provision_contact_point || :
                         provision_policy || :
                         provision_rules || :
-
-                        # Star & set as org home — Grafana requires a starred
-                        # dashboard before it appears in the home dropdown.
-                        curl -X POST "$BASE/api/user/stars/dashboard/soyo-home" || :
-                        curl -X PUT -H 'Content-Type: application/json' \
-                          -d '{"homeDashboardUID":"soyo-home"}' \
-                          "$BASE/api/org/preferences" || :
                       '';
                     };
                   in
