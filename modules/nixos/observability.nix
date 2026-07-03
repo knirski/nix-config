@@ -436,125 +436,91 @@
                     panels =
                       let
                         ds = "soyo-prometheus";
-                        grid = { h = 10; w = 24; };
-                        stat = { h = 4; w = 8; };
+                        g = x: y: w: h: { inherit x y w h; };
 
-                        timeseries = { title, expr, legend ? "", format ? "short", ... }@extra: grid // {
+                        tsTitle = x: y: w: h: title: expr: format: {
+                          gridPos = g x y w h;
                           type = "timeseries";
                           inherit title;
                           fieldConfig.defaults = {
-                            custom = {
-                              fillOpacity = 10;
-                              lineWidth = 1;
-                            };
+                            custom = { fillOpacity = 10; lineWidth = 1; };
                             unit = format;
                           };
                           targets = [
-                            {
-                              expr = expr;
-                              datasource = { type = "prometheus"; uid = ds; };
-                              refId = "A";
-                            }
-                          ];
-                          options.legend = { displayMode = "list"; showLegend = legend != ""; };
-                        } // extra;
-
-                        gaugeStat = { title, expr, format ? "short" }: stat // {
-                          type = "stat";
-                          inherit title;
-                          fieldConfig.defaults.unit = format;
-                          options = { reduceOptions = { calcs = [ "lastNotNull" ]; }; };
-                          targets = [
-                            {
-                              expr = expr;
-                              datasource = { type = "prometheus"; uid = ds; };
-                              refId = "A";
-                            }
+                            { expr = expr; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; }
                           ];
                         };
 
-                        statPanel = { title, expr, format ? "short", desc ? "" }: stat // {
+                        gauge = x: y: w: h: title: expr: format: {
+                          gridPos = g x y w h;
                           type = "stat";
                           inherit title;
                           fieldConfig.defaults.unit = format;
+                          options.reduceOptions = { calcs = [ "lastNotNull" ]; };
+                          targets = [
+                            { expr = expr; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; }
+                          ];
+                        };
+
+                        stat = x: y: w: h: title: expr: format: desc: {
+                          gridPos = g x y w h;
+                          type = "stat";
+                          inherit title;
+                          fieldConfig.defaults = { unit = format; description = desc; };
                           options = { reduceOptions = { calcs = [ "lastNotNull" ]; }; textMode = "value"; };
                           targets = [
-                            {
-                              expr = expr;
-                              datasource = { type = "prometheus"; uid = ds; };
-                              refId = "A";
-                            }
+                            { expr = expr; datasource = { type = "prometheus"; uid = ds; }; refId = "A"; }
                           ];
-                          fieldConfig.defaults.description = desc;
                         };
                       in
                       [
-                        # Row 1: CPU, Memory, Uptime, Disk
-                        (timeseries {
-                          title = "CPU Usage %";
-                          expr = ''100 - avg by (mode) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100'';
-                          format = "percent";
-                        })
-                        (timeseries {
-                          title = "Memory";
-                          expr = ''node_memory_MemAvailable_bytes'';
-                          format = "bytes";
-                        })
-                        (statPanel {
-                          title = "Uptime";
-                          expr = ''node_time_seconds - node_boot_time_seconds'';
-                          format = "s";
-                          desc = "Seconds since last boot";
-                        })
-                        (gaugeStat {
-                          title = "/ Disk Usage";
-                          expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""}) * 100'';
-                          format = "percent";
-                        })
-                        (gaugeStat {
-                          title = "/persist Disk Usage";
-                          expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""}) * 100'';
-                          format = "percent";
-                        })
+                        # Row 1: CPU + Memory — full width
+                        (tsTitle 0  0  24 10 "CPU Usage %"
+                          ''100 - avg by (mode) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100''
+                          "percent")
+                        (tsTitle 0  10 24 10 "Memory"
+                          ''node_memory_MemAvailable_bytes''
+                          "bytes")
 
-                        # Row 2: Network, DNS queries
-                        (timeseries {
-                          title = "Network Traffic";
-                          expr = ''rate(node_network_receive_bytes_total{device="enp1s0"}[5m])'';
-                          format = "Bps";
-                        })
-                        (timeseries {
-                          title = "DNS Queries (dnsmasq)";
-                          expr = ''rate(dnsmasq_servers_queries[5m])'';
-                        })
-                        (statPanel {
-                          title = "DNS Cache Hit Rate";
-                          expr = ''(dnsmasq_cache_hits / (dnsmasq_cache_hits + dnsmasq_cache_misses)) * 100'';
-                          format = "percent";
-                          desc = "% of queries served from cache";
-                        })
+                        # Row 2: Stats row — uptime + / + /persist
+                        (stat 0   20 8 4 "Uptime"
+                          ''node_time_seconds - node_boot_time_seconds''
+                          "s" "Seconds since last boot")
+                        (gauge 8  20 8 4 "/ Disk"
+                          ''100 - (node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""}) * 100''
+                          "percent")
+                        (gauge 16 20 8 4 "/persist"
+                          ''100 - (node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""}) * 100''
+                          "percent")
 
-                        # Row 3: Blocky, DHCP
-                        (timeseries {
-                          title = "Blocky Queries";
-                          expr = ''rate(blocky_query_total[5m])'';
-                        })
-                        (timeseries {
-                          title = "Blocked Queries";
-                          expr = ''rate(blocky_query_total{reason="BLOCKED"}[5m])'';
-                        })
-                        (statPanel {
-                          title = "DHCP Leases";
-                          expr = ''dnsmasq_leases'';
-                          format = "none";
-                          desc = "Active DHCP leases";
-                        })
-                        (statPanel {
-                          title = "Blocked Total";
-                          expr = ''blocky_query_total{reason="BLOCKED"}'';
-                          format = "none";
-                          desc = "Total blocked queries since start";
-                        })
+                        # Row 3: Network + DNS — full width
+                        (tsTitle 0  24 24 10 "Network Traffic"
+                          ''rate(node_network_receive_bytes_total{device="enp1s0"}[5m])''
+                          "Bps")
+                        (tsTitle 0  34 24 10 "DNS Queries (dnsmasq)"
+                          ''rate(dnsmasq_servers_queries[5m])''
+                          "short")
+
+                        # Row 4: DNS cache hit rate
+                        (stat 0 44 8 4 "DNS Cache Hit Rate"
+                          ''(dnsmasq_cache_hits / (dnsmasq_cache_hits + dnsmasq_cache_misses)) * 100''
+                          "percent" "% of queries served from cache")
+
+                        # Row 5: Blocky queries — full width
+                        (tsTitle 0  48 24 10 "Blocky Queries"
+                          ''rate(blocky_query_total[5m])''
+                          "short")
+                        (tsTitle 0  58 24 10 "Blocked Queries"
+                          ''rate(blocky_query_total{reason="BLOCKED"}[5m])''
+                          "short")
+
+                        # Row 6: DHCP leases + total blocked
+                        (stat 0  68 8 4 "DHCP Leases"
+                          ''dnsmasq_leases''
+                          "none" "Active DHCP leases")
+                        (stat 8  68 8 4 "Blocked Total"
+                          ''blocky_query_total{reason="BLOCKED"}''
+                          "none" "Total blocked queries since start")
                       ];
                   });
                 in
