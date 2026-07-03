@@ -66,12 +66,6 @@
             services.prometheus.exporters.node = {
               enable = true;
               listenAddress = cfg.nodeExporter.listenAddress;
-              enabledCollectors = [
-                "textfile"
-                "systemd"
-                "processes"
-                "filesystem"
-              ];
               extraFlags = [ "--collector.textfile.directory=/var/lib/prometheus/textfiles" ];
             };
 
@@ -333,10 +327,10 @@
                               sha256 = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
                             }
                           } | jq '
-                            (.templating.list[] | select(.name=="DS_PROMETHEUS").current) = {"selected":true,"text":"soyo-prometheus","value":"soyo-prometheus"}
+                            (.templating.list[] | select(.name=="ds_prometheus").current) = {"selected":true,"text":"soyo-prometheus","value":"soyo-prometheus"}
                           | (.templating.list[] | select(.name=="job").current) = {"selected":true,"text":"node","value":"node"}
-                          | (.templating.list[] | select(.name=="hostname" or .name=="node").current) = {"selected":true,"text":"soyo","value":"soyo"}
-                          | (.templating.list[] | select(.name=="port").current) = {"selected":true,"text":"9100","value":"9100"}
+                          | (.templating.list[] | select(.name=="nodename").current) = {"selected":true,"text":"soyo","value":"soyo"}
+                          | (.templating.list[] | select(.name=="node").current) = {"selected":true,"text":"127.0.0.1:9100","value":"127.0.0.1:9100"}
                           ' > $out/node-exporter-full.json
                         '';
                   }
