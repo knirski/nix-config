@@ -549,6 +549,8 @@
                       access = "proxy";
                       url = "http://127.0.0.1:3100";
                       uid = "soyo-loki";
+                      jsonData.httpHeaderName1 = "X-Scope-OrgID";
+                      secureJsonData.httpHeaderValue1 = "fake";
                     }
                     {
                       name = "Tempo";
