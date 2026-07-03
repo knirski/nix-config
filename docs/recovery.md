@@ -15,7 +15,7 @@ ssh krzysiek@soyo.tailnet-name.ts.net
 To verify or check status:
 
 ```sh
-ssh krzysiek@10.0.0.9
+ssh krzysiek@soyo
 tailscale status
 ```
 
@@ -47,7 +47,7 @@ Plug in a keyboard and monitor. Enter the LUKS passphrase at the prompt.
 From a machine on the LAN:
 
 ```sh
-ssh -p 2222 root@10.0.0.9
+ssh -p 2222 root@soyo
 ```
 
 Enter the LUKS passphrase. The initrd SSH host key fingerprint should be stable across rebuilds (it lives on the ESP at `/boot/initrd-ssh/`). If the fingerprint changed: a fresh install or ESP reformat regenerated it — accept the new key on first use.

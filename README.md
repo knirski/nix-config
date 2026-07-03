@@ -20,7 +20,7 @@ and the [dendritic](https://github.com/vic/import-tree) pattern.
 ## Quick start
 
 ```bash
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
 ```
 
 For a first install from the NixOS live ISO, see [hosts/soyo/DEPLOY.md](hosts/soyo/DEPLOY.md).

@@ -1467,7 +1467,7 @@ Create `scripts/deploy-soyo` (build locally, activate on Soyo via native `--targ
 #!/usr/bin/env bash
 set -euo pipefail
 mode="${1:-switch}"
-target="krzysiek@10.0.0.9"
+target="krzysiek@soyo"
 case "$mode" in
   test)   exec nixos-rebuild test   --flake .#soyo --target-host "$target" --use-remote-sudo ;;
   boot)   exec nixos-rebuild boot   --flake .#soyo --target-host "$target" --use-remote-sudo ;;

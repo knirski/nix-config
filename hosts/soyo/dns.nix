@@ -40,7 +40,10 @@ in
           "127.0.0.1:53"
           "10.0.0.9:53"
         ];
-        http = "10.0.0.9:4000"; # metrics/dashboard, LAN interface only
+        http = [
+          "127.0.0.1:4000"
+          "10.0.0.9:4000"
+        ]; # metrics on both loopback and LAN
       };
 
       # Encrypted (DoH) upstreams only, to keep queries private from the ISP.

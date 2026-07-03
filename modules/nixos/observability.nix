@@ -17,7 +17,7 @@
         nodeExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "10.0.0.9";
+            default = "127.0.0.1";
             description = "Listen address (IP only, no port — the module appends its default :9100).";
           };
         };
@@ -25,12 +25,12 @@
         dnsmasqExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "10.0.0.9";
+            default = "127.0.0.1";
             description = "Listen address (IP only, no port — the module appends its default :9153).";
           };
           dnsmasqListenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "10.0.0.9:53";
+            default = "10.0.0.9:5353";
             description = "dnsmasq address for lease stats; must match where dnsmasq is reachable from Soyo.";
           };
           leasesPath = lib.mkOption {
@@ -95,11 +95,7 @@
             };
 
             networking.firewall = lib.mkIf cfg.openFirewall {
-              interfaces.enp1s0.allowedTCPPorts = [
-                9100
-                9153
-              ]
-              ++ lib.optionals grafanaCfg.enable [ 3000 ];
+              interfaces.enp1s0.allowedTCPPorts = lib.optionals grafanaCfg.enable [ 3000 ];
             };
           }
 
@@ -115,15 +111,15 @@
               scrapeConfigs = [
                 {
                   job_name = "node";
-                  static_configs = [ { targets = [ "10.0.0.9:9100" ]; } ];
+                  static_configs = [ { targets = [ "127.0.0.1:9100" ]; } ];
                 }
                 {
                   job_name = "dnsmasq";
-                  static_configs = [ { targets = [ "10.0.0.9:9153" ]; } ];
+                  static_configs = [ { targets = [ "127.0.0.1:9153" ]; } ];
                 }
                 {
                   job_name = "blocky";
-                  static_configs = [ { targets = [ "10.0.0.9:4000" ]; } ];
+                  static_configs = [ { targets = [ "127.0.0.1:4000" ]; } ];
                 }
               ];
             };
