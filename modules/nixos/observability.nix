@@ -168,20 +168,20 @@
             # local exporters and serves that API on loopback :9090.
             services.prometheus = {
               enable = true;
-              listenAddress = "127.0.0.1";
+              listenAddress = "localhost";
               port = 9090;
               scrapeConfigs = [
                 {
                   job_name = "node";
-                  static_configs = [ { targets = [ "127.0.0.1:9100" ]; } ];
+                  static_configs = [ { targets = [ "localhost:9100" ]; } ];
                 }
                 {
                   job_name = "dnsmasq";
-                  static_configs = [ { targets = [ "127.0.0.1:9153" ]; } ];
+                  static_configs = [ { targets = [ "localhost:9153" ]; } ];
                 }
                 {
                   job_name = "blocky";
-                  static_configs = [ { targets = [ "127.0.0.1:4000" ]; } ];
+                  static_configs = [ { targets = [ "localhost:4000" ]; } ];
                 }
               ];
             };
@@ -196,7 +196,7 @@
 
                 server = {
                   http_listen_port = 3100;
-                  http_listen_address = "127.0.0.1";
+                  http_listen_address = "localhost";
                   log_level = "warn";
                 };
 
@@ -221,7 +221,7 @@
                 };
 
                 # Disable scheduler ring — single node doesn't need it.
-                # Without this, Loki probes 127.0.0.1:8500 (Consul) and
+                # Without this, Loki probes localhost:8500 (Consul) and
                 # the query API hangs indefinitely.
                 query_scheduler.use_scheduler_ring = false;
 
@@ -271,11 +271,67 @@
               extraFlags = [ "--disable-reporting" ];
             };
             environment.etc."alloy/config.alloy".text = ''
+              loki.relabel "journal_drilldown" {
+                forward_to = []
+
+                // Fallback service name for logs without a systemd unit.
+                rule {
+                  source_labels = ["__journal_syslog_identifier"]
+                  regex         = "(.+)"
+                  target_label  = "service_name"
+                }
+
+                // Prefer the systemd unit when present so Drilldown groups by
+                // the actual service instead of lumping the whole journal into
+                // one synthetic bucket.
+                rule {
+                  source_labels = ["__journal__systemd_unit"]
+                  regex         = "(.+)"
+                  target_label  = "service_name"
+                }
+
+                // Grafana's volume histogram groups by level/detected_level.
+                // Some journal entries arrive without a usable priority, so we
+                // seed a fallback and override it when journald provides one.
+                rule {
+                  source_labels = ["__journal_message"]
+                  regex         = ".*"
+                  replacement   = "unknown"
+                  target_label  = "level"
+                }
+
+                rule {
+                  source_labels = ["__journal_message"]
+                  regex         = ".*"
+                  replacement   = "unknown"
+                  target_label  = "detected_level"
+                }
+
+                rule {
+                  source_labels = ["__journal_priority_keyword"]
+                  regex         = "(.+)"
+                  target_label  = "level"
+                }
+
+                rule {
+                  source_labels = ["__journal_priority_keyword"]
+                  regex         = "(.+)"
+                  target_label  = "detected_level"
+                }
+
+                rule {
+                  source_labels = ["__journal__systemd_unit"]
+                  regex         = "(.+)"
+                  target_label  = "unit"
+                }
+              }
+
               // Ship systemd journal to local Loki
               loki.source.journal "soyo" {
-                max_age    = "12h"
-                forward_to = [loki.write.local_loki.receiver]
-                labels     = {
+                max_age       = "12h"
+                forward_to    = [loki.write.local_loki.receiver]
+                relabel_rules = loki.relabel.journal_drilldown.rules
+                labels        = {
                   job  = "systemd-journal",
                   host = "soyo",
                 }
@@ -284,7 +340,7 @@
               // Push to local Loki on loopback
               loki.write "local_loki" {
                 endpoint {
-                  url = "http://127.0.0.1:3100/loki/api/v1/push"
+                  url = "http://localhost:3100/loki/api/v1/push"
                 }
               }
             '';
@@ -307,7 +363,7 @@
                     }
                     {
                       key = "instance";
-                      value = "127.0.0.1:9153";
+                      value = "localhost:9153";
                     }
                   ];
                   tags = [
@@ -336,7 +392,7 @@
                     }
                     {
                       key = "instance";
-                      value = "127.0.0.1:4000";
+                      value = "localhost:4000";
                     }
                   ];
                   tags = [
@@ -365,7 +421,7 @@
                     }
                     {
                       key = "node";
-                      value = "127.0.0.1:9100";
+                      value = "localhost:9100";
                     }
                   ];
                   tags = [
@@ -539,7 +595,7 @@
                       name = "Prometheus";
                       type = "prometheus";
                       access = "proxy";
-                      url = "http://127.0.0.1:9090";
+                      url = "http://localhost:9090";
                       uid = "soyo-prometheus";
                       isDefault = true;
                     }
@@ -547,14 +603,14 @@
                       name = "Loki";
                       type = "loki";
                       access = "proxy";
-                      url = "http://127.0.0.1:3100";
+                      url = "http://localhost:3100";
                       uid = "soyo-loki";
                     }
                     {
                       name = "Tempo";
                       type = "tempo";
                       access = "proxy";
-                      url = "http://127.0.0.1:3200";
+                      url = "http://localhost:3200";
                       uid = "soyo-tempo";
                     }
                   ];
@@ -742,6 +798,7 @@
               "d /persist/var/lib/loki 0750 loki loki -"
               "d /persist/var/lib/tempo 0750 tempo tempo -"
               "d /persist/var/lib/tempo/generator-wal 0750 tempo tempo -"
+              "d /persist/var/lib/tempo/generator-traces 0750 tempo tempo -"
             ];
 
             systemd.services.prometheus.serviceConfig = {
@@ -777,9 +834,9 @@
 
                 server = {
                   http_listen_port = 3200;
-                  http_listen_address = "127.0.0.1";
+                  http_listen_address = "localhost";
                   grpc_listen_port = 4319;
-                  grpc_listen_address = "127.0.0.1";
+                  grpc_listen_address = "localhost";
                 };
 
                 distributor.receivers = {
@@ -796,11 +853,6 @@
                   };
                 };
 
-                querier.frontend_worker.frontend_address = "127.0.0.1:9095";
-                query_frontend = {
-                  max_outstanding_per_tenant = 2000;
-                };
-
                 storage.trace = {
                   backend = "local";
                   local.path = "/var/lib/tempo/traces";
@@ -812,6 +864,13 @@
                 # — without it, `rate()` returns "empty ring".
                 metrics_generator = {
                   storage.path = "/var/lib/tempo/generator-wal";
+                  # TraceQL metrics over recent traces come from the local-blocks
+                  # processor, which needs its own trace WAL separate from the
+                  # generator's metric WAL.
+                  traces_storage.path = "/var/lib/tempo/generator-traces";
+                  processor.local_blocks = {
+                    filter_server_spans = false;
+                  };
                   processor.span_metrics.enable_target_info = true;
                   processor.service_graphs = {
                     dimensions = [ "service.name" ];
@@ -830,6 +889,11 @@
 
                 overrides = {
                   max_bytes_per_trace = 5000000;
+                  metrics_generator_processors = [
+                    "local-blocks"
+                    "span-metrics"
+                    "service-graphs"
+                  ];
                 };
               };
             };
@@ -848,7 +912,11 @@
             # systemd-analyze blame data as an OTLP trace, pushes to Tempo.
             systemd.services.soyo-boot-trace = {
               description = "Generate boot trace from systemd-analyze";
-              after = [ "multi-user.target" ];
+              after = [
+                "multi-user.target"
+                "tempo.service"
+              ];
+              wants = [ "tempo.service" ];
               wantedBy = [ "multi-user.target" ];
               serviceConfig = {
                 Type = "oneshot";
@@ -863,31 +931,42 @@
                       ];
                       text = ''
                         set -eu
-                        TRACE_ID=$(uuidgen | tr -d -)
-                        systemd-analyze blame 2>/dev/null \
-                          | ${pkgs.jq}/bin/jq -nRc \
-                            --arg trace_id "$TRACE_ID" \
-                            '[limit(20; inputs | split(" ") | last | select(. != ""))] as $units |
-                             {
-                               resourceSpans: [{
-                                 resource: {attributes: [
-                                   {key: "service.name", value: {stringValue: "systemd-boot"}},
-                                   {key: "host.name", value: {stringValue: "soyo"}}
-                                 ]},
-                                 scopeSpans: [{
-                                   scope: {name: "systemd-analyze"},
-                                   spans: [$units[] | {
-                                     traceId: $trace_id,
-                                     spanId: (.[0:16]),
-                                     name: .,
-                                     kind: 2
-                                   }]
-                                 }]
-                               }]
-                             }' \
-                          | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
+                        TRACE_ID=$(uuidgen | tr 'A-F' 'a-f' | tr -d -)
+                        SPAN_ID=$(uuidgen | tr 'A-F' 'a-f' | tr -d - | cut -c1-16)
+                        START_NS=$(date +%s%N)
+                        END_NS=$((START_NS + 1000000000))
+                        TOP_UNITS=$(systemd-analyze blame 2>/dev/null | awk 'NR <= 10 { print $2 }' | paste -sd ',' -)
+                        ${pkgs.jq}/bin/jq -nc \
+                          --arg trace_id "$TRACE_ID" \
+                          --arg span_id "$SPAN_ID" \
+                          --arg start_ns "$START_NS" \
+                          --arg end_ns "$END_NS" \
+                          --arg top_units "$TOP_UNITS" \
+                          '{
+                            resourceSpans: [{
+                              resource: {attributes: [
+                                {key: "service.name", value: {stringValue: "systemd-boot"}},
+                                {key: "host.name", value: {stringValue: "soyo"}}
+                              ]},
+                              scopeSpans: [{
+                                scope: {name: "systemd-analyze"},
+                                spans: [{
+                                  traceId: $trace_id,
+                                  spanId: $span_id,
+                                  name: "systemd-boot",
+                                  kind: 2,
+                                  startTimeUnixNano: $start_ns,
+                                  endTimeUnixNano: $end_ns,
+                                  attributes: [
+                                    {key: "boot.top_units", value: {stringValue: $top_units}}
+                                  ]
+                                }]
+                              }]
+                            }]
+                          }' \
+                          | ${pkgs.curl}/bin/curl -fsS -o /dev/null -X POST \
                             -H 'Content-Type: application/json' \
-                            -d @- http://127.0.0.1:4318/v1/traces
+                            -d @- http://localhost:4318/v1/traces
                       '';
                     };
                   in
@@ -902,7 +981,11 @@
             # pushes a trace each time nixos-rebuild activates a new generation.
             systemd.services.soyo-activation-trace = {
               description = "Trace nixos-rebuild activation";
-              after = [ "multi-user.target" ];
+              after = [
+                "multi-user.target"
+                "tempo.service"
+              ];
+              wants = [ "tempo.service" ];
               serviceConfig = {
                 Type = "oneshot";
                 ExecStart =
@@ -918,8 +1001,8 @@
                         set -eu
                         GEN_PATH=/run/current-system
                         [ -d "$GEN_PATH" ] || exit 0
-                        TRACE_ID=$(uuidgen | tr -d -)
-                        SPAN_ID=$(uuidgen | tr -d - | cut -c1-16)
+                        TRACE_ID=$(uuidgen | tr 'A-F' 'a-f' | tr -d -)
+                        SPAN_ID=$(uuidgen | tr 'A-F' 'a-f' | tr -d - | cut -c1-16)
                         START_NS=$(stat --format=%Y "$GEN_PATH")000000000
                         NOW_NS=$(date +%s%N)
                         GEN=$(nixos-version 2>/dev/null | cut -c1-40 || echo unknown)
@@ -938,8 +1021,10 @@
                               scopeSpans: [{
                                 scope: {name: "nixos"},
                                 spans: [{
-                                  traceId: $trace_id, spanId: $span_id,
-                                  name: ("nixos-activation-" + $gen), kind: 2,
+                                  traceId: $trace_id,
+                                  spanId: $span_id,
+                                  name: ("nixos-activation-" + $gen),
+                                  kind: 2,
                                   startTimeUnixNano: $start_ns,
                                   endTimeUnixNano: $now_ns,
                                   attributes: [
@@ -949,9 +1034,9 @@
                               }]
                             }]
                           }' \
-                          | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
+                          | ${pkgs.curl}/bin/curl -fsS -o /dev/null -X POST \
                             -H 'Content-Type: application/json' \
-                            -d @- http://127.0.0.1:4318/v1/traces
+                            -d @- http://localhost:4318/v1/traces
                       '';
                     };
                   in
@@ -971,11 +1056,15 @@
               };
             };
 
-            # Health check tracer: runs hourly, checks disk, system state,
-            # memory, zram, and pushes results as a trace.
+            # Health check tracer: runs periodically, checks disk, systemd
+            # state, memory, zram, and pushes results as a trace.
             systemd.services.soyo-health-trace = {
               description = "Periodic health checks as traces";
-              after = [ "multi-user.target" ];
+              after = [
+                "multi-user.target"
+                "tempo.service"
+              ];
+              wants = [ "tempo.service" ];
               serviceConfig = {
                 Type = "oneshot";
                 ExecStart =
@@ -990,46 +1079,72 @@
                       excludeShellChecks = [ "SC2016" ];
                       text = ''
                         set -eu
-                        TRACE_ID=$(uuidgen | tr -d -)
+                        TRACE_ID=$(uuidgen | tr 'A-F' 'a-f' | tr -d -)
+                        ROOT_SPAN_ID=$(uuidgen | tr 'A-F' 'a-f' | tr -d - | cut -c1-16)
+                        ROOT_START_NS=$(date +%s%N)
 
                         run_check() {
-                          local name="$1" start end ok rc
+                          local name="$1" start end status_code rc span_id
                           shift
                           start=$(date +%s%N)
-                          ok=0; rc=0
-                          "$@" >/dev/null 2>&1 || { ok=2; rc=$?; }
+                          status_code=0
+                          rc=0
+                          "$@" >/dev/null 2>&1 || { status_code=2; rc=$?; }
                           end=$(date +%s%N)
+                          span_id=$(uuidgen | tr 'A-F' 'a-f' | tr -d - | cut -c1-16)
                           ${pkgs.jq}/bin/jq -nc \
+                            --arg trace_id "$TRACE_ID" \
+                            --arg root_span_id "$ROOT_SPAN_ID" \
+                            --arg span_id "$span_id" \
                             --arg name "$name" \
-                            --argjson ok "$ok" \
+                            --argjson status_code "$status_code" \
                             --arg rc "$rc" \
                             --arg start "$start" \
                             --arg end "$end" \
                             '{
-                              name: $name, kind: 2,
+                              traceId: $trace_id,
+                              spanId: $span_id,
+                              parentSpanId: $root_span_id,
+                              name: $name,
+                              kind: 2,
                               startTimeUnixNano: $start,
                               endTimeUnixNano: $end,
-                              status: {code: $ok},
+                              status: {code: $status_code},
                               attributes: [
                                 {key: "check", value: {stringValue: $name}},
-                                {key: "healthy", value: {boolValue: ($ok == 0)}},
+                                {key: "healthy", value: {boolValue: ($status_code == 0)}},
                                 {key: "return_code", value: {intValue: $rc}}
                               ]
                             }'
                         }
 
                         SPANS=$(
-                          (run_check "disk-usage" btrfs filesystem usage -b / 2>/dev/null || true)
+                          (run_check "disk-usage" btrfs filesystem usage -b / || true)
                           echo ','
                           (run_check "systemd-health" systemctl is-active --quiet multi-user.target)
                           echo ','
-                          (run_check "memory-free" awk '/MemAvailable/{print $2}' /proc/meminfo)
+                          (run_check "memory-free" sh -c "awk '/MemAvailable/{exit !(\$2 > 0)}' /proc/meminfo")
                           echo ','
-                          (run_check "zram-usage" awk '/swap/ {s+=$2} END {print s}' /proc/swaps)
+                          (run_check "zram-usage" sh -c "awk '/swap/ {found=1} END {exit found ? 0 : 1}' /proc/swaps")
                         )
 
-                        ${pkgs.jq}/bin/jq -nc \
+                        ROOT_END_NS=$(date +%s%N)
+                        ROOT_SPAN=$(${pkgs.jq}/bin/jq -nc \
                           --arg trace_id "$TRACE_ID" \
+                          --arg span_id "$ROOT_SPAN_ID" \
+                          --arg start "$ROOT_START_NS" \
+                          --arg end "$ROOT_END_NS" \
+                          '{
+                            traceId: $trace_id,
+                            spanId: $span_id,
+                            name: "soyo-health",
+                            kind: 2,
+                            startTimeUnixNano: $start,
+                            endTimeUnixNano: $end
+                          }')
+
+                        ${pkgs.jq}/bin/jq -nc \
+                          --argjson root_span "$ROOT_SPAN" \
                           --argjson spans "$(${pkgs.jq}/bin/jq -n "[$SPANS]" -c)" \
                           '{
                             resourceSpans: [{
@@ -1039,13 +1154,13 @@
                               ]},
                               scopeSpans: [{
                                 scope: {name: "health"},
-                                spans: $spans
+                                spans: ([$root_span] + $spans)
                               }]
                             }]
                           }' \
-                          | ${pkgs.curl}/bin/curl -sS -o /dev/null -X POST \
+                          | ${pkgs.curl}/bin/curl -fsS -o /dev/null -X POST \
                             -H 'Content-Type: application/json' \
-                            -d @- http://127.0.0.1:4318/v1/traces
+                            -d @- http://localhost:4318/v1/traces
                       '';
                     };
                   in
@@ -1056,11 +1171,12 @@
               };
             };
             systemd.timers.soyo-health-trace = {
-              description = "Hourly health check trace";
+              description = "Periodic health check trace";
               wantedBy = [ "timers.target" ];
               timerConfig = {
-                OnCalendar = "hourly";
-                RandomizedDelaySec = "120";
+                OnBootSec = "5m";
+                OnUnitActiveSec = "10m";
+                RandomizedDelaySec = "60";
                 Persistent = true;
               };
             };
