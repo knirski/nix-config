@@ -217,7 +217,7 @@ command and expected result.
   ```sh
   curl -so /dev/null -w '%{http_code}' http://soyo:3000
   ```
-  Expected: `200` or `302` (Grafana redirects to login). Prometheus datasource should be pre-provisioned. The default home should be **Fleet Overview**, and the `soyo` folder should contain **Soyo Control Plane** plus the imported drilldown dashboards.
+  Expected: `200` or `302` (Grafana redirects to login). Prometheus datasource should be pre-provisioned. The default home should be **Fleet Overview**. The **Soyo** folder should contain **Soyo Control Plane**, **Blocky**, and **dnsmasq**. **Node Exporter Full** should stay at the root level and offer a host selector.
 
 - [ ] **Grafana alert rules provisioned**
   ```sh
