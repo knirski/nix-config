@@ -436,11 +436,616 @@
                     hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
                   };
                 };
-                homeJson = pkgs.writeText "soyo-home.json" (
+                # Grafana gets two first-party dashboards:
+                # - Fleet Overview is the default landing page once more hosts join.
+                # - Soyo Control Plane stays the DNS/DHCP drilldown for the appliance itself.
+                fleetJson = pkgs.writeText "fleet-overview.json" (
+                  let
+                    ds = "soyo-prometheus";
+                    refIds = [
+                      "A"
+                      "B"
+                    ];
+
+                    mkGrid = x: y: w: h: {
+                      inherit
+                        x
+                        y
+                        w
+                        h
+                        ;
+                    };
+
+                    mkTarget =
+                      refId: expr: legendFormat:
+                      {
+                        inherit
+                          expr
+                          refId
+                          ;
+                        datasource = {
+                          type = "prometheus";
+                          uid = ds;
+                        };
+                      }
+                      // lib.optionalAttrs (legendFormat != null) { inherit legendFormat; };
+
+                    mkPanel = id: x: y: w: h: type: title: {
+                      inherit
+                        id
+                        type
+                        title
+                        ;
+                      gridPos = mkGrid x y w h;
+                    };
+
+                    mkText =
+                      {
+                        id,
+                        x,
+                        y,
+                        w,
+                        h,
+                        title,
+                        content,
+                      }:
+                      mkPanel id x y w h "text" title
+                      // {
+                        options = {
+                          mode = "markdown";
+                          inherit content;
+                        };
+                        transparent = true;
+                      };
+
+                    mkStat =
+                      {
+                        id,
+                        x,
+                        y,
+                        w,
+                        h,
+                        title,
+                        expr,
+                        unit ? "none",
+                        description ? null,
+                        thresholds ? null,
+                        mappings ? [ ],
+                        decimals ? null,
+                      }:
+                      mkPanel id x y w h "stat" title
+                      // {
+                        fieldConfig.defaults = {
+                          inherit unit;
+                          color.mode = "thresholds";
+                        }
+                        // lib.optionalAttrs (description != null) { inherit description; }
+                        // lib.optionalAttrs (decimals != null) { inherit decimals; }
+                        // lib.optionalAttrs (thresholds != null) {
+                          thresholds = {
+                            mode = "absolute";
+                            steps = thresholds;
+                          };
+                        }
+                        // lib.optionalAttrs (mappings != [ ]) { inherit mappings; };
+                        options = {
+                          colorMode = "backgroundSolid";
+                          graphMode = "area";
+                          justifyMode = "center";
+                          orientation = "auto";
+                          reduceOptions = {
+                            calcs = [ "lastNotNull" ];
+                            fields = "";
+                            values = false;
+                          };
+                          textMode = "value";
+                          wideLayout = true;
+                        };
+                        targets = [ (mkTarget "A" expr null) ];
+                      };
+
+                    mkTimeseries =
+                      {
+                        id,
+                        x,
+                        y,
+                        w,
+                        h,
+                        title,
+                        unit,
+                        targets,
+                        description ? null,
+                      }:
+                      mkPanel id x y w h "timeseries" title
+                      // {
+                        fieldConfig.defaults = {
+                          inherit unit;
+                          color.mode = "palette-classic";
+                          custom = {
+                            axisBorderShow = false;
+                            drawStyle = "line";
+                            fillOpacity = 12;
+                            lineInterpolation = "smooth";
+                            lineWidth = 2;
+                            pointSize = 3;
+                            showPoints = "never";
+                            spanNulls = true;
+                          };
+                        }
+                        // lib.optionalAttrs (description != null) { inherit description; };
+                        options = {
+                          legend = {
+                            calcs = [
+                              "lastNotNull"
+                              "mean"
+                            ];
+                            displayMode = "table";
+                            placement = "bottom";
+                            showLegend = true;
+                          };
+                          tooltip = {
+                            mode = "multi";
+                            sort = "desc";
+                          };
+                        };
+                        targets = lib.imap0 (
+                          i: target: mkTarget (builtins.elemAt refIds i) target.expr target.legend
+                        ) targets;
+                      };
+                  in
                   builtins.toJSON {
-                    title = "Soyo Home";
+                    title = "Fleet Overview";
+                    uid = "fleet-overview";
+                    tags = [
+                      "home"
+                      "fleet"
+                    ];
+                    editable = false;
+                    time = {
+                      from = "now-1h";
+                      to = "now";
+                    };
+                    refresh = "30s";
+                    templating.list = [
+                      {
+                        allowCustomValue = false;
+                        current = {
+                          text = "All";
+                          value = "$__all";
+                        };
+                        definition = ''label_values(up{job="node"}, instance)'';
+                        includeAll = true;
+                        name = "hosts";
+                        options = [ ];
+                        query = {
+                          qryType = 1;
+                          query = ''label_values(up{job="node"}, instance)'';
+                          refId = "PrometheusVariableQueryEditor-VariableQuery";
+                        };
+                        refresh = 1;
+                        regex = "";
+                        type = "query";
+                      }
+                    ];
+                    panels = [
+                      (mkText {
+                        id = 1;
+                        x = 0;
+                        y = 0;
+                        w = 24;
+                        h = 5;
+                        title = "Overview";
+                        content = ''
+                          ## Fleet at a glance
+
+                          This is the default Grafana landing page for a multi-host lab. Keep it generic: uptime, capacity, and network posture per host here; service- and role-specific details stay in their own dashboards.
+
+                          **Open next**
+                          - **Soyo Control Plane** for DNS, DHCP, Blocky, dnsmasq, and `/persist`
+                          - **Node Exporter Full** for low-level host internals
+                          - **Blocky** and **dnsmasq** for service drilldowns
+
+                          **Healthy by default**
+                          - every `node` scrape target stays **Up**
+                          - scrape target availability stays near **100%**
+                          - `Soyo DNS/DHCP` stays at **2 / 2**
+                        '';
+                      })
+                      (mkStat {
+                        id = 2;
+                        x = 0;
+                        y = 5;
+                        w = 6;
+                        h = 4;
+                        title = "Nodes Up";
+                        expr = ''sum(up{job="node"})'';
+                        thresholds = [
+                          {
+                            color = "red";
+                            value = null;
+                          }
+                          {
+                            color = "green";
+                            value = 1;
+                          }
+                        ];
+                        description = "node_exporter targets currently reachable";
+                      })
+                      (mkStat {
+                        id = 3;
+                        x = 6;
+                        y = 5;
+                        w = 6;
+                        h = 4;
+                        title = "Hosts Defined";
+                        expr = ''count(up{job="node"})'';
+                        thresholds = [
+                          {
+                            color = "blue";
+                            value = null;
+                          }
+                        ];
+                        description = "Hosts currently represented in Prometheus";
+                      })
+                      (mkStat {
+                        id = 4;
+                        x = 12;
+                        y = 5;
+                        w = 6;
+                        h = 4;
+                        title = "Targets Up";
+                        expr = "100 * sum(up) / clamp_min(count(up), 1)";
+                        unit = "percent";
+                        decimals = 1;
+                        thresholds = [
+                          {
+                            color = "red";
+                            value = null;
+                          }
+                          {
+                            color = "yellow";
+                            value = 90;
+                          }
+                          {
+                            color = "green";
+                            value = 100;
+                          }
+                        ];
+                        description = "Availability across all Prometheus scrape targets";
+                      })
+                      (mkStat {
+                        id = 5;
+                        x = 18;
+                        y = 5;
+                        w = 6;
+                        h = 4;
+                        title = "Soyo DNS/DHCP";
+                        expr = ''sum(up{job=~"blocky|dnsmasq"})'';
+                        thresholds = [
+                          {
+                            color = "red";
+                            value = null;
+                          }
+                          {
+                            color = "yellow";
+                            value = 1;
+                          }
+                          {
+                            color = "green";
+                            value = 2;
+                          }
+                        ];
+                        description = "Critical appliance services that must stay healthy";
+                      })
+                      {
+                        collapsed = false;
+                        gridPos = {
+                          h = 1;
+                          w = 24;
+                          x = 0;
+                          y = 9;
+                        };
+                        id = 10;
+                        panels = [ ];
+                        repeat = "hosts";
+                        title = "$hosts";
+                        type = "row";
+                      }
+                      (mkStat {
+                        id = 11;
+                        x = 0;
+                        y = 10;
+                        w = 4;
+                        h = 7;
+                        title = "Uptime";
+                        expr = ''sum((node_time_seconds{instance=~"$hosts",job="node"} - node_boot_time_seconds{instance=~"$hosts",job="node"}) OR vector(0))'';
+                        unit = "s";
+                        thresholds = [
+                          {
+                            color = "red";
+                            value = null;
+                          }
+                          {
+                            color = "green";
+                            value = 1;
+                          }
+                        ];
+                      })
+                      (mkStat {
+                        id = 12;
+                        x = 4;
+                        y = 10;
+                        w = 4;
+                        h = 7;
+                        title = "CPU Busy";
+                        expr = ''100 - avg(rate(node_cpu_seconds_total{mode="idle",instance=~"$hosts",job="node"}[5m])) * 100'';
+                        unit = "percent";
+                        decimals = 1;
+                        thresholds = [
+                          {
+                            color = "green";
+                            value = null;
+                          }
+                          {
+                            color = "yellow";
+                            value = 50;
+                          }
+                          {
+                            color = "red";
+                            value = 75;
+                          }
+                        ];
+                      })
+                      (mkStat {
+                        id = 13;
+                        x = 8;
+                        y = 10;
+                        w = 4;
+                        h = 7;
+                        title = "RAM Used";
+                        expr = ''100 * (1 - (node_memory_MemAvailable_bytes{instance=~"$hosts",job="node"} / node_memory_MemTotal_bytes{instance=~"$hosts",job="node"}))'';
+                        unit = "percent";
+                        decimals = 1;
+                        thresholds = [
+                          {
+                            color = "green";
+                            value = null;
+                          }
+                          {
+                            color = "yellow";
+                            value = 70;
+                          }
+                          {
+                            color = "red";
+                            value = 85;
+                          }
+                        ];
+                      })
+                      (mkStat {
+                        id = 14;
+                        x = 12;
+                        y = 10;
+                        w = 4;
+                        h = 7;
+                        title = "/ Used";
+                        expr = ''100 * (1 - (node_filesystem_avail_bytes{instance=~"$hosts",job="node",mountpoint="/",fstype!=""} / node_filesystem_size_bytes{instance=~"$hosts",job="node",mountpoint="/",fstype!=""}))'';
+                        unit = "percent";
+                        decimals = 1;
+                        thresholds = [
+                          {
+                            color = "green";
+                            value = null;
+                          }
+                          {
+                            color = "yellow";
+                            value = 70;
+                          }
+                          {
+                            color = "red";
+                            value = 85;
+                          }
+                        ];
+                      })
+                      (mkTimeseries {
+                        id = 15;
+                        x = 16;
+                        y = 10;
+                        w = 8;
+                        h = 7;
+                        title = "Network";
+                        unit = "Bps";
+                        description = "Per-host traffic across non-loopback interfaces";
+                        targets = [
+                          {
+                            expr = ''sum(rate(node_network_receive_bytes_total{instance=~"$hosts",job="node",device!="lo"}[5m]))'';
+                            legend = "RX";
+                          }
+                          {
+                            expr = ''sum(rate(node_network_transmit_bytes_total{instance=~"$hosts",job="node",device!="lo"}[5m]))'';
+                            legend = "TX";
+                          }
+                        ];
+                      })
+                    ];
+                  }
+                );
+                homeJson = pkgs.writeText "soyo-home.json" (
+                  let
+                    ds = "soyo-prometheus";
+                    refIds = [
+                      "A"
+                      "B"
+                      "C"
+                      "D"
+                    ];
+
+                    mkGrid = x: y: w: h: {
+                      inherit
+                        x
+                        y
+                        w
+                        h
+                        ;
+                    };
+
+                    mkTarget =
+                      refId: expr: legendFormat:
+                      {
+                        inherit
+                          expr
+                          refId
+                          ;
+                        datasource = {
+                          type = "prometheus";
+                          uid = ds;
+                        };
+                      }
+                      // lib.optionalAttrs (legendFormat != null) { inherit legendFormat; };
+
+                    mkPanel = id: x: y: w: h: type: title: {
+                      inherit
+                        id
+                        type
+                        title
+                        ;
+                      gridPos = mkGrid x y w h;
+                    };
+
+                    mkText =
+                      {
+                        id,
+                        x,
+                        y,
+                        w,
+                        h,
+                        title,
+                        content,
+                      }:
+                      mkPanel id x y w h "text" title
+                      // {
+                        options = {
+                          mode = "markdown";
+                          inherit content;
+                        };
+                        transparent = true;
+                      };
+
+                    mkStat =
+                      {
+                        id,
+                        x,
+                        y,
+                        w,
+                        h,
+                        title,
+                        expr,
+                        unit ? "none",
+                        description ? null,
+                        thresholds ? null,
+                        mappings ? [ ],
+                        decimals ? null,
+                      }:
+                      mkPanel id x y w h "stat" title
+                      // {
+                        fieldConfig.defaults = {
+                          inherit unit;
+                          color.mode = "thresholds";
+                        }
+                        // lib.optionalAttrs (description != null) { inherit description; }
+                        // lib.optionalAttrs (decimals != null) { inherit decimals; }
+                        // lib.optionalAttrs (thresholds != null) {
+                          thresholds = {
+                            mode = "absolute";
+                            steps = thresholds;
+                          };
+                        }
+                        // lib.optionalAttrs (mappings != [ ]) { inherit mappings; };
+                        options = {
+                          colorMode = "backgroundSolid";
+                          graphMode = "area";
+                          justifyMode = "center";
+                          orientation = "auto";
+                          reduceOptions = {
+                            calcs = [ "lastNotNull" ];
+                            fields = "";
+                            values = false;
+                          };
+                          textMode = "value";
+                          wideLayout = true;
+                        };
+                        targets = [ (mkTarget "A" expr null) ];
+                      };
+
+                    mkTimeseries =
+                      {
+                        id,
+                        x,
+                        y,
+                        w,
+                        h,
+                        title,
+                        unit,
+                        targets,
+                        description ? null,
+                      }:
+                      mkPanel id x y w h "timeseries" title
+                      // {
+                        fieldConfig.defaults = {
+                          inherit unit;
+                          color.mode = "palette-classic";
+                          custom = {
+                            axisBorderShow = false;
+                            drawStyle = "line";
+                            fillOpacity = 16;
+                            lineInterpolation = "smooth";
+                            lineWidth = 2;
+                            pointSize = 3;
+                            showPoints = "never";
+                            spanNulls = true;
+                          };
+                        }
+                        // lib.optionalAttrs (description != null) { inherit description; };
+                        options = {
+                          legend = {
+                            calcs = [
+                              "lastNotNull"
+                              "mean"
+                            ];
+                            displayMode = "table";
+                            placement = "bottom";
+                            showLegend = true;
+                          };
+                          tooltip = {
+                            mode = "multi";
+                            sort = "desc";
+                          };
+                        };
+                        targets = lib.imap0 (
+                          i: target: mkTarget (builtins.elemAt refIds i) target.expr target.legend
+                        ) targets;
+                      };
+
+                    fsUsed =
+                      mountpoint:
+                      ''100 * (1 - (node_filesystem_avail_bytes{mountpoint="${mountpoint}",fstype!=""} / node_filesystem_size_bytes{mountpoint="${mountpoint}",fstype!=""}))'';
+
+                    persistFree = ''100 * (node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""})'';
+
+                    blockRate30m = ''100 * sum(rate(blocky_query_total{reason="BLOCKED"}[30m])) / clamp_min(sum(rate(blocky_query_total[30m])), 0.001)'';
+
+                    cacheHitRate30m = "100 * sum(rate(dnsmasq_cache_hits[30m])) / clamp_min(sum(rate(dnsmasq_cache_hits[30m])) + sum(rate(dnsmasq_cache_misses[30m])), 0.001)";
+
+                    blockRate5m = ''100 * sum(rate(blocky_query_total{reason="BLOCKED"}[5m])) / clamp_min(sum(rate(blocky_query_total[5m])), 0.001)'';
+
+                    cacheHitRate5m = "100 * sum(rate(dnsmasq_cache_hits[5m])) / clamp_min(sum(rate(dnsmasq_cache_hits[5m])) + sum(rate(dnsmasq_cache_misses[5m])), 0.001)";
+                  in
+                  builtins.toJSON {
+                    title = "Soyo Control Plane";
                     uid = "soyo-home";
-                    tags = [ "home" ];
+                    tags = [
+                      "home"
+                      "soyo"
+                    ];
                     editable = false;
                     time = {
                       from = "now-12h";
@@ -448,128 +1053,283 @@
                     };
                     refresh = "30s";
                     templating.list = [ ];
-                    panels =
-                      let
-                        ds = "soyo-prometheus";
-                        ts = x: y: w: h: t: e: f: {
-                          gridPos = {
-                            inherit
-                              x
-                              y
-                              w
-                              h
-                              ;
-                          };
-                          type = "timeseries";
-                          title = t;
-                          fieldConfig.defaults = {
-                            custom = {
-                              fillOpacity = 10;
-                              lineWidth = 1;
+                    panels = [
+                      (mkText {
+                        id = 1;
+                        x = 0;
+                        y = 0;
+                        w = 24;
+                        h = 5;
+                        title = "Overview";
+                        content = ''
+                          ## Soyo at a glance
+
+                          This is the Soyo-specific drilldown from **Fleet Overview**. Stay here when you care about the appliance role itself: DNS, DHCP, filtering, cache behaviour, and `/persist` capacity.
+
+                          **Open next**
+                          - **Fleet Overview** for generic host health across the lab
+                          - **Blocky** for resolver and blocking behaviour
+                          - **dnsmasq** for leases, cache, and upstream forwarding
+                          - **Node Exporter Full** for low-level host internals
+
+                          **Healthy by default**
+                          - `Blocky` and `dnsmasq` stay **Up**
+                          - `/persist free` stays well above **10%**
+                          - query traffic and block rate move with normal LAN activity
+                        '';
+                      })
+                      (mkStat {
+                        id = 2;
+                        x = 0;
+                        y = 5;
+                        w = 4;
+                        h = 4;
+                        title = "Blocky";
+                        expr = ''max(up{job="blocky"})'';
+                        thresholds = [
+                          {
+                            color = "red";
+                            value = null;
+                          }
+                          {
+                            color = "green";
+                            value = 1;
+                          }
+                        ];
+                        mappings = [
+                          {
+                            type = "value";
+                            options = {
+                              "0" = {
+                                text = "Down";
+                                color = "red";
+                              };
+                              "1" = {
+                                text = "Up";
+                                color = "green";
+                              };
                             };
-                            unit = f;
-                          };
-                          targets = [
-                            {
-                              expr = e;
-                              datasource = {
-                                type = "prometheus";
-                                uid = ds;
+                          }
+                        ];
+                        description = "Resolver and filtering frontend";
+                      })
+                      (mkStat {
+                        id = 3;
+                        x = 4;
+                        y = 5;
+                        w = 4;
+                        h = 4;
+                        title = "dnsmasq";
+                        expr = ''max(up{job="dnsmasq"})'';
+                        thresholds = [
+                          {
+                            color = "red";
+                            value = null;
+                          }
+                          {
+                            color = "green";
+                            value = 1;
+                          }
+                        ];
+                        mappings = [
+                          {
+                            type = "value";
+                            options = {
+                              "0" = {
+                                text = "Down";
+                                color = "red";
                               };
-                              refId = "A";
-                            }
-                          ];
-                        };
-                        g = x: y: w: h: t: e: f: {
-                          gridPos = {
-                            inherit
-                              x
-                              y
-                              w
-                              h
-                              ;
-                          };
-                          type = "stat";
-                          title = t;
-                          fieldConfig.defaults.unit = f;
-                          options.reduceOptions = {
-                            calcs = [ "lastNotNull" ];
-                          };
-                          targets = [
-                            {
-                              expr = e;
-                              datasource = {
-                                type = "prometheus";
-                                uid = ds;
+                              "1" = {
+                                text = "Up";
+                                color = "green";
                               };
-                              refId = "A";
-                            }
-                          ];
-                        };
-                        st = x: y: w: h: t: e: f: d: {
-                          gridPos = {
-                            inherit
-                              x
-                              y
-                              w
-                              h
-                              ;
-                          };
-                          type = "stat";
-                          title = t;
-                          fieldConfig.defaults = {
-                            unit = f;
-                            description = d;
-                          };
-                          options = {
-                            reduceOptions = {
-                              calcs = [ "lastNotNull" ];
                             };
-                            textMode = "value";
-                          };
-                          targets = [
-                            {
-                              expr = e;
-                              datasource = {
-                                type = "prometheus";
-                                uid = ds;
-                              };
-                              refId = "A";
-                            }
-                          ];
-                        };
-                      in
-                      [
-                        (ts 0 0 24 10 "CPU Usage %"
-                          ''100 - avg by (mode) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100''
-                          "percent"
-                        )
-                        (ts 0 10 24 10 "Memory" "node_memory_MemAvailable_bytes" "bytes")
-                        (st 0 20 8 4 "Uptime" "node_time_seconds - node_boot_time_seconds" "s" "Seconds since last boot")
-                        (g 8 20 8 4 "/ Disk"
-                          ''100 - (node_filesystem_avail_bytes{mountpoint="/",fstype!=""} / node_filesystem_size_bytes{mountpoint="/",fstype!=""}) * 100''
-                          "percent"
-                        )
-                        (g 16 20 8 4 "/persist"
-                          ''100 - (node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""}) * 100''
-                          "percent"
-                        )
-                        (ts 0 24 24 10 "Network Traffic" ''rate(node_network_receive_bytes_total{device="enp1s0"}[5m])''
-                          "Bps"
-                        )
-                        (ts 0 34 24 10 "DNS Queries (dnsmasq)" "rate(dnsmasq_servers_queries[5m])" "short")
-                        (st 0 44 8 4 "DNS Cache Hit Rate"
-                          "(dnsmasq_cache_hits / (dnsmasq_cache_hits + dnsmasq_cache_misses)) * 100"
-                          "percent"
-                          "% of queries served from cache"
-                        )
-                        (ts 0 48 24 10 "Blocky Queries" "rate(blocky_query_total[5m])" "short")
-                        (ts 0 58 24 10 "Blocked Queries" ''rate(blocky_query_total{reason="BLOCKED"}[5m])'' "short")
-                        (st 0 68 8 4 "DHCP Leases" "dnsmasq_leases" "none" "Active DHCP leases")
-                        (st 8 68 8 4 "Blocked Total" ''blocky_query_total{reason="BLOCKED"}'' "none"
-                          "Total blocked queries since start"
-                        )
-                      ];
+                          }
+                        ];
+                        description = "DHCP and reverse DNS backend";
+                      })
+                      (mkStat {
+                        id = 4;
+                        x = 8;
+                        y = 5;
+                        w = 4;
+                        h = 4;
+                        title = "DHCP Leases";
+                        expr = "max(dnsmasq_leases)";
+                        thresholds = [
+                          {
+                            color = "blue";
+                            value = null;
+                          }
+                        ];
+                        description = "Current active leases";
+                      })
+                      (mkStat {
+                        id = 5;
+                        x = 12;
+                        y = 5;
+                        w = 4;
+                        h = 4;
+                        title = "Block Rate";
+                        expr = blockRate30m;
+                        unit = "percent";
+                        decimals = 1;
+                        thresholds = [
+                          {
+                            color = "blue";
+                            value = null;
+                          }
+                          {
+                            color = "green";
+                            value = 5;
+                          }
+                        ];
+                        description = "Share of DNS queries blocked over the last 30 minutes";
+                      })
+                      (mkStat {
+                        id = 6;
+                        x = 16;
+                        y = 5;
+                        w = 4;
+                        h = 4;
+                        title = "Cache Hit Rate";
+                        expr = cacheHitRate30m;
+                        unit = "percent";
+                        decimals = 1;
+                        thresholds = [
+                          {
+                            color = "red";
+                            value = null;
+                          }
+                          {
+                            color = "yellow";
+                            value = 40;
+                          }
+                          {
+                            color = "green";
+                            value = 70;
+                          }
+                        ];
+                        description = "dnsmasq cache efficiency over the last 30 minutes";
+                      })
+                      (mkStat {
+                        id = 7;
+                        x = 20;
+                        y = 5;
+                        w = 4;
+                        h = 4;
+                        title = "/persist Free";
+                        expr = persistFree;
+                        unit = "percent";
+                        decimals = 1;
+                        thresholds = [
+                          {
+                            color = "red";
+                            value = null;
+                          }
+                          {
+                            color = "yellow";
+                            value = 15;
+                          }
+                          {
+                            color = "green";
+                            value = 25;
+                          }
+                        ];
+                        description = "Durable storage headroom";
+                      })
+                      (mkTimeseries {
+                        id = 8;
+                        x = 0;
+                        y = 9;
+                        w = 12;
+                        h = 10;
+                        title = "DNS Pipeline";
+                        unit = "short";
+                        description = "Incoming queries, blocked queries, and dnsmasq upstream forwards";
+                        targets = [
+                          {
+                            expr = "sum(rate(blocky_query_total[5m]))";
+                            legend = "Queries";
+                          }
+                          {
+                            expr = ''sum(rate(blocky_query_total{reason="BLOCKED"}[5m]))'';
+                            legend = "Blocked";
+                          }
+                          {
+                            expr = "sum(rate(dnsmasq_servers_queries[5m]))";
+                            legend = "Forwarded upstream";
+                          }
+                        ];
+                      })
+                      (mkTimeseries {
+                        id = 9;
+                        x = 12;
+                        y = 9;
+                        w = 12;
+                        h = 10;
+                        title = "Host Pressure";
+                        unit = "percent";
+                        description = "Capacity trends that can eventually threaten the appliance role";
+                        targets = [
+                          {
+                            expr = ''100 - avg by (mode) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100'';
+                            legend = "CPU busy";
+                          }
+                          {
+                            expr = "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))";
+                            legend = "Memory used";
+                          }
+                          {
+                            expr = fsUsed "/";
+                            legend = "/ used";
+                          }
+                          {
+                            expr = fsUsed "/persist";
+                            legend = "/persist used";
+                          }
+                        ];
+                      })
+                      (mkTimeseries {
+                        id = 10;
+                        x = 0;
+                        y = 19;
+                        w = 12;
+                        h = 8;
+                        title = "LAN Traffic";
+                        unit = "Bps";
+                        targets = [
+                          {
+                            expr = ''rate(node_network_receive_bytes_total{device="enp1s0"}[5m])'';
+                            legend = "RX";
+                          }
+                          {
+                            expr = ''rate(node_network_transmit_bytes_total{device="enp1s0"}[5m])'';
+                            legend = "TX";
+                          }
+                        ];
+                      })
+                      (mkTimeseries {
+                        id = 11;
+                        x = 12;
+                        y = 19;
+                        w = 12;
+                        h = 8;
+                        title = "Filter Efficiency";
+                        unit = "percent";
+                        description = "Short-window effectiveness signals for blocking and cache reuse";
+                        targets = [
+                          {
+                            expr = blockRate5m;
+                            legend = "Block rate";
+                          }
+                          {
+                            expr = cacheHitRate5m;
+                            legend = "Cache hit rate";
+                          }
+                        ];
+                      })
+                    ];
                   }
                 );
               in
@@ -589,7 +1349,7 @@
                   # Admin password from agenix-encrypted secret.
                   security.admin_password = "$__file{${config.age.secrets.grafana-admin-password.path}}";
                   unified_alerting.enabled = true;
-                  dashboards.default_home_dashboard_path = "${homeJson}";
+                  dashboards.default_home_dashboard_path = "${fleetJson}";
                 };
                 provision.datasources.settings = {
                   apiVersion = 1;
@@ -622,12 +1382,20 @@
                   apiVersion = 1;
                   providers = [
                     {
+                      name = "fleet";
+                      type = "file";
+                      options.path = pkgs.runCommand "fleet-grafana-dashboards" { } ''
+                        mkdir -p $out
+                        cp ${fleetJson} $out/001-fleet-overview.json
+                      '';
+                    }
+                    {
                       name = "soyo";
                       type = "file";
                       folder = "soyo";
                       options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
                         mkdir -p $out
-                        cp ${homeJson} $out/001-home.json
+                        cp ${homeJson} $out/001-soyo-control-plane.json
                         cp ${dnsmasqJson} $out/dnsmasq.json
                         cp ${blockyJson} $out/blocky.json
                         cp ${nodeExporterJson} $out/node-exporter-full.json
@@ -722,27 +1490,31 @@
                         }
 
                         # Alert rules (Grafana 13 /api/v1: the new /apis/v0alpha1 is broken
-                        # in 13.0.3, old API stays operative. Requires ruleGroup + orgID.)
+                        # in 13.0.3, old API stays operative. Grafana does not
+                        # treat POST as an upsert, so we delete each managed UID
+                        # first to replace stale rules from older revisions.
+                        delete_rule() {
+                          local uid="$1" status
+                          status=$(command curl -sS -u "$AUTH" -o /dev/null -w '%{http_code}'                             -X DELETE "$BASE/api/v1/provisioning/alert-rules/$uid")
+                          [ "$status" = 200 ] || [ "$status" = 202 ] || [ "$status" = 404 ]
+                        }
+
                         post_rule() {
-                          ${pkgs.jq}/bin/jq -nc \
-                            --arg uid "$1" --arg title "$2" \
-                            --arg expr "$3" --arg for "$4" \
-                            --arg noData "$5" --arg summary "$6" \
-                            '{uid: $uid, title: $title,
+                          local uid="$1"
+                          delete_rule "$uid"
+                          ${pkgs.jq}/bin/jq -nc                             --arg uid "$uid" --arg title "$2"                             --arg expr "$3" --arg for "$4"                             --arg noData "$5" --arg summary "$6"                             '{uid: $uid, title: $title,
                               folderUID: "soyo", ruleGroup: "soyo", orgID: 1,
                               condition: "A", noDataState: $noData,
                               execErrState: "Error", for: $for,
                               data: [{
                                 refId: "A",
                                 relativeTimeRange: {from: 600, to: 0},
-                                datasourceUid: "prometheus",
+                                datasourceUid: "soyo-prometheus",
                                 model: {type: "prometheus", expr: $expr}
                               }],
                               annotations: {summary: $summary},
                               labels: {severity: "critical", team: "soyo"},
-                              isPaused: false}' \
-                            | curl -X POST -H 'Content-Type: application/json' \
-                              -d @- "$BASE/api/v1/provisioning/alert-rules"
+                              isPaused: false}'                             | curl -X POST -H 'Content-Type: application/json'                               -d @- "$BASE/api/v1/provisioning/alert-rules"
                         }
 
                         provision_rules() {
