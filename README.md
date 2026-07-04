@@ -21,11 +21,13 @@ and the [dendritic](https://github.com/vic/import-tree) pattern.
 
 ```bash
 ./scripts/deploy-soyo.sh
-# Or manually: nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
-# If DNS isn't working: nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+# Or manually: nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
+# If DNS isn't working: nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
 ```
 
 For a first install from the NixOS live ISO, see [hosts/soyo/DEPLOY.md](hosts/soyo/DEPLOY.md).
+
+For the guided learning path through this repo, start at [docs/learning/README.md](docs/learning/README.md).
 
 ## Structure
 
@@ -52,11 +54,12 @@ The canonical design document is
 Key principles:
 
 - **DNS + DHCP only** — everything else is a guest service, resource-isolated.
-- **Impermanent root** — `/` is wiped to a blank Btrfs snapshot each boot; durable state lives under `/persist`.
+- **Impermanent root** — `/` is wiped to a blank Btrfs snapshot each boot; durable state is restored from an explicit persisted-path inventory under `/persist`, including private `DynamicUser` state when services store it under `/var/lib/private`.
 - **Secrets via agenix-rekey** — master-encrypted files rekeyed per host. Full walkthrough in [docs/secrets.md](docs/secrets.md).
 - **`linuxPackages_latest`** — the in-tree `dwmac_motorcomm` NIC driver (Linux 6.13+).
 - **TPM auto-unlock** — unattended power-loss recovery; passphrase keyslot as break-glass fallback.
 - **Tailscale mesh VPN** — remote admin from anywhere, no open ports, no DynDNS. Auth key deployed as an encrypted agenix secret.
+- **On-box observability** — Grafana, Prometheus, Loki, Tempo, and Alloy run as resource-isolated guest services; Grafana/Loki/Tempo/Prometheus persist under `/var/lib/<name>`, while Alloy's journal cursor persists under `/var/lib/private/alloy`.
 
 ## Tooling
 
