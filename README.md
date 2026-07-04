@@ -25,7 +25,8 @@ and the [dendritic](https://github.com/vic/import-tree) pattern.
 # If DNS isn't working: nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
 ```
 
-For a first install from the NixOS live ISO, see [hosts/soyo/DEPLOY.md](hosts/soyo/DEPLOY.md).
+For a first install from the NixOS live ISO, see [docs/install-soyo.md](docs/install-soyo.md).
+For the condensed checklist, see [hosts/soyo/DEPLOY.md](hosts/soyo/DEPLOY.md).
 
 For the guided learning path through this repo, start at [docs/learning/README.md](docs/learning/README.md).
 

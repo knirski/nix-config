@@ -163,7 +163,7 @@ If Secure Boot prevents booting during setup (wrong keys, unsigned image):
 
 1. Procure a replacement (same model, or any x86_64 box).
 2. Boot the NixOS 26.05 installer USB.
-3. Follow `hosts/soyo/DEPLOY.md` — the full provisioning flow.
+3. Follow [`docs/install-soyo.md`](install-soyo.md) — the full provisioning flow.
 4. After install, restore class 3 data from the Synology:
 
    ```sh
@@ -232,7 +232,7 @@ This gives a static IP in the normal LAN range so you can reach Soyo by IP.
 
 Reuses the provisioning flow with an extra restore step:
 
-1. Provision via `hosts/soyo/DEPLOY.md` with `disko` from the flake.
+1. Provision via [`docs/install-soyo.md`](install-soyo.md) with `disko` from the flake.
 2. Restore class 3 data: `sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo -p /run/agenix/restic-password restore latest --target /`
 3. Re-enroll agenix with the new host key.
 4. Update `hosts/soyo/facter.json` if the replacement hardware differs.
