@@ -28,6 +28,8 @@ Traditional NixOS has a mutable `/` where services write state freely. That's si
 
 **Fork: preservation or impermanence (community module).** `preservation` is newer and less battle-tested than `nix-community/impermanence`. Picked `preservation` deliberately as a learning target — fewer examples, more to understand from first principles. Both solve the same problem: persisting selected paths from a wiped root.
 
+The subtle lesson from this session: the persisted-path inventory has to follow **systemd runtime semantics**, not just directory names. Services that use `DynamicUser=true` plus `StateDirectory=` often write under `/var/lib/private/<name>`, even when the friendly path looks like `/var/lib/<name>`. Alloy was the concrete example: its journal cursor lived under `/var/lib/private/alloy`, so reboots dropped the cursor until that private path was added to the inventory.
+
 ## DNS/DHCP: Blocky + dnsmasq
 
 **Fork: AdGuard Home vs Blocky + dnsmasq.** AdGuard is a single-module solution with a UI and built-in DHCP. Not chosen because AdGuard's YAML file pulls against declarative config (`mutableSettings = false` fights the app), its DHCP server is thin next to dnsmasq, and one process couples DNS and DHCP into one blast radius. Blocky handles DNS + ad-block, dnsmasq handles DHCP + PTR, glued by a conditional forward — component isolation and declarative purity over fewer moving parts.
@@ -154,11 +156,14 @@ Other production-aligned defaults:
 - `compactor.retention_enabled = true` — enable log retention via the compactor (not just the table manager)
 - `ingester.lifecycler.final_sleep = "0s"` — speeds up shutdown; production configs set this
 
-### Alloy: loopback-only and `--disable-reporting`
+### Alloy: loopback-only, `--disable-reporting`, and cursor persistence
 
-Alloy's config was already idiomatic — `loki.source.journal` scraping local systemd journals and forwarding to `loki.write`, with `prometheus.exporter.unix` for node metrics. Two production patterns confirmed:
+Alloy's config was already idiomatic — `loki.source.journal` scraping local systemd journals and forwarding to `loki.write`, with `prometheus.exporter.unix` for node metrics. Three production patterns mattered in the end:
 - **Loopback ports only** (`127.0.0.1:xxxxx`) for all collectors — no LAN-facing listeners. The collectors serve local scrapers (Prometheus, Loki write), not the network.
 - **`--disable-reporting`** CLI flag — Alloy phones home by default. Production configs suppress this.
+- **Persist the journal cursor** on an impermanent host. Alloy stores `loki.source.journal` positions under `/var/lib/private/alloy/data-alloy/.../positions.yml` because the unit uses `DynamicUser=true` and `StateDirectory=alloy`. Without persisting that private directory, every reboot makes Alloy start over from `max_age`, which means Loki is ingesting logs but Grafana's recent windows can still look empty until Alloy catches up.
+
+The practical rule: on a wiped-root system, treat `StateDirectory=` paths as first-class state. Persist them explicitly, and keep `loki.source.journal.max_age` short enough that a deliberate state wipe still recovers recent logs quickly.
 
 ### Tempo: from raw systemd to `services.tempo`
 
@@ -189,6 +194,12 @@ Soyo's observability stack uses `127.0.0.1` everywhere — not `localhost`. The 
 `localhost` resolves to both `127.0.0.1` (IPv4) and `::1` (IPv6) via `/etc/hosts`. `curl http://localhost:4318` might pick `::1` in a dual-stack environment. But Tempo (and most Go services) bind to a specific address via `http_listen_address` — if that's `127.0.0.1`, an IPv6 connection fails. The symptom is silent: curl connects, nothing responds, trace generators silently drop data.
 
 The fix (`0af140c`): 20 replacements across Prometheus scrape targets, Loki bind addresses, Alloy push URLs, Grafana datasource URLs, dashboard templating values, trace generator curl targets, and the grafana-alert-setup base URL. Every internal loopback connection uses the explicit IPv4 address.
+
+### Persisted directories need ownership, not just presence
+
+Another impermanence gotcha showed up during a full observability wipe. Recreating `/persist/var/lib/grafana`, `/persist/var/lib/loki`, `/persist/var/lib/tempo`, or `/persist/var/lib/prometheus` as bare directories is not enough — they come back as `root:root`, the bind mounts succeed, and the services then fail later with ordinary filesystem errors (`permission denied`, failed symlink creation, missing WAL directories).
+
+The fix is declarative ownership via `systemd.tmpfiles` for persisted service directories. Presence answers “does the path survive reboot”; ownership answers “can the service actually use it after a wipe or recovery.” On an impermanent host, both are part of the state contract.
 
 ### ntfy alert rendering: templates over attachments
 

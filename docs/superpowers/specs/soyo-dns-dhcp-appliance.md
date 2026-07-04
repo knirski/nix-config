@@ -264,6 +264,7 @@ The implementation uses the `preservation` module for the persisted-path wiring 
 At minimum, this baseline needs an explicit persisted-path inventory for:
 
 - DHCP and service state under `/var/lib`, especially the dnsmasq lease database
+- service-managed private state under `/var/lib/private` when units use `DynamicUser`/`StateDirectory` (for example Alloy's journal cursor under `/var/lib/private/alloy`)
 - persistent logs under `/var/log` if they remain part of the operational model
 - `/var/lib/nixos`, so declarative users and groups keep stable numeric IDs across reboots
 - machine identity such as `/etc/machine-id`
@@ -291,7 +292,7 @@ For a learning repo, that discipline is valuable: missing persistence usually fa
 
 Using impermanence from the beginning is valuable for learning, but it comes with real cost for the LAN's only DNS/DHCP appliance:
 
-- every critical service must be checked for hidden writes outside the persisted set
+- every critical service must be checked for hidden writes outside the persisted set, including `DynamicUser` private state under `/var/lib/private`
 - the break-glass and power-loss paths need another full validation pass
 - install, recovery, backup, and restore docs all become more complex
 - mistakes are more likely to show up as boot-time or first-request failures rather than ordinary configuration drift
@@ -630,8 +631,9 @@ The Uptime Kuma watcher is NAS-side, documented as an operator step, not in the 
 Soyo should expose metrics, but it should not become its own metrics stack.
 
 - on-box exporters stay lightweight: Blocky's Prometheus endpoint, `node_exporter` for host metrics, and the Prometheus dnsmasq exporter for lease/DNS statistics
-- Grafana, Prometheus, Loki, Tempo, and Alloy run **on-box** as resource-isolated guest services with `MemoryMax` and `CPUQuota` limits. This was initially designed as off-box (see [design journey](/docs/learning/design-journey.md)), but on-box was chosen for simplicity — Soyo's 16 GB RAM and single-NIC workload have ample headroom, and ruling out an off-box dependency keeps DNS/DHCP availability independent of NAS or WAN connectivity.
+- Grafana, Prometheus, Loki, Tempo, and Alloy run **on-box** as resource-isolated guest services with `MemoryMax` and `CPUQuota` limits. This was initially designed as off-box (see [design journey](/docs/learning/design-journey.md)), but on-box was chosen for simplicity — Soyo's 16 GB RAM and single-NIC workload have ample headroom, and ruling out an off-box dependency keeps DNS/DHCP availability independent of NAS or WAN connectivity. Their persisted state is part of the appliance contract: Grafana/Loki/Tempo/Prometheus use `/var/lib/<name>`, while Alloy's journal cursor lives under `/var/lib/private/alloy` because the unit uses `DynamicUser` + `StateDirectory`.
 - alerting routes through Grafana's ntfy contact point (disk space, backup failure, service health)
+- persisted observability directories on `/persist` need declarative ownership (`systemd.tmpfiles`) as well as persistence, otherwise a manual wipe recreates them as `root:root` and Grafana/Loki/Tempo fail later with ordinary filesystem errors
 
 That split preserves appliance focus: Soyo publishes a small metrics surface, while every heavier observability responsibility lives in an independent failure domain.
 
