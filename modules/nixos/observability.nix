@@ -2045,6 +2045,7 @@
                       name = "soyo-boot-trace";
                       runtimeInputs = [
                         pkgs.curl
+                        pkgs.gawk
                         pkgs.jq
                         pkgs.util-linux
                       ];
