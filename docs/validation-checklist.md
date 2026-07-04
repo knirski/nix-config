@@ -109,14 +109,17 @@ command and expected result.
 - [ ] **LAN initrd SSH unlock**
   ```sh
   ssh -p 2222 root@soyo
+  # If you land at -bash-5.3#, run:
+  systemd-tty-ask-password-agent --watch
   ```
-  Expected: initrd SSH prompt (enter passphrase). Only works when system is at the initrd unlock stage.
+  Expected: initrd SSH shell or prompt, then the LUKS passphrase prompt. Only works when system is at the initrd unlock stage.
 
 - [ ] **Direct-link rescue unlock**
   1. Connect laptop directly to Soyo's Ethernet port.
   2. `sudo ip addr add 192.168.254.1/30 dev eth0 && sudo ip link set eth0 up`
   3. `ssh -p 2222 root@192.168.254.2`
-  Expected: initrd SSH prompt over the direct link.
+  4. If you land at `-bash-5.3#`, run `systemd-tty-ask-password-agent --watch`.
+  Expected: initrd SSH shell or prompt over the direct link, then the LUKS passphrase prompt.
 
 ## M2 — Durability & operations
 
@@ -249,14 +252,27 @@ command and expected result.
 - [ ] **Secure Boot enabled**
   ```sh
   sudo sbctl status
+  sudo sbctl list-enrolled-keys
   ```
-  Expected: "Setup Mode: User", "Secure Boot: enabled", files signed.
+  Expected: `Setup Mode: User`, `Secure Boot: enabled`, and enrolled `PK`, `KEK`, and `db` keys. `Installed:` may still be false because the NixOS Limine module signs the EFI binary directly instead of registering it in sbctl's file database.
+
+- [ ] **sbctl key state persisted**
+  ```sh
+  sudo ls /persist/var/lib/sbctl/keys
+  ```
+  Expected: the PK/KEK/db key hierarchy exists under `/persist/var/lib/sbctl/keys`. Without this durable copy, future Limine updates cannot be signed after a reboot.
 
 - [ ] **Limine secureBoot enabled**
   Check `boot.loader.limine.secureBoot.enable = true` in `hosts/soyo/boot.nix`. Expected: build succeeds (module force-enables enrollConfig, validateChecksums, panicOnChecksumMismatch).
 
 - [ ] **Tampered cmdline/kernel fails to boot**
   Edit the boot entry cmdline or replace the kernel image. Expected: boot fails (checksum mismatch or enrolled config violation).
+
+- [ ] **Deploy still works with Secure Boot enabled**
+  ```sh
+  ./scripts/deploy-soyo.sh
+  ```
+  Expected: activation succeeds. In particular, the bootloader step does not fail with `There are no sbctl secure boot keys present. Please generate some.`
 
 - [ ] **TPM auto-unlock survives kernel update**
   Update nixpkgs, deploy (new kernel). Reboot. Expected: still auto-unlocks (PCR 0+2+7 stable across kernel/initrd updates).
@@ -268,5 +284,3 @@ command and expected result.
   sudo systemctl reboot
   ```
   Expected: auto-unlocks again.
-.
-d: auto-unlocks again.

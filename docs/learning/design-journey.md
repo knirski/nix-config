@@ -48,6 +48,8 @@ The subtle lesson from this session: the persisted-path inventory has to follow 
 
 **Fork: Limine or lanzaboote.** lanzaboote produces signed UKIs but was dropped from nixpkgs's `lanzaboote-tool` in 2025 for maintenance gaps. Limine's Secure Boot module forces safe defaults (enrolled config, checksum validation, editor locked). Picked Limine for in-tree stability on `nixos-unstable`.
 
+The subtle lesson from the Secure Boot cutover: on an impermanent root, `sbctl`'s private key directory is real host state. The current signed generation can still boot even after those keys are lost, because firmware only needs the already-signed Limine EFI binary plus the enrolled certificates. The *next* `nixos-rebuild` is where the failure appears: the nixpkgs Limine installer calls `sbctl sign` on `BOOTX64.EFI` during activation, and that requires the private keys under `/var/lib/sbctl`. That made `/var/lib/sbctl` part of the persisted-path inventory. Another nuance: `sbctl status` may still report `Installed: ✗ sbctl is not installed` because Limine signs the EFI binary directly and does not populate sbctl's file database. In this setup, successful Secure Boot boots and successful future deploys are the real checks.
+
 ## Deploy: native nixos-rebuild
 
 **Fork: deploy-rs or native build + copy.** `deploy-rs` adds deploy checks and magic-rollback but needs another flake input. Native `nixos-rebuild --target-host` does local build + remote activation with zero extra dependencies. `deploy-rs` deferred to M4 when a second host makes multi-host orchestration worth it.

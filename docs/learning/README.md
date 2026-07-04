@@ -14,7 +14,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 6 | `flake.nix` | M1 | The entry point — thin, delegates to flake-parts + import-tree |
 | 7 | `modules/parts/soyo.nix` | M1 | How a host is assembled by toggling aspects |
 | 8 | `modules/nixos/base.nix` → `server.nix` → `users.nix` | M1 | The role-neutral base, server-only defaults, user policy |
-| 9 | `modules/nixos/persistence.nix`, `hosts/soyo/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + the concrete persisted-path inventory |
+| 9 | `modules/nixos/persistence.nix`, `hosts/soyo/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + the concrete persisted-path inventory, including why boot signing state like `/var/lib/sbctl` belongs in it |
 | 10 | `modules/nixos/blocky.nix`, `hosts/soyo/dns.nix` | M1 | DNS with blocking (Blocky) |
 | 11 | `modules/nixos/dhcp.nix`, `hosts/soyo/dhcp.nix` | M1 | DHCP + reverse DNS (dnsmasq) |
 | 12 | `modules/nixos/remote-unlock.nix`, `hosts/soyo/initrd-unlock.nix` | M1 | TPM auto-unlock + break-glass paths |
@@ -22,7 +22,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 14 | `modules/nixos/maintenance.nix` | M2 | Scheduled upkeep: gc, scrub, SMART, ntfy alerts |
 | 15 | `modules/nixos/backup.nix`, `hosts/soyo/backup.nix` | M2 | restic to Synology, btrbk local snapshots |
 | 16 | `modules/nixos/observability.nix`, `hosts/soyo/observability.nix` | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces, and Alloy journal shipping on an impermanent host |
-| 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding |
+| 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding, and Limine's `sbctl` signing model |
 | 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, checks, CI pipeline |
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
 | 20 | `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline, Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
@@ -56,6 +56,8 @@ A NixOS flake that configures a small Intel N150 box ("Soyo") as a LAN DNS and D
 **PCR (Platform Configuration Register)** — A TPM register that hashes boot components. If firmware, bootloader, or Secure Boot state changes, PCR values change and the TPM won't release the key — the passphrase fallback is used instead.
 
 **rekeyFile** — agenix-rekey's flow: secrets are master-encrypted with the operator's key, then rekeyed per-host at deploy time. Each host gets its own copy encrypted with its SSH host key.
+
+**sbctl file database** — sbctl's internal list of EFI binaries it tracks as signed. In this repo, the NixOS Limine module uses `sbctl` to sign `BOOTX64.EFI` directly during activation, so Secure Boot can be working even if `sbctl status` still reports no installed files.
 
 **Tailscale** — A WireGuard-based mesh VPN that assigns each device a stable IP
 in your tailnet. No open firewall ports, no DynDNS. Soyo joins automatically

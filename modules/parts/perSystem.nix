@@ -10,7 +10,6 @@
     {
       pkgs,
       config,
-      system,
       ...
     }:
     {
@@ -30,6 +29,7 @@
           pkgs.nixos-anywhere
           pkgs.nixos-facter
           pkgs.nixos-rebuild
+          pkgs.sbctl
           config.agenix-rekey.package
         ];
       };
