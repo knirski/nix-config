@@ -14,6 +14,10 @@
         inInitrd = true;
       }
       "/var/lib/dnsmasq"
+      # Alloy uses DynamicUser + StateDirectory=alloy, which resolves to the
+      # private state dir below. Persist the cursor so journal shipping resumes
+      # from the last read entry instead of replaying a large backlog on boot.
+      "/var/lib/private/alloy"
       "/var/lib/grafana"
       "/var/lib/loki"
       "/var/lib/tailscale"
