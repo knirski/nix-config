@@ -14,14 +14,14 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 6 | `flake.nix` | M1 | The entry point — thin, delegates to flake-parts + import-tree |
 | 7 | `modules/parts/soyo.nix` | M1 | How a host is assembled by toggling aspects |
 | 8 | `modules/nixos/base.nix` → `server.nix` → `users.nix` | M1 | The role-neutral base, server-only defaults, user policy |
-| 9 | `modules/nixos/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + preservation |
+| 9 | `modules/nixos/persistence.nix`, `hosts/soyo/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + the concrete persisted-path inventory |
 | 10 | `modules/nixos/blocky.nix`, `hosts/soyo/dns.nix` | M1 | DNS with blocking (Blocky) |
 | 11 | `modules/nixos/dhcp.nix`, `hosts/soyo/dhcp.nix` | M1 | DHCP + reverse DNS (dnsmasq) |
 | 12 | `modules/nixos/remote-unlock.nix`, `hosts/soyo/initrd-unlock.nix` | M1 | TPM auto-unlock + break-glass paths |
 | 13 | [agenix/agenix-rekey](https://github.com/ryantm/agenix), `docs/secrets.md` | M1 | Encrypted secrets, rekeyFile flow |
 | 14 | `modules/nixos/maintenance.nix` | M2 | Scheduled upkeep: gc, scrub, SMART, ntfy alerts |
 | 15 | `modules/nixos/backup.nix`, `hosts/soyo/backup.nix` | M2 | restic to Synology, btrbk local snapshots |
-| 16 | `modules/nixos/observability.nix`, `hosts/soyo/observability.nix` | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces |
+| 16 | `modules/nixos/observability.nix`, `hosts/soyo/observability.nix` | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces, and Alloy journal shipping on an impermanent host |
 | 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding |
 | 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, checks, CI pipeline |
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
@@ -48,6 +48,8 @@ A NixOS flake that configures a small Intel N150 box ("Soyo") as a LAN DNS and D
 **Impermanence (erase-your-darlings)** — The root filesystem is wiped to a blank Btrfs snapshot on every boot. Only explicitly declared paths under `/persist` survive. Forces an inventory of what state actually matters.
 
 **preservation** — The NixOS module that manages the persisted-path inventory and bind-mounts `/persist` contents back into runtime paths.
+
+**DynamicUser / StateDirectory** — A systemd pattern where a service gets a transient UID and a managed state directory. On NixOS this often lands under `/var/lib/private/<name>`, so impermanence requires checking those private paths explicitly, not just the obvious `/var/lib/<name>`.
 
 **TPM2 auto-unlock** — The LUKS2 encryption key is enrolled against the TPM's Platform Configuration Registers (PCRs). If the measured boot hasn't changed, the TPM releases the key without a passphrase — so power loss recovers unattended.
 
