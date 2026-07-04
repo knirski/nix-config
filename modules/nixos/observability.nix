@@ -408,34 +408,39 @@
                     hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
                   };
                 };
-                nodeExporterJson = fillTemplating {
-                  replacements = [
-                    {
-                      key = "ds_prometheus";
-                      value = "soyo-prometheus";
-                    }
-                    {
-                      key = "job";
-                      value = "node";
-                    }
-                    {
-                      key = "nodename";
-                      value = "soyo";
-                    }
-                    {
-                      key = "node";
-                      value = "localhost:9100";
-                    }
-                  ];
-                  tags = [
-                    "linux"
-                    "node-exporter"
-                  ];
-                  dashboard = fetchDashboard {
-                    id = 1860;
-                    hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
-                  };
-                };
+                nodeExporterJson =
+                  let
+                    dashboard = builtins.fromJSON (
+                      builtins.readFile (fillTemplating {
+                        replacements = [
+                          {
+                            key = "ds_prometheus";
+                            value = "soyo-prometheus";
+                          }
+                          {
+                            key = "job";
+                            value = "node";
+                          }
+                        ];
+                        tags = [
+                          "linux"
+                          "node-exporter"
+                        ];
+                        dashboard = fetchDashboard {
+                          id = 1860;
+                          hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
+                        };
+                      })
+                    );
+                  in
+                  pkgs.writeText "node-exporter-full-root.json" (
+                    builtins.toJSON (
+                      dashboard
+                      // {
+                        uid = "node-exporter-root";
+                      }
+                    )
+                  );
                 # Grafana gets two first-party dashboards:
                 # - Fleet Overview is the default landing page once more hosts join.
                 # - Soyo Control Plane stays the DNS/DHCP drilldown for the appliance itself.
@@ -1387,18 +1392,19 @@
                       options.path = pkgs.runCommand "fleet-grafana-dashboards" { } ''
                         mkdir -p $out
                         cp ${fleetJson} $out/001-fleet-overview.json
+                        cp ${nodeExporterJson} $out/002-node-exporter-full.json
                       '';
                     }
                     {
                       name = "soyo";
                       type = "file";
-                      folder = "soyo";
+                      folder = "Soyo";
+                      folderUid = "soyo";
                       options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
                         mkdir -p $out
                         cp ${homeJson} $out/001-soyo-control-plane.json
                         cp ${dnsmasqJson} $out/dnsmasq.json
                         cp ${blockyJson} $out/blocky.json
-                        cp ${nodeExporterJson} $out/node-exporter-full.json
                       '';
                     }
                   ];
@@ -1459,6 +1465,22 @@
                             -H 'Content-Type: application/json' \
                             -d '{"uid":"soyo","title":"Soyo","overwrite":true}' \
                             "$BASE/api/folders/soyo" || :
+                        }
+
+                        # Early dashboard provisioning used a plain folder title,
+                        # so Grafana auto-generated a separate lowercase folder UID.
+                        # Clean it up once dashboards and alert rules have moved to
+                        # the explicit Soyo folder UID.
+                        cleanup_legacy_folder() {
+                          local legacy_uids uid status
+                          legacy_uids=$(command curl -sS -u "$AUTH" "$BASE/api/folders" \
+                            | ${pkgs.jq}/bin/jq -r '.[] | select(.title == "soyo" and .uid != "soyo") | .uid')
+
+                          for uid in $legacy_uids; do
+                            status=$(command curl -sS -u "$AUTH" -o /dev/null -w '%{http_code}' \
+                              -X DELETE "$BASE/api/folders/$uid")
+                            [ "$status" = 200 ] || [ "$status" = 204 ] || [ "$status" = 404 ]
+                          done
                         }
 
                         # Contact point: ntfy webhook with template-based rendering.
@@ -1541,6 +1563,7 @@
 
                         wait_ready
                         ensure_folder || :
+                        cleanup_legacy_folder || :
                         provision_contact_point || :
                         provision_policy || :
                         provision_rules || :
