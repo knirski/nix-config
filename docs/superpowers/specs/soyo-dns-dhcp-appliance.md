@@ -264,6 +264,7 @@ The implementation uses the `preservation` module for the persisted-path wiring 
 At minimum, this baseline needs an explicit persisted-path inventory for:
 
 - DHCP and service state under `/var/lib`, especially the dnsmasq lease database
+- Secure Boot signing state under `/var/lib/sbctl` — the current signed generation can still boot without those private keys, but future Limine updates cannot be signed if they are lost
 - service-managed private state under `/var/lib/private` when units use `DynamicUser`/`StateDirectory` (for example Alloy's journal cursor under `/var/lib/private/alloy`)
 - persistent logs under `/var/log` if they remain part of the operational model
 - `/var/lib/nixos`, so declarative users and groups keep stable numeric IDs across reboots
@@ -457,17 +458,21 @@ In Phase 1, before Secure Boot is on, the binding is convenience encryption agai
 **Phase 2 — Limine Secure Boot.** Limine's trust model: it signs its own binary, enrolls the config hash into that signed binary, and verifies kernel/initrd by checksum against it. Setting `boot.loader.limine.secureBoot.enable = true` makes the nixpkgs module enforce the safe settings automatically — it force-enables `enrollConfig`, `validateChecksums`, and `panicOnChecksumMismatch` and asserts the boot-entry editor is off, failing the build otherwise — so the config cannot be enabled insecurely. Remaining operator steps:
 
 - generate keys with `sbctl`, put firmware into setup mode, enroll with Microsoft keys kept (`sbctl enroll-keys -m`) so option ROMs and vendor firmware still load (much lower brick risk)
+- deploy once more before the next reboot so Limine is signed with those keys and `/var/lib/sbctl` is persisted on the impermanent root
 - re-enroll the TPM keyslot against PCR 0+2+7
 
 This closes the cmdline-injection bypass: the editor is gone and the cmdline is enrolled into the signed binary, so a tampered boot fails before the TPM would release the key.
+
+A subtle impermanence gotcha: `sbctl`'s private keys are ordinary host state under `/var/lib/sbctl`. If that directory is not part of the persisted-path inventory, the system can keep booting the already-signed current generation under Secure Boot, but the next `nixos-rebuild` that reinstalls Limine fails because the installer cannot call `sbctl sign` on `BOOTX64.EFI` anymore.
 
 Maintenance and recovery:
 
 - kernel/initrd/bootloader updates leave PCR 0+2+7 unchanged; auto-unlock continues
 - a BIOS/firmware update can change PCR 0 or clear keys; if so, re-enroll the Secure Boot keys and re-run `systemd-cryptenroll`
+- if `nixos-rebuild` reports `There are no sbctl secure boot keys present. Please generate some.`, the persisted `/var/lib/sbctl` state is missing; return firmware to Setup Mode, recreate the keys, deploy once, then re-enable Secure Boot
 - if Secure Boot blocks boot during setup, toggle it off in firmware, boot, fix; the passphrase keyslot is an independent fallback throughout
 
-Known caveats: `fwupd` is currently broken under Limine Secure Boot (nixpkgs #534574), so LVFS firmware updates may need Secure Boot temporarily off; the module boots a `bzImage`, not a UKI (a backlog migration that would only strengthen this).
+Known caveats: `fwupd` is currently broken under Limine Secure Boot (nixpkgs #534574), so LVFS firmware updates may need Secure Boot temporarily off; the module boots a `bzImage`, not a UKI (a backlog migration that would only strengthen this); and `sbctl status`'s `Installed` field is not the success criterion here, because the nixpkgs Limine module signs the EFI binary directly instead of populating sbctl's file database.
 
 ### Break-Glass: Manual Unlock
 
@@ -735,7 +740,7 @@ Post-install checklist:
 - TPM2 auto-unlock succeeds on a normal reboot
 - TPM2 auto-unlock still succeeds after a kernel/initrd update (PCR 0+2+7 stable)
 - break-glass passphrase unlock works when the TPM keyslot is bypassed
-- Phase 2: `sbctl status` shows Secure Boot on and signed; the editor is off; a tampered checksum or edited cmdline fails to boot
+- Phase 2: Secure Boot is enabled, the editor is off, a tampered checksum or edited cmdline fails to boot, and a normal post-reboot deploy still succeeds (proving `/var/lib/sbctl` survived and Limine can be re-signed)
 - initrd SSH host key fingerprint is stable across a rebuild
 - LAN initrd SSH break-glass unlock works
 - local console passphrase unlock works

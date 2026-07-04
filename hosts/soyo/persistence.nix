@@ -33,6 +33,12 @@
         mode = "0750";
       }
       "/var/lib/tailscale"
+      # sbctl stores the Secure Boot private keys here. If this directory is
+      # wiped with the ephemeral root, future Limine updates cannot be signed.
+      {
+        directory = "/var/lib/sbctl";
+        mode = "0700";
+      }
       {
         directory = "/var/lib/tempo";
         user = "tempo";

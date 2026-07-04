@@ -23,6 +23,8 @@ nix flake lock --update-input nixpkgs
 
 Then deploy normally. Confirm `enp1s0` still comes up after the deploy — the `dwmac_motorcomm` driver must survive each kernel bump.
 
+After M3, every Limine reinstall also needs the local `sbctl` private keys. Those live under `/var/lib/sbctl`, which is persisted from `/persist`. If activation ever fails with `There are no sbctl secure boot keys present. Please generate some.`, the durable key state is missing: return firmware to Setup Mode, recreate the keys with `sbctl create-keys` + `sbctl enroll-keys -m`, deploy once before rebooting again, then re-enable Secure Boot.
+
 After a kernel/initrd/bootloader update, TPM PCRs should stay stable (Phase 2 binds
 PCR 0+2+7, which does not change across software updates). If auto-unlock still fails
 for another reason, use break-glass passphrase unlock, then re-enroll:

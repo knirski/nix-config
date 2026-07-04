@@ -55,7 +55,13 @@ From a machine on the LAN:
 ssh -p 2222 root@soyo
 ```
 
-Enter the LUKS passphrase. The initrd SSH host key fingerprint should be stable across rebuilds (it lives on the ESP at `/boot/initrd-ssh/`). If the fingerprint changed: a fresh install or ESP reformat regenerated it — accept the new key on first use.
+If SSH lands at an initrd shell prompt such as `-bash-5.3#`, start the systemd password agent manually:
+
+```sh
+systemd-tty-ask-password-agent --watch
+```
+
+Then enter the LUKS passphrase at the prompt. The initrd SSH host key fingerprint should be stable across rebuilds (it lives on the ESP at `/boot/initrd-ssh/`). If the fingerprint changed: a fresh install or ESP reformat regenerated it — accept the new key on first use.
 
 ### 3. Direct-link rescue
 
@@ -75,8 +81,15 @@ When the LAN/router is down **and** the box is headless:
    ssh -p 2222 root@192.168.254.2
    ```
 
-4. Enter the LUKS passphrase.
-5. After boot, reconnect Soyo to the LAN switch/router.
+4. If SSH lands at an initrd shell prompt such as `-bash-5.3#`, run:
+
+   ```sh
+   systemd-tty-ask-password-agent --watch
+   ```
+
+5. Enter the LUKS passphrase.
+6. After boot, reconnect Soyo to the LAN switch/router.
+
 
 ### After successful unlock (Phase 2 — Secure Boot)
 
@@ -87,15 +100,17 @@ sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
 sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partlabel/luks
 ```
 
+If `--wipe-slot=tpm2` prints `No slots to remove selected.`, there was no TPM slot enrolled yet. Continue with the enroll command.
+
 ## Phase 2 — Limine Secure Boot setup (one-time operator steps)
 
 These steps enable Secure Boot with custom keys on Soyo. Run once after deploying the Phase 2 config.
 
 ### Prerequisites
 
-- Soyo has `boot.loader.limine.secureBoot.enable = true` deployed (the nixpkgs module force-enables `enrollConfig`, `validateChecksums`, and `panicOnChecksumMismatch`; the editor is locked).
-- Firmware Secure Boot Mode set to **Customized** (confirmed available on this board).
-- `sbctl` is available in the dev shell.
+- Soyo has `boot.loader.limine.secureBoot.enable = true` in the deployed config (the nixpkgs module force-enables `enrollConfig`, `validateChecksums`, and `panicOnChecksumMismatch`; the editor is locked).
+- Firmware Secure Boot Mode can be switched to **Customized** (confirmed available on this board).
+- `sbctl` is available on Soyo. If you are cutting over from an older generation that does not ship it system-wide yet, run the `sbctl` commands below via `nix shell nixpkgs#sbctl -c ...`.
 
 ### Steps
 
@@ -104,24 +119,31 @@ These steps enable Secure Boot with custom keys on Soyo. Run once after deployin
 #    Customized, then use "Reset to Setup Mode" to clear the factory keys.
 #    Reboot.
 
-# 2. Generate custom Secure Boot keys on Soyo
+# 2. Generate custom Secure Boot keys on Soyo.
 sudo sbctl create-keys
 
-# 3. Enroll keys, keeping Microsoft keys so option ROMs and vendor firmware still load
+# 3. Enroll keys, keeping Microsoft keys so option ROMs and vendor firmware still load.
 sudo sbctl enroll-keys -m
 
-# 4. Enable Secure Boot in firmware
+# 4. From your workstation, deploy once more before the next reboot.
+#    This signs Limine with the newly-created keys and persists /var/lib/sbctl
+#    on the impermanent root so future bootloader installs keep working.
+./scripts/deploy-soyo.sh
+
+# 5. Enable Secure Boot in firmware.
 #    BIOS → Secure Boot → Enabled. If "Reset to Setup Mode" is still active,
 #    toggle it off first.
 
-# 5. Re-enroll the TPM keyslot against PCR 0+2+7 for firmware+tamper coverage
+# 6. Re-enroll the TPM keyslot against PCR 0+2+7 for firmware+tamper coverage.
 sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
 sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partlabel/luks
 
-# 6. Verify
+# 7. Verify.
 sudo sbctl status
-# Expected: Setup Mode: User, Secure Boot: enabled, files signed
+# Expected: Setup Mode: User, Secure Boot: enabled.
 ```
+
+`sbctl status` may still show `Installed: ✗ sbctl is not installed` in this setup. That field is about sbctl's own tracked-file database, while the NixOS Limine module signs `BOOTX64.EFI` directly during activation.
 
 ### Recovery if Secure Boot blocks boot
 
@@ -129,12 +151,13 @@ If Secure Boot prevents booting during setup (wrong keys, unsigned image):
 
 1. Enter BIOS, set Secure Boot back to **Standard** (or disable it).
 2. Boot normally — the passphrase keyslot is an independent fallback throughout.
-3. Debug and re-run the steps above.
+3. If the failed deploy complained that there were no `sbctl` Secure Boot keys, return firmware to Setup Mode, recreate the keys, deploy once before rebooting again, then re-enable Secure Boot.
 
 ### Caveats
 
 - `fwupd` is currently broken under Limine Secure Boot ([nixpkgs #534574](https://github.com/NixOS/nixpkgs/issues/534574)). LVFS firmware updates may need Secure Boot temporarily off.
 - PCR 0+2+7 is stable across kernel/initrd/bootloader updates — auto-unlock survives normal deployments without re-enrollment. Only a BIOS/firmware update (changes PCR 0) or clearing the TPM requires re-enrollment.
+- On an impermanent root, `/var/lib/sbctl` is real persistent state. If that directory is lost, the current signed boot path can still boot, but the next Limine reinstall fails with `There are no sbctl secure boot keys present. Please generate some.`
 
 ## Soyo fully down (dead hardware, no power)
 
