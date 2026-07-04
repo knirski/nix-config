@@ -62,7 +62,7 @@ sudo nixos-rebuild switch --rollback
 # Revert the flake lock to the known-good nixpkgs revision
 git checkout flake.lock
 # Or: nix flake lock --override-input nixpkgs github:NixOS/nixpkgs/<known-good-rev>
-./scripts/deploy-soyo
+./scripts/deploy-soyo.sh
 ```
 
 ## Testing before committing

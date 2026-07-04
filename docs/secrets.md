@@ -282,7 +282,7 @@ Then:
 > rekeyed secrets; the full rekey workflow is completed as part of the
 > deploy checklist.
 
-See [`hosts/soyo/DEPLOY.md`](../hosts/soyo/DEPLOY.md) for the concrete steps.
+See [`docs/install-soyo.md`](install-soyo.md) for the concrete steps.
 
 ---
 
