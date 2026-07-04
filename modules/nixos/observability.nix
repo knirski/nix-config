@@ -328,7 +328,10 @@
 
               // Ship systemd journal to local Loki
               loki.source.journal "soyo" {
-                max_age       = "12h"
+                // This only applies when the positions file is missing, for
+                // example after a deliberate state wipe. Keep the backfill
+                // short so Drilldown reaches recent logs quickly again.
+                max_age       = "30m"
                 forward_to    = [loki.write.local_loki.receiver]
                 relabel_rules = loki.relabel.journal_drilldown.rules
                 labels        = {
