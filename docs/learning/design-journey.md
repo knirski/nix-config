@@ -126,7 +126,7 @@ extraFlags = [
 
 - **Prometheus self-monitoring (dashboard 19268).** 1,300+ metrics from `localhost:9090/metrics` covering TSDB, query latency, WAL. Low signal-to-noise for 3 scrape targets and ~2,500 series — nothing to optimize.
 - **Grafana self-monitoring.** Community dashboards target v10/v11 naming; Grafana 13 renamed half the metrics. `systemctl status grafana` already tells you it's running.
-- **Custom "Soyo Appliance" dashboard.** 600 lines of hand-maintained JSON covering CPU, memory, disk, and service status. Node Exporter Full (1860) covers all of it plus 130 more panels. Dropped in `0b8e703`.
+- **Custom landing dashboards only.** A first pass at a monolithic "Soyo Appliance" dashboard was dropped because Node Exporter Full (1860) already covers generic host internals far better. The custom dashboards came back later, but with a narrower job: a generic **Fleet Overview** landing page and a role-specific **Soyo Control Plane** drilldown. Research with `gh` across real repos found the same split repeatedly — fleet/host summaries (for example Misterio77's `hosts.json`) and service-status dashboards (for example Swarsel's `service-status.json`) work well as home pages, while imported community dashboards stay the deep dives. The rule that survived: hand-written dashboards may summarize and route, but they should not try to reimplement the detailed dashboards.
 
 ## What's deferred to M3/M4
 
