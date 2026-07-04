@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.base =
+  aspects.nixos.base =
     { pkgs, ... }:
     {
       time.timeZone = "Europe/Warsaw";

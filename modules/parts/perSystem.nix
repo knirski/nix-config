@@ -3,13 +3,13 @@
   systems = [ "x86_64-linux" ];
   imports = [
     inputs.treefmt-nix.flakeModule
-    inputs.agenix-rekey.flakeModules.default
   ];
 
   perSystem =
     {
       pkgs,
       config,
+      system,
       ...
     }:
     {
@@ -30,7 +30,7 @@
           pkgs.nixos-facter
           pkgs.nixos-rebuild
           pkgs.sbctl
-          config.agenix-rekey.package
+          inputs.agenix-rekey.packages.${system}.default
         ];
       };
     };

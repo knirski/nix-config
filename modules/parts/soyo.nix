@@ -1,5 +1,5 @@
 # flake-parts module: assembles nixosConfigurations.soyo by toggling aspects
-# (config.flake.modules.nixos.*) and importing host-specific files.
+# (config.aspects.nixos.*) and importing host-specific files.
 # Grown incrementally across the following tasks.
 { config, inputs, ... }:
 {
@@ -7,7 +7,7 @@
     system = "x86_64-linux";
     specialArgs = { inherit inputs; };
     modules =
-      (with config.flake.modules.nixos; [
+      (with config.aspects.nixos; [
         base
         server
         users
@@ -29,7 +29,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.krzysiek.imports = [ config.flake.modules.homeManager.base ];
+            home-manager.users.krzysiek.imports = [ config.aspects.homeManager.base ];
           }
         )
         ../../hosts/soyo/users.nix
