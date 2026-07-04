@@ -152,7 +152,7 @@ let
 in
 {
   perSystem =
-    { pkgs, system, ... }:
+    { pkgs, ... }:
     {
       packages.topology =
         (import nix-topology {

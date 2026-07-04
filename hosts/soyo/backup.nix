@@ -8,6 +8,8 @@
       # from the reservations.nix forward-A records).
       repository = "sftp:soyo-backup@czworaczki:/backup/soyo";
       passwordFile = config.age.secrets.restic-password.path;
+      # Back up the whole persisted state tree. This includes /persist/var/lib/sbctl,
+      # so the Secure Boot signing keys survive a disaster restore too.
       paths = [
         "/persist"
       ];
