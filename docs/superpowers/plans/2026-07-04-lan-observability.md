@@ -103,60 +103,54 @@ Expected: FAIL with a path-not-found error for `./hosts/soyo/network.nix`.
 
 - [ ] **Step 3: Pass `networkData` into the observability host policy**
 
-```nix
-# hosts/soyo/observability.nix
-let
-  networkData = import ./network.nix;
-in
-{
-  lanAppliance.services.observability = {
-    enable = true;
-    networkData = networkData;
-    # dnsmasq listens on 5353 (Blocky owns :53).
-    dnsmasqExporter.dnsmasqListenAddress = "127.0.0.1:5353";
-    grafana.enable = true;
-    openFirewall = true;
-  };
-}
+`hosts/soyo/observability.nix` already exists with the basic observability config. Add the `networkData` import and pass-through:
+
+```diff
+--- a/hosts/soyo/observability.nix
++++ b/hosts/soyo/observability.nix
+@@ -1,5 +1,9 @@
++let
++  networkData = import ./network.nix;
++in
+ {
+   lanAppliance.services.observability = {
+     enable = true;
++    networkData = networkData;
+     # dnsmasq listens on 5353 (Blocky owns :53).
+     dnsmasqExporter.dnsmasqListenAddress = "127.0.0.1:5353";
+     grafana.enable = true;
 ```
 
 - [ ] **Step 4: Rewire topology to read reservations through the new namespace**
 
-```nix
-# modules/parts/topology.nix
-let
-  inherit (inputs) nix-topology;
+`modules/parts/topology.nix` already exists with reservations imported directly. Change just the import line — all downstream topology logic (`grouped`, `deviceNodes`, `isWiFi`/`isNAS` heuristics, upstream nodes) stays untouched:
 
-  networkData = import ../../hosts/soyo/network.nix;
-  reservations = networkData.reservations;
+```diff
+--- a/modules/parts/topology.nix
++++ b/modules/parts/topology.nix
+@@ -17,7 +17,8 @@
+ let
+   inherit (inputs) nix-topology;
 
-  # Group reservations by name (multihomed hosts have multiple entries)
-  grouped = lib.foldl (
-    acc: r:
-    acc
-    // {
-      ${r.name} = (acc.${r.name} or [ ]) ++ [
-        {
-          inherit (r) name mac ip;
-          isWiFi = lib.hasPrefix "orbi-satellite" r.name;
-          isNAS = r.name == "czworaczki";
-        }
-      ];
-    }
-  ) { } reservations;
+-  reservations = import ../../hosts/soyo/reservations.nix;
++  networkData = import ../../hosts/soyo/network.nix;
++  reservations = networkData.reservations;
+
+   # Group reservations by name (multihomed hosts have multiple entries)
+   grouped = lib.foldl (
 ```
 
-- [ ] **Step 5: Run the namespace checks**
+- [ ] **Step 5: Run the namespace checks and verify topology didn't regress**
 
 Run:
 ```bash
 nix eval --json --expr '(import ./hosts/soyo/network.nix).deviceMeta' | jq 'keys'
-nix eval --raw .#topology.x86_64-linux.drvPath
+nix build .#topology.x86_64-linux
 ```
 
 Expected:
 - first command prints the monitored device keys, including `"czworaczki"` and `"drukarka"`
-- second command prints a derivation path instead of failing
+- second command succeeds (verified visually by inspecting `result/main.svg` for the expected device nodes)
 
 - [ ] **Step 6: Commit the namespace introduction**
 
@@ -180,74 +174,66 @@ nix eval --json .#nixosConfigurations.soyo.config.services.prometheus.scrapeConf
 
 Expected: `[]`. This check protects the existing `node`, `dnsmasq`, and `blocky` scrapes from accidental replacement in the next step.
 
-- [ ] **Step 2: Add observability options for `networkData` and blackbox exporter binding**
+- [ ] **Step 2: Add `networkData` and `blackboxExporter` options**
+
+The module already declares `nodeExporter`, `dnsmasqExporter`, `grafana`, and `openFirewall` options. Add only the new ones:
 
 ```nix
-# modules/nixos/observability.nix
-options.lanAppliance.services.observability = {
-  enable = lib.mkEnableOption "prometheus node_exporter, dnsmasq exporter, and optional on-box Grafana dashboards";
-
-  networkData = lib.mkOption {
-    type = lib.types.attrs;
-    default = {
-      reservations = [ ];
-      monitoredInfrastructure = [ ];
-      deviceMeta = { };
-    };
-    description = "Host-local network data used for LAN dashboards, blackbox probes, and passive inventory.";
-  };
-
-  blackboxExporter = {
-    listenAddress = lib.mkOption {
-      type = lib.types.str;
-      default = "127.0.0.1";
-      description = "Loopback listen address for blackbox_exporter (module appends :9115).";
-    };
-  };
-
-  nodeExporter = {
-    listenAddress = lib.mkOption {
-      type = lib.types.str;
-      default = "127.0.0.1";
-      description = "Listen address (IP only, no port — the module appends its default :9100).";
-    };
-  };
-
-  dnsmasqExporter = {
-    listenAddress = lib.mkOption {
-      type = lib.types.str;
-      default = "127.0.0.1";
-      description = "Listen address (IP only, no port — the module appends its default :9153).";
-    };
-    dnsmasqListenAddress = lib.mkOption {
-      type = lib.types.str;
-      default = "soyo:5353";
-      description = "dnsmasq address for lease stats; must match where dnsmasq is reachable from Soyo.";
-    };
-    leasesPath = lib.mkOption {
-      type = lib.types.str;
-      default = "/var/lib/dnsmasq/dnsmasq.leases";
+# modules/nixos/observability.nix — add inside the existing
+# options.lanAppliance.services.observability = { ... } block
+networkData = lib.mkOption {
+  type = lib.types.submodule {
+    options = {
+      reservations = lib.mkOption {
+        type = lib.types.listOf (lib.types.submodule {
+          options = {
+            name = lib.mkOption { type = lib.types.str; };
+            mac = lib.mkOption { type = lib.types.str; };
+            ip = lib.mkOption { type = lib.types.str; };
+          };
+        });
+        default = [ ];
+        description = "DHCP/DNS reservation list, same shape as hosts/soyo/reservations.nix.";
+      };
+      monitoredInfrastructure = lib.mkOption {
+        type = lib.types.listOf (lib.types.submodule {
+          options = {
+            name = lib.mkOption { type = lib.types.str; };
+            ip = lib.mkOption { type = lib.types.str; };
+            kind = lib.mkOption { type = lib.types.str; };
+            displayName = lib.mkOption { type = lib.types.str; };
+            probeHttpUrl = lib.mkOption { type = lib.types.nullOr lib.types.str; default = null; };
+          };
+        });
+        default = [ ];
+        description = "Infrastructure targets that should always be probed (e.g. non-DHCP or off-LAN devices).";
+      };
+      deviceMeta = lib.mkOption {
+        type = lib.types.attrsOf (lib.types.submodule {
+          options = {
+            kind = lib.mkOption { type = lib.types.str; };
+            displayName = lib.mkOption { type = lib.types.str; };
+            monitor = lib.mkOption { type = lib.types.bool; default = false; };
+          };
+        });
+        default = { };
+        description = "Observability-only labels keyed by reservation name — keeps rich labels off the DHCP schema.";
+      };
     };
   };
-
-  grafana = {
-    enable = lib.mkEnableOption "on-box Grafana dashboards (adds a local Prometheus scraper; resource-isolated as a guest service)";
-    listenAddress = lib.mkOption {
-      type = lib.types.str;
-      default = "soyo";
-      description = "Grafana listen address (the module appends :3000).";
-    };
-    domain = lib.mkOption {
-      type = lib.types.str;
-      default = "soyo";
-      description = "Grafana root URL domain (used for redirects and links).";
-    };
+  default = {
+    reservations = [ ];
+    monitoredInfrastructure = [ ];
+    deviceMeta = { };
   };
+  description = "Host-local network data used for LAN dashboards, blackbox probes, and passive inventory.";
+};
 
-  openFirewall = lib.mkOption {
-    type = lib.types.bool;
-    default = false;
-    description = "Open the LAN firewall for exporter ports (9100, 9153) and Grafana (3000).";
+blackboxExporter = {
+  listenAddress = lib.mkOption {
+    type = lib.types.str;
+    default = "127.0.0.1";
+    description = "Loopback listen address for blackbox_exporter (module appends :9115).";
   };
 };
 ```
@@ -301,8 +287,11 @@ in
 
 - [ ] **Step 4: Enable blackbox exporter and add Prometheus ICMP and HTTP jobs**
 
+**Insertion point:** The blackbox exporter service and its systemd limit go in the **first** `mkMerge` element (always active under `cfg.enable`). The blackbox scrape jobs go in a **new third** `mkMerge` element — the NixOS module system merges `scrapeConfigs` lists across `mkMerge` elements automatically, so this appends to the existing `node`/`dnsmasq`/`blocky` jobs without overwriting them.
+
 ```nix
 # modules/nixos/observability.nix
+# --- first mkMerge element (always-on) — add after existing node_exporter block ---
 services.prometheus.exporters.blackbox = {
   enable = true;
   listenAddress = cfg.blackboxExporter.listenAddress;
@@ -328,64 +317,55 @@ systemd.services.prometheus-blackbox-exporter.serviceConfig = {
   CPUQuota = "10%";
 };
 
-services.prometheus.scrapeConfigs = [
-  {
-    job_name = "node";
-    static_configs = [ { targets = [ "localhost:9100" ]; } ];
-  }
-  {
-    job_name = "dnsmasq";
-    static_configs = [ { targets = [ "localhost:9153" ]; } ];
-  }
-  {
-    job_name = "blocky";
-    static_configs = [ { targets = [ "localhost:4000" ]; } ];
-  }
-  {
-    job_name = "blackbox-exporter";
-    static_configs = [ { targets = [ "127.0.0.1:9115" ]; } ];
-  }
-  {
-    job_name = "blackbox-icmp";
-    metrics_path = "/probe";
-    params.module = [ "icmp" ];
-    static_configs = map (t: mkStaticLabelTarget t t.ip) probeTargets;
-    relabel_configs = [
-      {
-        source_labels = [ "__address__" ];
-        target_label = "__param_target";
-      }
-      {
-        source_labels = [ "__param_target" ];
-        target_label = "instance";
-      }
-      {
-        target_label = "__address__";
-        replacement = "127.0.0.1:9115";
-      }
-    ];
-  }
-  {
-    job_name = "blackbox-http";
-    metrics_path = "/probe";
-    params.module = [ "http_2xx" ];
-    static_configs = map (t: mkStaticLabelTarget t t.probeHttpUrl) httpProbeTargets;
-    relabel_configs = [
-      {
-        source_labels = [ "__address__" ];
-        target_label = "__param_target";
-      }
-      {
-        source_labels = [ "__param_target" ];
-        target_label = "instance";
-      }
-      {
-        target_label = "__address__";
-        replacement = "127.0.0.1:9115";
-      }
-    ];
-  }
-];
+# --- third mkMerge element — add as a new list item inside the mkMerge ---
+(lib.mkIf grafanaCfg.enable {
+  services.prometheus.scrapeConfigs = [
+    {
+      job_name = "blackbox-exporter";
+      static_configs = [ { targets = [ "127.0.0.1:9115" ]; } ];
+    }
+    {
+      job_name = "blackbox-icmp";
+      metrics_path = "/probe";
+      params.module = [ "icmp" ];
+      static_configs = map (t: mkStaticLabelTarget t t.ip) probeTargets;
+      relabel_configs = [
+        {
+          source_labels = [ "__address__" ];
+          target_label = "__param_target";
+        }
+        {
+          source_labels = [ "__param_target" ];
+          target_label = "instance";
+        }
+        {
+          target_label = "__address__";
+          replacement = "127.0.0.1:9115";
+        }
+      ];
+    }
+    {
+      job_name = "blackbox-http";
+      metrics_path = "/probe";
+      params.module = [ "http_2xx" ];
+      static_configs = map (t: mkStaticLabelTarget t t.probeHttpUrl) httpProbeTargets;
+      relabel_configs = [
+        {
+          source_labels = [ "__address__" ];
+          target_label = "__param_target";
+        }
+        {
+          source_labels = [ "__param_target" ];
+          target_label = "instance";
+        }
+        {
+          target_label = "__address__";
+          replacement = "127.0.0.1:9115";
+        }
+      ];
+    }
+  ];
+})
 ```
 
 - [ ] **Step 5: Evaluate the blackbox jobs and labels**
@@ -625,6 +605,8 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Wire the collector into the observability module with a service and timer**
 
+**Insertion point:** Add these to the **first** `mkMerge` element (always active under `cfg.enable`).
+
 ```nix
 # modules/nixos/observability.nix
 let
@@ -661,6 +643,7 @@ in
       Type = "oneshot";
       User = "prometheus";
       Group = "prometheus";
+      SupplementaryGroups = [ "dnsmasq" ];
       ExecStart = "${lanInventoryScript}/bin/lan-inventory-exporter";
       MemoryMax = "96M";
       CPUQuota = "10%";
@@ -709,7 +692,7 @@ git commit -m "feat(observability): add passive lan inventory collector"
 
 Run:
 ```bash
-rg -n "lan-overview|LAN Overview" modules/nixos/observability.nix
+grep -rn "lan-overview\|LAN Overview" modules/nixos/observability.nix
 ```
 
 Expected: no matches.
@@ -847,15 +830,15 @@ This keeps `LAN Overview`, `Fleet Overview`, and `Node Exporter Full` at the roo
 ```md
 # docs/validation-checklist.md
 - [ ] **blackbox probe targets visible**
-  Command: `curl -s http://soyo:9090/api/v1/targets | jq '''.data.activeTargets[] | select(.labels.job | test("blackbox")) | {job: .labels.job, instance: .labels.instance, target_name: .labels.target_name, health: .health}'''`
+  Command: `curl -s http://soyo:9090/api/v1/targets | jq '.data.activeTargets[] | select(.labels.job | test("blackbox")) | {job: .labels.job, instance: .labels.instance, target_name: .labels.target_name, health: .health}'`
   Expected: healthy `blackbox-icmp` targets for Orbi, Funbox, satellites, `drukarka`, and `czworaczki`; healthy `blackbox-http` targets for Orbi and Funbox.
 
 - [ ] **LAN inventory metrics present**
-  Command: `curl -s http://soyo:9100/metrics | rg '''^lan_device_(seen|reserved|lease_expires_seconds)'''`
+  Command: `curl -s http://soyo:9100/metrics | grep '^lan_device_'`
   Expected: metrics present, including reserved devices and at least one visible device row.
 
 - [ ] **LAN dashboard provisioned at root**
-  Command: `curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:3000/api/search | jq '''[.[] | {title, uid, folderTitle}] | map(select(.title == "LAN Overview" or .title == "Fleet Overview" or .title == "Node Exporter Full"))'''`
+  Command: `curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:3000/api/search | jq '[.[] | {title, uid, folderTitle}] | map(select(.title == "LAN Overview" or .title == "Fleet Overview" or .title == "Node Exporter Full"))'`
   Expected: `LAN Overview`, `Fleet Overview`, and `Node Exporter Full` appear at the root; the `Soyo` folder still contains only `Soyo Control Plane`, `Blocky`, and `Dnsmasq`.
 ```
 
@@ -872,7 +855,7 @@ Run:
 ```bash
 nix flake check
 sudo nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
-curl -s http://soyo:9100/metrics | rg '^lan_device_(seen|reserved|lease_expires_seconds)'
+curl -s http://soyo:9100/metrics | grep '^lan_device_'
 curl -s http://soyo:9090/api/v1/targets | jq '.data.activeTargets[] | select(.labels.job | test("blackbox")) | {job: .labels.job, instance: .labels.instance, target_name: .labels.target_name, health: .health}'
 curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:3000/api/search | jq '[.[] | {title, uid, folderTitle}]'
 ```
