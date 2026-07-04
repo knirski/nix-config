@@ -6,6 +6,11 @@
   security.tpm2.enable = true;
 
   boot.loader.limine.enable = true;
+  # systemd-boot-random-seed writes to /boot/loader/random-seed on the ESP.
+  # Since the ESP is vfat (no permissions), bootctl warns "world accessible"
+  # every boot. This service only applies to systemd-boot; with Limine we
+  # don't need it.
+  systemd.services.systemd-boot-random-seed.enable = false;
   # Phase 2: enable Limine's Secure Boot mode declaratively first, then perform
   # the one-time firmware + sbctl key enrollment from docs/recovery.md.
   # The module force-enables the safe settings needed for a locked boot path.
