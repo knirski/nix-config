@@ -73,6 +73,202 @@
           };
         in
         pkgs.writeText "dashboard.json" (builtins.toJSON withTags);
+
+      networkData = cfg.networkData;
+      deviceMeta = networkData.deviceMeta or { };
+
+      reservationProbeTargets = lib.concatMap (
+        r:
+        let
+          meta = deviceMeta.${r.name} or null;
+        in
+        lib.optionals ((meta != null) && ((meta.monitor or false))) [
+          {
+            name = r.name;
+            ip = r.ip;
+            kind = meta.kind or "host";
+            displayName = meta.displayName or r.name;
+          }
+        ]
+      ) networkData.reservations;
+
+      probeTargets =
+        reservationProbeTargets
+        ++ (map (
+          t:
+          t
+          // {
+            displayName = t.displayName or t.name;
+          }
+        ) networkData.monitoredInfrastructure);
+
+      httpProbeTargets = lib.filter (t: t ? probeHttpUrl) probeTargets;
+
+      mkStaticLabelTarget = t: target: {
+        targets = [ target ];
+        labels = {
+          target_name = t.name;
+          target_kind = t.kind;
+          display_name = t.displayName;
+          site = "lan";
+        };
+      };
+
+      lanInventoryNetworkJson = pkgs.writeText "lan-network.json" (builtins.toJSON cfg.networkData);
+      lanInventoryScript = pkgs.writeShellApplication {
+        name = "lan-inventory-exporter";
+        runtimeInputs = [
+          pkgs.iproute2
+          pkgs.python3
+        ];
+        text = ''
+          set -euo pipefail
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "$tmpdir"' EXIT
+
+          ${pkgs.iproute2}/bin/ip -json neigh show dev enp1s0 > "$tmpdir/neighbors.json"
+
+          exec ${pkgs.python3}/bin/python3 ${./observability/lan_inventory.py} \
+            --network-data ${lanInventoryNetworkJson} \
+            --leases ${cfg.dnsmasqExporter.leasesPath} \
+            --neighbors "$tmpdir/neighbors.json" \
+            --vendor-db ${pkgs.arp-scan}/etc/arp-scan/mac-vendor.txt \
+            --output /var/lib/prometheus/textfiles/lan_inventory.prom
+        '';
+      };
+      lanOverviewJson = pkgs.writeText "lan-overview.json" (
+        builtins.toJSON {
+          title = "LAN Overview";
+          uid = "lan-overview";
+          editable = false;
+          refresh = "30s";
+          time = {
+            from = "now-6h";
+            to = "now";
+          };
+          tags = [
+            "lan"
+            "network"
+            "blackbox"
+          ];
+          panels = [
+            {
+              id = 1;
+              type = "table";
+              title = "Infrastructure Reachability";
+              gridPos = {
+                x = 0;
+                y = 0;
+                w = 12;
+                h = 8;
+              };
+              targets = [
+                {
+                  refId = "A";
+                  datasource = {
+                    type = "prometheus";
+                    uid = "soyo-prometheus";
+                  };
+                  expr = "max by (display_name, target_kind, instance, job) (probe_success{job=~\"blackbox-(icmp|http)\", site=\"lan\"})";
+                  format = "table";
+                  instant = true;
+                }
+              ];
+            }
+            {
+              id = 2;
+              type = "timeseries";
+              title = "Probe Latency";
+              gridPos = {
+                x = 12;
+                y = 0;
+                w = 12;
+                h = 8;
+              };
+              targets = [
+                {
+                  refId = "A";
+                  datasource = {
+                    type = "prometheus";
+                    uid = "soyo-prometheus";
+                  };
+                  expr = "probe_duration_seconds{job=~\"blackbox-(icmp|http)\", site=\"lan\"}";
+                  legendFormat = "{{display_name}} ({{job}})";
+                }
+              ];
+            }
+            {
+              id = 3;
+              type = "table";
+              title = "Known Devices";
+              gridPos = {
+                x = 0;
+                y = 8;
+                w = 16;
+                h = 10;
+              };
+              targets = [
+                {
+                  refId = "A";
+                  datasource = {
+                    type = "prometheus";
+                    uid = "soyo-prometheus";
+                  };
+                  expr = "lan_device_seen{name!~\"unknown-.*\"}";
+                  format = "table";
+                  instant = true;
+                }
+              ];
+            }
+            {
+              id = 4;
+              type = "table";
+              title = "Unknown Devices";
+              gridPos = {
+                x = 16;
+                y = 8;
+                w = 8;
+                h = 10;
+              };
+              targets = [
+                {
+                  refId = "A";
+                  datasource = {
+                    type = "prometheus";
+                    uid = "soyo-prometheus";
+                  };
+                  expr = "lan_device_seen{name=~\"unknown-.*\"}";
+                  format = "table";
+                  instant = true;
+                }
+              ];
+            }
+            {
+              id = 5;
+              type = "table";
+              title = "Reservations Currently Absent";
+              gridPos = {
+                x = 0;
+                y = 18;
+                w = 24;
+                h = 8;
+              };
+              targets = [
+                {
+                  refId = "A";
+                  datasource = {
+                    type = "prometheus";
+                    uid = "soyo-prometheus";
+                  };
+                  expr = "lan_device_reserved unless on (ip, name, mac) lan_device_seen";
+                  format = "table";
+                  instant = true;
+                }
+              ];
+            }
+          ];
+        }
+      );
     in
     {
       options.lanAppliance.services.observability = {
@@ -122,6 +318,74 @@
           default = false;
           description = "Open the LAN firewall for exporter ports (9100, 9153) and Grafana (3000).";
         };
+
+        networkData = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              reservations = lib.mkOption {
+                type = lib.types.listOf (
+                  lib.types.submodule {
+                    options = {
+                      name = lib.mkOption { type = lib.types.str; };
+                      mac = lib.mkOption { type = lib.types.str; };
+                      ip = lib.mkOption { type = lib.types.str; };
+                    };
+                  }
+                );
+                default = [ ];
+                description = "DHCP/DNS reservation list, same shape as hosts/soyo/reservations.nix.";
+              };
+              monitoredInfrastructure = lib.mkOption {
+                type = lib.types.listOf (
+                  lib.types.submodule {
+                    options = {
+                      name = lib.mkOption { type = lib.types.str; };
+                      ip = lib.mkOption { type = lib.types.str; };
+                      kind = lib.mkOption { type = lib.types.str; };
+                      displayName = lib.mkOption { type = lib.types.str; };
+                      probeHttpUrl = lib.mkOption {
+                        type = lib.types.nullOr lib.types.str;
+                        default = null;
+                      };
+                    };
+                  }
+                );
+                default = [ ];
+                description = "Infrastructure targets that should always be probed (e.g. non-DHCP or off-LAN devices).";
+              };
+              deviceMeta = lib.mkOption {
+                type = lib.types.attrsOf (
+                  lib.types.submodule {
+                    options = {
+                      kind = lib.mkOption { type = lib.types.str; };
+                      displayName = lib.mkOption { type = lib.types.str; };
+                      monitor = lib.mkOption {
+                        type = lib.types.bool;
+                        default = false;
+                      };
+                    };
+                  }
+                );
+                default = { };
+                description = "Observability-only labels keyed by reservation name — keeps rich labels off the DHCP schema.";
+              };
+            };
+          };
+          default = {
+            reservations = [ ];
+            monitoredInfrastructure = [ ];
+            deviceMeta = { };
+          };
+          description = "Host-local network data used for LAN dashboards, blackbox probes, and passive inventory.";
+        };
+
+        blackboxExporter = {
+          listenAddress = lib.mkOption {
+            type = lib.types.str;
+            default = "127.0.0.1";
+            description = "Loopback listen address for blackbox_exporter (module appends :9115).";
+          };
+        };
       };
 
       config = lib.mkIf cfg.enable (
@@ -146,6 +410,10 @@
 
             # Resource isolation: exporters are guest services; prevent them from
             # starving Blocky or dnsmasq under memory/CPU pressure.
+            # Also: node-exporter needs to read textfiles written by prometheus
+            # user, so add it to the prometheus supplementary group.
+            users.users.node-exporter.extraGroups = [ "prometheus" ];
+
             systemd.services.prometheus-node-exporter.serviceConfig = {
               MemoryMax = "64M";
               CPUQuota = "10%";
@@ -158,6 +426,63 @@
 
             networking.firewall = lib.mkIf cfg.openFirewall {
               interfaces.enp1s0.allowedTCPPorts = lib.optionals grafanaCfg.enable [ 3000 ];
+            };
+
+            services.prometheus.exporters.blackbox = {
+              enable = true;
+              listenAddress = cfg.blackboxExporter.listenAddress;
+              configFile = pkgs.writeText "blackbox.yml" (
+                builtins.toJSON {
+                  modules = {
+                    icmp.prober = "icmp";
+                    http_2xx = {
+                      prober = "http";
+                      timeout = "5s";
+                      http = {
+                        preferred_ip_protocol = "ip4";
+                        method = "GET";
+                      };
+                    };
+                  };
+                }
+              );
+            };
+
+            systemd.services.prometheus-blackbox-exporter.serviceConfig = {
+              MemoryMax = "96M";
+              CPUQuota = "10%";
+            };
+
+            systemd.tmpfiles.rules = [
+              "d /var/lib/prometheus/textfiles 0755 prometheus prometheus -"
+            ];
+
+            systemd.services.lan-inventory-exporter = {
+              description = "Emit passive LAN inventory metrics for node_exporter textfile collector";
+              after = [
+                "network-online.target"
+                "dnsmasq.service"
+              ];
+              wants = [ "network-online.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                User = "prometheus";
+                Group = "prometheus";
+                SupplementaryGroups = [ "dnsmasq" ];
+                ExecStart = "${lanInventoryScript}/bin/lan-inventory-exporter";
+                MemoryMax = "96M";
+                CPUQuota = "10%";
+              };
+            };
+
+            systemd.timers.lan-inventory-exporter = {
+              wantedBy = [ "timers.target" ];
+              timerConfig = {
+                OnBootSec = "2m";
+                OnUnitActiveSec = "5m";
+                RandomizedDelaySec = "30s";
+                Unit = "lan-inventory-exporter.service";
+              };
             };
           }
 
@@ -1393,6 +1718,7 @@
                         mkdir -p $out
                         cp ${fleetJson} $out/001-fleet-overview.json
                         cp ${nodeExporterJson} $out/002-node-exporter-full.json
+                        cp ${lanOverviewJson} $out/003-lan-overview.json
                       '';
                     }
                     {
@@ -1973,6 +2299,56 @@
                 Persistent = true;
               };
             };
+          })
+
+          # --- Blackbox probe jobs (grafana-dependent: needs Prometheus) ---
+          (lib.mkIf grafanaCfg.enable {
+            services.prometheus.scrapeConfigs = [
+              {
+                job_name = "blackbox-exporter";
+                static_configs = [ { targets = [ "127.0.0.1:9115" ]; } ];
+              }
+              {
+                job_name = "blackbox-icmp";
+                metrics_path = "/probe";
+                params.module = [ "icmp" ];
+                static_configs = map (t: mkStaticLabelTarget t t.ip) probeTargets;
+                relabel_configs = [
+                  {
+                    source_labels = [ "__address__" ];
+                    target_label = "__param_target";
+                  }
+                  {
+                    source_labels = [ "__param_target" ];
+                    target_label = "instance";
+                  }
+                  {
+                    target_label = "__address__";
+                    replacement = "127.0.0.1:9115";
+                  }
+                ];
+              }
+              {
+                job_name = "blackbox-http";
+                metrics_path = "/probe";
+                params.module = [ "http_2xx" ];
+                static_configs = map (t: mkStaticLabelTarget t t.probeHttpUrl) httpProbeTargets;
+                relabel_configs = [
+                  {
+                    source_labels = [ "__address__" ];
+                    target_label = "__param_target";
+                  }
+                  {
+                    source_labels = [ "__param_target" ];
+                    target_label = "instance";
+                  }
+                  {
+                    target_label = "__address__";
+                    replacement = "127.0.0.1:9115";
+                  }
+                ];
+              }
+            ];
           })
         ]
       );
