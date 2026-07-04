@@ -199,7 +199,7 @@ The fix (`0af140c`): 20 replacements across Prometheus scrape targets, Loki bind
 
 Another impermanence gotcha showed up during a full observability wipe. Recreating `/persist/var/lib/grafana`, `/persist/var/lib/loki`, `/persist/var/lib/tempo`, or `/persist/var/lib/prometheus` as bare directories is not enough — they come back as `root:root`, the bind mounts succeed, and the services then fail later with ordinary filesystem errors (`permission denied`, failed symlink creation, missing WAL directories).
 
-The fix is declarative ownership via `systemd.tmpfiles` for persisted service directories. Presence answers “does the path survive reboot”; ownership answers “can the service actually use it after a wipe or recovery.” On an impermanent host, both are part of the state contract.
+The fix is declarative ownership in the `preservation` inventory for the top-level persisted service directories themselves. `preservation` generates the tmpfiles entries for those paths, so a second conflicting rule gets ignored. Plain tmpfiles rules still make sense for nested helper directories such as Tempo's generator WAL and trace storage. Presence answers “does the path survive reboot”; ownership answers “can the service actually use it after a wipe or recovery.” On an impermanent host, both are part of the state contract.
 
 ### ntfy alert rendering: templates over attachments
 
