@@ -404,182 +404,205 @@
 
           # --- On-box Grafana + Prometheus (optional guest service) ---
           (lib.mkIf grafanaCfg.enable (
-            {
-              services.prometheus = {
-                enable = true;
-                listenAddress = "localhost";
-                port = 9090;
-                scrapeConfigs = [
-                  {
-                    job_name = "node";
-                    static_configs = [ { targets = [ "localhost:9100" ]; } ];
-                  }
-                  {
-                    job_name = "dnsmasq";
-                    static_configs = [ { targets = [ "localhost:9153" ]; } ];
-                  }
-                  {
-                    job_name = "blocky";
-                    static_configs = [ { targets = [ "localhost:4000" ]; } ];
-                  }
-                ];
-              };
-
-              services.loki = {
-                enable = true;
-                configuration = {
-                  auth_enabled = false;
-                  analytics.reporting_enabled = false;
-
-                  server = {
-                    http_listen_port = 3100;
-                    http_listen_address = "localhost";
-                    log_level = "warn";
-                  };
-
-                  ingester = {
-                    lifecycler = {
-                      address = "127.0.0.1";
-                      ring = {
-                        kvstore.store = "inmemory";
-                        replication_factor = 1;
-                      };
-                      final_sleep = "0s";
-                    };
-                    chunk_idle_period = "5m";
-                    chunk_retain_period = "30s";
-                    wal = {
-                      enabled = true;
-                      dir = "/var/lib/loki/wal";
-                    };
-                  };
-
-                  query_scheduler.use_scheduler_ring = false;
-
-                  schema_config.configs = [
+            lib.mkMerge [
+              {
+                services.prometheus = {
+                  enable = true;
+                  listenAddress = "localhost";
+                  port = 9090;
+                  scrapeConfigs = [
                     {
-                      from = "2025-01-01";
-                      store = "tsdb";
-                      object_store = "filesystem";
-                      schema = "v13";
-                      index = {
-                        prefix = "index_";
-                        period = "24h";
-                      };
+                      job_name = "node";
+                      static_configs = [ { targets = [ "localhost:9100" ]; } ];
+                    }
+                    {
+                      job_name = "dnsmasq";
+                      static_configs = [ { targets = [ "localhost:9153" ]; } ];
+                    }
+                    {
+                      job_name = "blocky";
+                      static_configs = [ { targets = [ "localhost:4000" ]; } ];
                     }
                   ];
-
-                  storage_config = {
-                    tsdb_shipper = {
-                      active_index_directory = "/var/lib/loki/tsdb-index";
-                      cache_location = "/var/lib/loki/tsdb-cache";
-                      cache_ttl = "24h";
-                    };
-                    filesystem.directory = "/var/lib/loki/chunks";
-                  };
-
-                  compactor = {
-                    working_directory = "/var/lib/loki/compactor";
-                    retention_enabled = true;
-                    delete_request_store = "filesystem";
-                  };
-
-                  limits_config = {
-                    reject_old_samples = true;
-                    reject_old_samples_max_age = "168h";
-                    retention_period = "720h";
-                    allow_structured_metadata = false;
-                    ingestion_rate_mb = 12;
-                    ingestion_burst_size_mb = 18;
-                  };
                 };
-              };
 
-              services.alloy = {
-                enable = true;
-                extraFlags = [ "--disable-reporting" ];
-              };
-              environment.etc."alloy/config.alloy".text = alloyConfig;
-
-              services.grafana =
-                let
-                  config' = {
-                    server = {
-                      http_addr = "0.0.0.0";
-                      http_port = 3000;
-                      domain = grafanaCfg.domain;
-                      root_url = "http://${grafanaCfg.domain}:3000";
-                    };
-                    analytics.reporting_enabled = false;
-                    grafana_news.new_news_enabled = false;
-                    security.secret_key = "SW2YcwTIb9zpOOhoPsMm";
-                    security.admin_password = "$__file{${config.age.secrets.grafana-admin-password.path}}";
-                    unified_alerting.enabled = true;
-                    dashboards.default_home_dashboard_path = "${fleetJson}";
-                  };
-                in
-                {
+                services.loki = {
                   enable = true;
-                  settings = config';
-                  provision.datasources.settings = {
-                    apiVersion = 1;
-                    datasources = [
+                  configuration = {
+                    auth_enabled = false;
+                    analytics.reporting_enabled = false;
+
+                    server = {
+                      http_listen_port = 3100;
+                      http_listen_address = "localhost";
+                      log_level = "warn";
+                    };
+
+                    ingester = {
+                      lifecycler = {
+                        address = "127.0.0.1";
+                        ring = {
+                          kvstore.store = "inmemory";
+                          replication_factor = 1;
+                        };
+                        final_sleep = "0s";
+                      };
+                      chunk_idle_period = "5m";
+                      chunk_retain_period = "30s";
+                      wal = {
+                        enabled = true;
+                        dir = "/var/lib/loki/wal";
+                      };
+                    };
+
+                    query_scheduler.use_scheduler_ring = false;
+
+                    schema_config.configs = [
                       {
-                        name = "Prometheus";
-                        type = "prometheus";
-                        access = "proxy";
-                        url = "http://localhost:9090";
-                        uid = "soyo-prometheus";
-                        isDefault = true;
-                      }
-                      {
-                        name = "Loki";
-                        type = "loki";
-                        access = "proxy";
-                        url = "http://localhost:3100";
-                        uid = "soyo-loki";
-                      }
-                      {
-                        name = "Tempo";
-                        type = "tempo";
-                        access = "proxy";
-                        url = "http://localhost:3200";
-                        uid = "soyo-tempo";
-                      }
-                    ];
-                  };
-                  provision.dashboards.settings = {
-                    apiVersion = 1;
-                    providers = [
-                      {
-                        name = "fleet";
-                        type = "file";
-                        options.path = pkgs.runCommand "fleet-grafana-dashboards" { } ''
-                          mkdir -p $out
-                          cp ${fleetJson} $out/001-fleet-overview.json
-                          cp ${nodeExporterJson} $out/002-node-exporter-full.json
-                          cp ${lanOverviewJson} $out/003-lan-overview.json
-                        '';
-                      }
-                      {
-                        name = "soyo";
-                        type = "file";
-                        folder = "Soyo";
-                        folderUid = "soyo";
-                        options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
-                          mkdir -p $out
-                          cp ${homeJson} $out/001-soyo-control-plane.json
-                          cp ${dnsmasqJson} $out/dnsmasq.json
-                          cp ${blockyJson} $out/blocky.json
-                        '';
+                        from = "2025-01-01";
+                        store = "tsdb";
+                        object_store = "filesystem";
+                        schema = "v13";
+                        index = {
+                          prefix = "index_";
+                          period = "24h";
+                        };
                       }
                     ];
+
+                    storage_config = {
+                      tsdb_shipper = {
+                        active_index_directory = "/var/lib/loki/tsdb-index";
+                        cache_location = "/var/lib/loki/tsdb-cache";
+                        cache_ttl = "24h";
+                      };
+                      filesystem.directory = "/var/lib/loki/chunks";
+                    };
+
+                    compactor = {
+                      working_directory = "/var/lib/loki/compactor";
+                      retention_enabled = true;
+                      delete_request_store = "filesystem";
+                    };
+
+                    limits_config = {
+                      reject_old_samples = true;
+                      reject_old_samples_max_age = "168h";
+                      retention_period = "720h";
+                      allow_structured_metadata = false;
+                      ingestion_rate_mb = 12;
+                      ingestion_burst_size_mb = 18;
+                    };
                   };
                 };
 
-            }
-            // grafanaAlertSetup
-            // tempoTraces
+                services.alloy = {
+                  enable = true;
+                  extraFlags = [ "--disable-reporting" ];
+                };
+                environment.etc."alloy/config.alloy".text = alloyConfig;
+
+                services.grafana =
+                  let
+                    config' = {
+                      server = {
+                        http_addr = "0.0.0.0";
+                        http_port = 3000;
+                        domain = grafanaCfg.domain;
+                        root_url = "http://${grafanaCfg.domain}:3000";
+                      };
+                      analytics.reporting_enabled = false;
+                      grafana_news.new_news_enabled = false;
+                      security.secret_key = "SW2YcwTIb9zpOOhoPsMm";
+                      security.admin_password = "$__file{${config.age.secrets.grafana-admin-password.path}}";
+                      unified_alerting.enabled = true;
+                      dashboards.default_home_dashboard_path = "${fleetJson}";
+                    };
+                  in
+                  {
+                    enable = true;
+                    settings = config';
+                    provision.datasources.settings = {
+                      apiVersion = 1;
+                      datasources = [
+                        {
+                          name = "Prometheus";
+                          type = "prometheus";
+                          access = "proxy";
+                          url = "http://localhost:9090";
+                          uid = "soyo-prometheus";
+                          isDefault = true;
+                        }
+                        {
+                          name = "Loki";
+                          type = "loki";
+                          access = "proxy";
+                          url = "http://localhost:3100";
+                          uid = "soyo-loki";
+                        }
+                        {
+                          name = "Tempo";
+                          type = "tempo";
+                          access = "proxy";
+                          url = "http://localhost:3200";
+                          uid = "soyo-tempo";
+                        }
+                      ];
+                    };
+                    provision.dashboards.settings = {
+                      apiVersion = 1;
+                      providers = [
+                        {
+                          name = "fleet";
+                          type = "file";
+                          options.path = pkgs.runCommand "fleet-grafana-dashboards" { } ''
+                            mkdir -p $out
+                            cp ${fleetJson} $out/001-fleet-overview.json
+                            cp ${nodeExporterJson} $out/002-node-exporter-full.json
+                            cp ${lanOverviewJson} $out/003-lan-overview.json
+                          '';
+                        }
+                        {
+                          name = "soyo";
+                          type = "file";
+                          folder = "Soyo";
+                          folderUid = "soyo";
+                          options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
+                            mkdir -p $out
+                            cp ${homeJson} $out/001-soyo-control-plane.json
+                            cp ${dnsmasqJson} $out/dnsmasq.json
+                            cp ${blockyJson} $out/blocky.json
+                          '';
+                        }
+                      ];
+                    };
+                  };
+              }
+              {
+                systemd.services.grafana.serviceConfig = {
+                  MemoryMax = "256M";
+                  CPUQuota = "20%";
+                  Nice = 10;
+                };
+                systemd.services.prometheus.serviceConfig = {
+                  MemoryMax = "512M";
+                  CPUQuota = "30%";
+                  Nice = 10;
+                };
+                systemd.services.loki.serviceConfig = {
+                  MemoryMax = "512M";
+                  CPUQuota = "20%";
+                  Nice = 10;
+                };
+                systemd.services.alloy.serviceConfig = {
+                  MemoryMax = "128M";
+                  CPUQuota = "10%";
+                  Nice = 10;
+                };
+              }
+              grafanaAlertSetup
+              tempoTraces
+            ]
           ))
 
           # --- Blackbox probe jobs (grafana-dependent: needs Prometheus) ---
