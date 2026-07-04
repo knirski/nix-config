@@ -1,9 +1,10 @@
-# flake-parts does not know that our dendritic aspect namespace should merge.
-# Declare it once so every aspect file can add flake.modules.nixos.<name> or
-# flake.modules.homeManager.<name> without fighting over one unique output.
+# Dendritic aspect namespace. Every aspect module contributes to
+# aspects.nixos.<name> and/or aspects.homeManager.<name>, and the host
+# assembler toggles them by name. Not under `flake.*` to avoid triggering
+# `nix flake check` warnings about non-standard flake outputs.
 { lib, ... }:
 {
-  options.flake.modules = {
+  options.aspects = {
     nixos = lib.mkOption {
       type = lib.types.lazyAttrsOf lib.types.raw;
       default = { };

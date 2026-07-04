@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.maintenance =
+  aspects.nixos.maintenance =
     {
       lib,
       config,

@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.backup =
+  aspects.nixos.backup =
     {
       lib,
       config,

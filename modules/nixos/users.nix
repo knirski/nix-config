@@ -1,7 +1,7 @@
 # User *policy* only. Per-user definitions and password secrets are host data
 # (hosts/soyo/users.nix).
 {
-  flake.modules.nixos.users = {
+  aspects.nixos.users = {
     users.mutableUsers = false;
 
     security.sudo = {

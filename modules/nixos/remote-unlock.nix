@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.remote-unlock =
+  aspects.nixos.remote-unlock =
     { lib, config, ... }:
     let
       cfg = config.lanAppliance.services.remoteUnlock;

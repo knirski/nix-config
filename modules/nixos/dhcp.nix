@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.dhcp =
+  aspects.nixos.dhcp =
     { lib, config, ... }:
     let
       cfg = config.lanAppliance.services.dhcp;

@@ -1,6 +1,6 @@
 { inputs, ... }:
 {
-  flake.modules.nixos.persistence =
+  aspects.nixos.persistence =
     { lib, pkgs, ... }:
     {
       imports = [ inputs.preservation.nixosModules.preservation ];

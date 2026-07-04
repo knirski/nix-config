@@ -1,5 +1,5 @@
 {
-  flake.modules.homeManager.base =
+  aspects.homeManager.base =
     { pkgs, ... }:
     {
       home.stateVersion = "26.05";

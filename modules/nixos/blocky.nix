@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.blocky =
+  aspects.nixos.blocky =
     { lib, config, ... }:
     let
       cfg = config.lanAppliance.services.blocky;

@@ -1,5 +1,5 @@
 {
-  flake.modules.nixos.server =
+  aspects.nixos.server =
     {
       lib,
       config,
