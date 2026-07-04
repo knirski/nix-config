@@ -3,3 +3,5 @@ result
 **/.tmp.agenix-rekey.*/
 # direnv local cache
 .direnv/
+# Python bytecode
+**/__pycache__/

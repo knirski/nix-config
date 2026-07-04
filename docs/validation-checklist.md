@@ -219,6 +219,24 @@ command and expected result.
   ```
   Expected: `200` or `302` (Grafana redirects to login). Prometheus datasource should be pre-provisioned. The default home should be **Fleet Overview**. The **Soyo** folder should contain **Soyo Control Plane**, **Blocky**, and **dnsmasq**. **Node Exporter Full** should stay at the root level and offer a host selector.
 
+- [ ] **blackbox probe targets visible**
+  ```sh
+  curl -s http://soyo:9090/api/v1/targets | jq '.data.activeTargets[] | select(.labels.job | test("blackbox")) | {job: .labels.job, instance: .labels.instance, target_name: .labels.target_name, health: .health}'
+  ```
+  Expected: healthy `blackbox-icmp` targets for Orbi, Funbox, satellites, `drukarka`, and `czworaczki`; healthy `blackbox-http` targets for Orbi and Funbox.
+
+- [ ] **LAN inventory metrics present**
+  ```sh
+  curl -s http://soyo:9100/metrics | grep '^lan_device_'
+  ```
+  Expected: metrics present, including reserved devices and at least one visible device row.
+
+- [ ] **LAN dashboard provisioned at root**
+  ```sh
+  curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:3000/api/search | jq '[.[] | {title, uid, folderTitle}] | map(select(.title == "LAN Overview" or .title == "Fleet Overview" or .title == "Node Exporter Full"))'
+  ```
+  Expected: `LAN Overview`, `Fleet Overview`, and `Node Exporter Full` appear at the root; the `Soyo` folder still contains only `Soyo Control Plane`, `Blocky`, and `Dnsmasq`.
+
 - [ ] **Grafana alert rules provisioned**
   ```sh
   curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" \

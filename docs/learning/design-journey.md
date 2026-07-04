@@ -128,6 +128,10 @@ extraFlags = [
 - **Grafana self-monitoring.** Community dashboards target v10/v11 naming; Grafana 13 renamed half the metrics. `systemctl status grafana` already tells you it's running.
 - **Custom landing dashboards only.** A first pass at a monolithic "Soyo Appliance" dashboard was dropped because Node Exporter Full (1860) already covers generic host internals far better. The custom dashboards came back later, but with a narrower job: a generic **Fleet Overview** landing page and a role-specific **Soyo Control Plane** drilldown. Research with `gh` across real repos found the same split repeatedly — fleet/host summaries (for example Misterio77's `hosts.json`) and service-status dashboards (for example Swarsel's `service-status.json`) work well as home pages, while imported community dashboards stay the deep dives. The rule that survived: hand-written dashboards may summarize and route, but they should not try to reimplement the detailed dashboards.
 
+## Host-local network namespaces
+
+`hosts/soyo/reservations.nix` stays the appliance truth for DHCP and forward/reverse DNS because those roles are critical. Observability needs more shape than `{ name; mac; ip; }`, though, so the repo adds `hosts/soyo/network.nix` as an adjacent namespace instead of mutating the reservation schema. That keeps the critical path boring while still giving Grafana and Prometheus richer labels, extra off-LAN targets, and future room for inventory metadata.
+
 ## What's deferred to M3/M4
 
 - **Secure Boot** (M3) — Limine secureBoot, sbctl key enrollment, PCR 0+2+7 re-enroll

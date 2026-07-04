@@ -17,7 +17,8 @@
 let
   inherit (inputs) nix-topology;
 
-  reservations = import ../../hosts/soyo/reservations.nix;
+  networkData = import ../../hosts/soyo/network.nix;
+  reservations = networkData.reservations;
 
   # Group reservations by name (multihomed hosts have multiple entries)
   grouped = lib.foldl (
