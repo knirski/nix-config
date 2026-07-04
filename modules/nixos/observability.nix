@@ -792,14 +792,9 @@
               Nice = 10;
             };
 
-            # Ensure persisted data dirs have correct ownership for their service users.
-            # The preservation module bind-mounts /persist/var/lib/<name> onto /var/lib/<name>;
-            # without explicit ownership, the source dir is owned by root and the service user
-            # can't write. tmpfiles fixes this at boot.
+            # preservation owns the top-level persisted directories; tmpfiles
+            # only creates Tempo's generator subdirs underneath that owned tree.
             systemd.tmpfiles.rules = [
-              "d /persist/var/lib/grafana 0750 grafana grafana -"
-              "d /persist/var/lib/loki 0750 loki loki -"
-              "d /persist/var/lib/tempo 0750 tempo tempo -"
               "d /persist/var/lib/tempo/generator-wal 0750 tempo tempo -"
               "d /persist/var/lib/tempo/generator-traces 0750 tempo tempo -"
             ];

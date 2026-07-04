@@ -18,11 +18,33 @@
       # private state dir below. Persist the cursor so journal shipping resumes
       # from the last read entry instead of replaying a large backlog on boot.
       "/var/lib/private/alloy"
-      "/var/lib/grafana"
-      "/var/lib/loki"
+      # preservation generates tmpfiles entries for persisted directories, so
+      # service ownership belongs here rather than in a second conflicting rule.
+      {
+        directory = "/var/lib/grafana";
+        user = "grafana";
+        group = "grafana";
+        mode = "0750";
+      }
+      {
+        directory = "/var/lib/loki";
+        user = "loki";
+        group = "loki";
+        mode = "0750";
+      }
       "/var/lib/tailscale"
-      "/var/lib/tempo"
-      "/var/lib/prometheus"
+      {
+        directory = "/var/lib/tempo";
+        user = "tempo";
+        group = "tempo";
+        mode = "0750";
+      }
+      {
+        directory = "/var/lib/prometheus";
+        user = "prometheus";
+        group = "prometheus";
+        mode = "0750";
+      }
       "/var/log"
       "/etc/restic"
     ];
