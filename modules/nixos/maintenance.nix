@@ -89,9 +89,12 @@
           description = "ntfy OnFailure notification for %i";
           serviceConfig = {
             Type = "oneshot";
-            ExecStart = pkgs.writeShellScript "ntfy-failure" ''
+            # %i is expanded by systemd at runtime, so it MUST be outside the
+            # writeShellScript store path (systemd does not expand specifiers
+            # inside executed files).  Pass it as argument $1.
+            ExecStart = "${pkgs.writeShellScript "ntfy-failure" ''
               set -euo pipefail
-              SERVICE="%i"
+              SERVICE="$1"
 
               # Self-guard: if WE are the failing unit, stop — no recursion.
               case "$SERVICE" in
@@ -105,7 +108,7 @@
                 -H "Title: soyo unit failed" \
                 -d "$SERVICE failed on soyo — check journalctl -u $SERVICE" \
                 "$TOPIC"
-            '';
+            ''} %i";
           };
         };
 

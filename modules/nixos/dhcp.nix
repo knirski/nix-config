@@ -3,7 +3,7 @@
     { lib, config, ... }:
     let
       cfg = config.lanAppliance.services.dhcp;
-      leaseDir = builtins.dirOf cfg.leaseFile;
+      leaseDir = dirOf cfg.leaseFile;
       reservationLines = map (r: "${r.mac},${r.ip},${r.name},infinite") cfg.reservations;
     in
     {

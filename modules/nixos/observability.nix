@@ -18,7 +18,7 @@
         let
           meta = deviceMeta.${r.name} or null;
         in
-        lib.optionals ((meta != null) && ((meta.monitor or false))) [
+        lib.optionals ((meta != null) && (meta.monitor or false)) [
           {
             name = r.name;
             ip = r.ip;
@@ -51,16 +51,15 @@
       };
 
       fleetJson = import ../../lib/observability/fleet-dashboard.nix {
-        inherit lib pkgs;
+        inherit pkgs;
         builder = builder;
       };
       homeJson = import ../../lib/observability/soyo-dashboard.nix {
-        inherit lib pkgs;
+        inherit pkgs;
         builder = soyoBuilder;
       };
       lanOverviewJson = import ../../lib/observability/lan-dashboard.nix {
         inherit pkgs;
-        inherit networkData;
       };
 
       lanInventoryNetworkJson = pkgs.writeText "lan-network.json" (builtins.toJSON cfg.networkData);
@@ -535,7 +534,7 @@
                       };
                       analytics.reporting_enabled = false;
                       grafana_news.new_news_enabled = false;
-                      security.secret_key = "SW2YcwTIb9zpOOhoPsMm";
+                      security.secret_key = "$__file{${config.age.secrets.grafana-secret-key.path}}";
                       security.admin_password = "$__file{${config.age.secrets.grafana-admin-password.path}}";
                       unified_alerting.enabled = true;
                       dashboards.default_home_dashboard_path = "${fleetJson}";

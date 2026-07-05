@@ -1,14 +1,7 @@
 # Fleet Overview dashboard — default landing page for multi-host labs.
-{
-  lib,
-  pkgs,
-  builder,
-}:
+{ pkgs, builder }:
 let
   inherit (builder)
-    mkGrid
-    mkTarget
-    mkPanel
     mkText
     mkStat
     mkTimeseries

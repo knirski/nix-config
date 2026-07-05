@@ -11,7 +11,11 @@
           "nix-command"
           "flakes"
         ];
-        auto-optimise-store = true;
+        # auto-optimise-store = true is intentionally absent.
+        # It makes garbage collection O(n) on store size and causes lock
+        # contention on every nix command.  Instead, a weekly systemd timer
+        # runs `nix store optimise` when the system is idle.
+        # Docs: https://nix.dev/manual/nix/latest/command-ref/new-cli/nix3-store-optimise
         warn-dirty = false;
         # trusted-users: required for `nixos-rebuild --target-host` to work.
         # Without this, the remote nix daemon rejects unsigned store paths
@@ -22,6 +26,29 @@
           "krzysiek"
           "@wheel"
         ];
+      };
+
+      # Weekly nix store optimisation (replaces `auto-optimise-store`, which
+      # causes lock contention on every nix command and O(n) GC cost).
+      systemd.services.nix-store-optimise = {
+        description = "Optimise the Nix store";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.nix}/bin/nix store optimise";
+          MemoryMax = "512M";
+          CPUQuota = "50%";
+          Nice = 19;
+          IOSchedulingClass = "idle";
+        };
+      };
+      systemd.timers.nix-store-optimise = {
+        description = "Weekly Nix store optimisation";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "weekly";
+          RandomizedDelaySec = "6h";
+          Persistent = true;
+        };
       };
 
       documentation.nixos.enable = true;

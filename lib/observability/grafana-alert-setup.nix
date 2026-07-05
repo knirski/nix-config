@@ -1,9 +1,4 @@
-{
-  lib,
-  config,
-  pkgs,
-  ...
-}:
+{ config, pkgs, ... }:
 {
   systemd.services.grafana-alert-setup = {
     description = "Provision Grafana alerting rules and ntfy contact point";

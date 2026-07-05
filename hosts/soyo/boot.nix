@@ -15,7 +15,9 @@
   # the one-time firmware + sbctl key enrollment from docs/recovery.md.
   # The module force-enables the safe settings needed for a locked boot path.
   boot.loader.limine.secureBoot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  # Required during Secure Boot key enrollment (sbctl).  Safe to set to false
+  # after enrollment is complete — future updates use signed pre-enrolled certs.
+  boot.loader.efi.canTouchEfiVariables = false;
   boot.initrd.systemd.enable = true;
   boot.initrd.availableKernelModules = [
     "tpm_crb"

@@ -10,7 +10,7 @@
         lanInterface = lib.mkOption { type = lib.types.str; };
         # The rich policy stays host-local; the shared aspect owns service wiring.
         settings = lib.mkOption {
-          type = lib.types.attrs;
+          type = lib.types.attrsOf lib.types.anything;
           default = { };
         };
       };

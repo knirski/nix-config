@@ -48,6 +48,7 @@
         ../../hosts/soyo/networking.nix
         {
           networking.hostName = "soyo";
+          nixpkgs.hostPlatform = "x86_64-linux";
           system.stateVersion = "26.05";
 
           # Secrets use the agenix-rekey rekeyFile flow (see docs/secrets.md).

@@ -27,6 +27,10 @@
         rekeyFile = ../../secrets/grafana-admin-password.age;
         owner = "grafana";
       };
+      grafana-secret-key = {
+        rekeyFile = ../../secrets/grafana-secret-key.age;
+        owner = "grafana";
+      };
     };
   };
 }
