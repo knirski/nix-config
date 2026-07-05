@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-SSH_OPTS="-o ConnectTimeout=10 -o LogLevel=QUIET"
+SSH_OPTS=(-o ConnectTimeout=10 -o LogLevel=QUIET)
 
 pass() { echo "  [PASS] $*"; ((PASS++)) || true; }
 fail() { echo "  [FAIL] $*"; ((FAIL++)) || true; }
@@ -47,9 +47,9 @@ check_val() {
 }
 
 # shellcheck disable=SC2029,SC2329
-run_ssh()  { ssh "$SSH_OPTS" "krzysiek@$HOST" "$@"; }
+run_ssh()  { ssh "${SSH_OPTS[@]}" "krzysiek@$HOST" "$@"; }
 # shellcheck disable=SC2029,SC2329
-run_sudo() { ssh "$SSH_OPTS" "krzysiek@$HOST" sudo "$@"; }
+run_sudo() { ssh "${SSH_OPTS[@]}" "krzysiek@$HOST" sudo "$@"; }
 
 echo "=== Healthcheck: $HOST ==="
 echo ""
