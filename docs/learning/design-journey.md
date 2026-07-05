@@ -227,6 +227,12 @@ Blocky and dnsmasq `for` was 2 minutes — enough for a `nixos-rebuild` to trigg
 
 Prometheus scrapes every 60s, so 5m means at most 5 consecutive failed scrapes before alerting — two more than 2m, which is the right extra margin for scheduled maintenance without trading off real outage detection speed.
 
+### Quiet deploys: `KeepLast` over fresh alert state
+
+The next false-positive came from the alert engine itself rather than the `for` window. During a `nixos-rebuild`, Grafana and Prometheus can briefly restart or miss a scrape. With `noDataState = Alerting` and `execErrState = Error`, a perfectly healthy deploy looked like a brand-new incident because the query backend disappeared for a moment.
+
+The fix was to keep the four core alerts (`🧱` Blocky, `📡` dnsmasq, `🛟` backup, `💽` Btrfs space) but change both states to `KeepLast`. That tells Grafana to preserve the last known status across a short datasource gap or query error instead of manufacturing a new page from missing data. Real outages still fire once the underlying metric stays bad past the `for` window; deploy-time restarts stay quiet.
+
 ### Dashboard folder over tags
 
 Three community dashboards (Blocky, dnsmasq, Node Exporter) used `tags = ["soyo"]` to group them under a common label. Grafana's folder system (`folder = "soyo"` on the provider) groups them natively in the UI sidebar. Tags stay for functional search (e.g. `dnsmask`, `blocky`, `linux`, `node-exporter`) — organizational grouping moves to the folder.
