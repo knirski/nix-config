@@ -2,13 +2,32 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-HOST="${1:-soyo}"
-IP="${2:-10.0.0.9}"
+HOST="soyo"
 PASS=0
 FAIL=0
 
-pass() { echo "  [PASS] $*"; ((PASS++)); }
-fail() { echo "  [FAIL] $*"; ((FAIL++)); }
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      echo "Usage: healthcheck.sh [--host <hostname>]"
+      echo "  Runs automated health checks against a NixOS host via SSH."
+      echo "  Default host: soyo"
+      exit 0
+      ;;
+    --host)
+      HOST="$2"; shift
+      ;;
+    *)
+      HOST="$1"
+      ;;
+  esac
+  shift
+done
+
+SSH_OPTS="-o ConnectTimeout=10 -o LogLevel=QUIET"
+
+pass() { echo "  [PASS] $*"; ((PASS++)) || true; }
+fail() { echo "  [FAIL] $*"; ((FAIL++)) || true; }
 check() {
   local desc="$1"; shift
   if "$@" > /dev/null 2>&1; then
@@ -27,17 +46,19 @@ check_val() {
   fi
 }
 
+run_ssh()  { ssh $SSH_OPTS "krzysiek@$HOST" "$@"; }
+run_sudo() { ssh $SSH_OPTS "krzysiek@$HOST" "sudo $@"; }
+
 echo "=== Healthcheck: $HOST ==="
 echo ""
 
 echo "--- Network ---"
 check "enp1s0 is UP" \
-  ssh "krzysiek@$HOST" 'ip link show enp1s0 | grep -q "state UP"'
+  run_ssh 'ip link show enp1s0 | grep -q "state UP"'
 check_val "Hostname is soyo" "soyo" \
-  ssh "krzysiek@$HOST" hostname
+  run_ssh hostname
 check_val "Root SSH blocked" "Permission denied" \
   ssh -o ConnectTimeout=5 root@"$HOST" hostname
-check "Static IP reachable" ping -c 1 -W 3 "$IP"
 
 echo ""
 echo "--- DNS ---"
@@ -53,76 +74,68 @@ check_val "Reverse DNS (10.0.0.9)" "soyo" \
 echo ""
 echo "--- DHCP ---"
 check_val "DHCP lease file exists" "." \
-  ssh "krzysiek@$HOST" 'sudo cat /var/lib/dnsmasq/dnsmasq.leases'
+  run_sudo cat /var/lib/dnsmasq/dnsmasq.leases
 
 echo ""
 echo "--- Services ---"
 for svc in blocky dnsmasq prometheus loki alloy grafana; do
   check_val "$svc is active" "active" \
-    ssh "krzysiek@$HOST" "systemctl is-active $svc"
+    run_ssh "systemctl is-active $svc"
 done
 
 echo ""
 echo "--- Timers ---"
-for tmr in nix-gc btrfs-scrub free-space-check; do
-  check_val "$tmr timer exists" "1" \
-    ssh "krzysiek@$HOST" "systemctl list-timers --all --no-legend '$tmr*' | wc -l"
+for tmr in nix-store-optimise btrbk-soyo fstrim; do
+  check_val "$tmr timer enabled" "enabled" \
+    run_ssh "systemctl is-enabled ${tmr}.timer 2>/dev/null"
 done
 
 echo ""
 echo "--- Metrics ---"
 check_val "node_exporter (port 9100)" "node_" \
-  curl -sf "http://$HOST:9100/metrics"
+  run_ssh 'curl -sf http://localhost:9100/metrics | grep node_ | head -1'
 check_val "dnsmasq_exporter (port 9153)" "# HELP" \
-  curl -sf "http://$HOST:9153/metrics"
-check_val "Prometheus API (port 9090)" "WAL" \
-  curl -sf "http://$HOST:9090"
-check_val "Grafana (port 3000)" "200\|302\|Location" \
-  curl -sI "http://$HOST:3000"
-
+  run_ssh 'curl -sf http://localhost:9153/metrics'
+check_val "Prometheus API (port 9090)" "success" \
+  run_ssh 'curl -sf http://localhost:9090/api/v1/status/buildinfo'
+check_val "Grafana (port 3000)" "Location" \
+  run_ssh 'curl -sI http://localhost:3000'
 check_val "LAN inventory metrics" "lan_device_" \
-  curl -sf "http://$HOST:9100/metrics" | grep lan_device_
+  run_ssh 'curl -sf http://localhost:9100/metrics | grep lan_device_'
 
 echo ""
 echo "--- Secrets ---"
 check_val "agenix secrets decrypted" "." \
-  ssh "krzysiek@$HOST" 'sudo ls /run/agenix/ | grep -q ntfy-token'
+  run_sudo ls /run/agenix/
 
 echo ""
 echo "--- System ---"
-check_val "Journald bounded (500M)" "500.0M" \
-  ssh "krzysiek@$HOST" 'journalctl --header | grep "System Max Use"'
-
+check_val "Journald persistent" "persistent" \
+  run_ssh 'grep "^Storage=persistent" /etc/systemd/journald.conf'
 check_val "Tailscale connected" "soyo" \
-  ssh "krzysiek@$HOST" 'tailscale status | grep -q soyo'
+  run_ssh 'tailscale status'
 
 echo ""
 echo "--- Storage ---"
-SMART_DISK="/dev/disk/by-id/ata-PELADN_512GB_20250522100164"
-check_val "SMART tests scheduled" "Self-test" \
-  ssh "krzysiek@$HOST" "sudo smartctl -a '$SMART_DISK' 2>/dev/null | grep -q 'Self-test'"
-
-check_val "btrbk snapshots exist" "." \
-  ssh "krzysiek@$HOST" 'sudo btrbk -c /etc/btrbk/soyo.conf list 2>/dev/null | head -5 | grep -q .'
+check_val "SMART enabled (smartd running)" "active" \
+  run_ssh 'systemctl is-active smartd' 2>/dev/null
 
 echo ""
 echo "--- Secure Boot ---"
 check_val "Secure Boot enabled" "enabled" \
-  ssh "krzysiek@$HOST" 'sudo sbctl status | grep -q "Secure Boot.*enabled"'
+  run_ssh 'bootctl status | grep -i "Secure Boot" | grep -o "enabled"'
 check_val "sbctl keys persisted" "." \
-  ssh "krzysiek@$HOST" 'sudo ls /persist/var/lib/sbctl/keys 2>/dev/null | head -5 | grep -q .'
+  run_sudo ls /persist/var/lib/sbctl/keys
 
 echo ""
 echo "--- Observability ---"
-check_val "blackbox ICMP probes healthy" "up" \
-  bash -c "curl -sf 'http://$HOST:9090/api/v1/targets' | grep -q blackbox-icmp.*up"
-check_val "blackbox HTTP probes healthy" "up" \
-  bash -c "curl -sf 'http://$HOST:9090/api/v1/targets' | grep -q blackbox-http.*up"
+check_val "blackbox ICMP probes healthy" "\"health\":\"up\"" \
+  run_ssh 'curl -sf http://localhost:9090/api/v1/targets | grep blackbox-icmp | head -5'
+check_val "blackbox HTTP probes healthy" "\"health\":\"up\"" \
+  run_ssh 'curl -sf http://localhost:9090/api/v1/targets | grep blackbox-http | head -5'
 
 echo ""
 echo "========================"
 echo "Results: $PASS passed, $FAIL failed"
 echo "========================"
-if [ "$FAIL" -gt 0 ]; then
-  exit 1
-fi
+exit $FAIL

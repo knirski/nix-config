@@ -53,9 +53,19 @@
       formatter = config.treefmt.build.wrapper;
       checks.formatting = config.treefmt.build.check inputs.self;
       packages.deadnix = pkgs.deadnix;
-      packages.healthcheck = pkgs.writeShellScriptBin "healthcheck" ''
-        exec ${../../scripts/healthcheck.sh} "$@"
-      '';
+      packages.healthcheck = pkgs.writeShellApplication {
+        name = "healthcheck";
+        runtimeInputs = with pkgs; [
+          curl
+          dnsutils
+          gnugrep
+          gnused
+          iputils
+          jq
+          openssh
+        ];
+        text = ''exec ${../../scripts/healthcheck.sh} "$@"'';
+      };
       checks.lan-inventory =
         pkgs.runCommand "lan-inventory-test"
           {
