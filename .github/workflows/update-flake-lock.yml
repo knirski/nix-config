@@ -16,6 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/flake-checker-action@v9
+        with:
+          use-flakehub: false
       - uses: DeterminateSystems/update-flake-lock@v24
         with:
           pr-title: "chore(deps): update flake.lock"
