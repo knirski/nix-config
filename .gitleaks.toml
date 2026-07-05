@@ -1,0 +1,10 @@
+# Gitleaks allowlist for this repo.
+# Known false positives that are not actual secrets:
+# - curl commands referencing runtime secret paths in docs
+# - Grafana secret_key in observability config (pre-existing, managed via agenix for admin password)
+[allowlist]
+paths = [
+  '''docs/validation-checklist.md''',
+  '''docs/superpowers/plans/2026-07-04-lan-observability.md''',
+  '''modules/nixos/observability.nix''',
+]
