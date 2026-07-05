@@ -335,23 +335,25 @@ See the full checklist at [`docs/validation-checklist.md`](validation-checklist.
 
 ## Subsequent deploys
 
-From a workstation on the LAN:
+For normal config-only changes, use the direct deploy path from a workstation on the LAN:
 
 ```bash
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
 ```
 
-Or using the wrapper script:
+If DNS is not working yet, replace `krzysiek@soyo` with `krzysiek@10.0.0.9`.
+
+Use the wrapper script when secrets changed and you want rekey + deploy in one step:
 
 ```bash
 ./scripts/deploy-soyo.sh
 ```
 
-When secrets change, rekey before deploying:
+Manual equivalent for secret changes:
 
 ```bash
 nix develop '.#' -c agenix rekey
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
 ```
 
 See [`docs/update-and-rollback.md`](update-and-rollback.md) for the full

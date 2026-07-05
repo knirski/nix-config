@@ -4,7 +4,17 @@ How to update Soyo to the latest `nixos-unstable` and roll back when an update g
 
 ## Routine update
 
-The day-2 remote deploy uses native `nixos-rebuild --target-host` — your workstation builds, Soyo activates.
+The day-2 remote deploy uses native `nixos-rebuild --target-host` — your workstation builds, Soyo activates. There are two useful paths:
+
+### Config-only deploy (fast path, no secret changes)
+
+```sh
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+```
+
+Use this when you are changing NixOS config, dashboards, alerts, services, or docs and **none of the master-encrypted secret files changed**. It builds the full closure locally, copies it to Soyo over SSH, and activates it remotely. Soyo's N150 never compiles. If DNS isn't working, use `krzysiek@10.0.0.9`.
+
+### Secret-changing deploy (rekey + deploy)
 
 ```sh
 ./scripts/deploy-soyo.sh
@@ -13,7 +23,7 @@ The day-2 remote deploy uses native `nixos-rebuild --target-host` — your works
 This runs:
 
 1. `agenix rekey` — re-encrypts every master `.age` secret for Soyo's host key. Run this on your workstation with your SSH private key available (the `masterIdentities` in `modules/parts/soyo.nix` must point to it). Failure here means Soyo gets stale secrets.
-2. `nixos-rebuild switch --target-host krzysiek@soyo --use-remote-sudo` — builds the full closure locally, copies it to Soyo over SSH, activates it remotely. Soyo's N150 never compiles. If DNS isn't working, use `krzysiek@10.0.0.9`.
+2. `nixos-rebuild switch --target-host krzysiek@soyo --use-remote-sudo` — builds the full closure locally, copies it to Soyo over SSH, and activates it remotely.
 
 ## Updating nixpkgs
 
