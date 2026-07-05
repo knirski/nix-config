@@ -6,10 +6,18 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v16
@@ -18,7 +26,7 @@ jobs:
       - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml
 
   eval:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v16
@@ -26,7 +34,7 @@ jobs:
       - run: nix flake check
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         host: [soyo]
@@ -49,15 +57,15 @@ jobs:
         if: steps.closure-cache.outputs.cache-hit == 'true'
         run: |
           PREV=$(cat previous-closure.txt)
-          CURR=$(nix path-info ./result)
+          CURR=$(readlink -f result)
           echo "### Closure diff for ${{ matrix.host }}" >> $GITHUB_STEP_SUMMARY
           nix store diff-closures "$PREV" "$CURR" >> $GITHUB_STEP_SUMMARY || true
 
       - name: Save current closure path
-        run: nix path-info ./result > previous-closure.txt
+        run: readlink -f result > previous-closure.txt
 
   topology:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v16
