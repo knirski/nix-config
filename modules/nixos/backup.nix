@@ -121,6 +121,15 @@
           extraOptions =
             cfg.restic.extraOptions
             ++ lib.optionals (cfg.restic.sshKeyFile != null) [
+              # The single quotes around the SSH command are required — systemd's
+              # ExecStart= parser splits on spaces, and without them sftp.command
+              # would only be set to "ssh" while the host and key path would leak
+              # as separate positional arguments to restic.
+              # StrictHostKeyChecking=accept-new avoids the interactive prompt on
+              # first connection; UserKnownHostsFile persists the host key under
+              # /persist (the root filesystem is ephemeral on this host).
+              # The FQDN czworaczki.home.arpa routes to Blocky (LAN DNS) instead
+              # of matching Tailscale's ~danio-cloud.ts.net per-link domain.
               "sftp.command='ssh soyo-backup@czworaczki.home.arpa -i ${cfg.restic.sshKeyFile} -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/persist/etc/restic/known_hosts -s sftp'"
             ];
           pruneOpts = cfg.restic.pruneOpts;
