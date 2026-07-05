@@ -44,7 +44,7 @@ For the guided learning path through this repo, start at [docs/learning/README.m
 └── flake.nix              # Entry point — auto-imports modules/
 ```
 
-Aspect modules are listed in `modules/default.nix`, expose `flake.modules.nixos.<name>`,
+Aspect modules are listed in `modules/default.nix`, expose `aspects.nixos.<name>`,
 and are toggled in the host assembler (`modules/parts/soyo.nix`).
 Host directories hold machine-specific data only.
 
@@ -68,7 +68,7 @@ Key principles:
 ```bash
 # CI (runs on every push via GitHub Actions)
 # Lint: deadnix, statix, typos, gitleaks, actionlint, shellcheck,
-#       markdownlint, ruff
+#       markdownlint, ruff (gitleaks uses --config .gitleaks.toml)
 # https://github.com/knirski/nix-config/actions
 
 # Generate network topology diagram
@@ -82,7 +82,7 @@ nom build .#nixosConfigurations.soyo.config.system.build.toplevel
 nix-locate <command>
 
 # Connect remotely via Tailscale
-ssh krzysiek@soyo.tailnet-name.ts.net
+ssh krzysiek@soyo
 
 # Check for CVEs in the current system closure
 # (requires vulnix: nix shell nixpkgs#vulnix)
@@ -92,7 +92,7 @@ sudo nix-shell -p vulnix --run 'vulnix -c system'
 ## Requirements
 
 - Nix 2.18+ with flakes enabled (`nix-command flakes` experimental features)
-- NixOS 26.05 (nixpkgs `714a5f8c4ead`)
+- NixOS 26.05 (nixpkgs `release-26.05` branch)
 
 ## Resources
 

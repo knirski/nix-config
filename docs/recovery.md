@@ -14,7 +14,7 @@ authenticates automatically using the encrypted auth key. Once connected, you
 can reach Soyo from anywhere without open ports or DynDNS:
 
 ```sh
-ssh krzysiek@soyo.tailnet-name.ts.net
+ssh krzysiek@soyo
 ```
 
 To verify or check status:
