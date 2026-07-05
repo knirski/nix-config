@@ -26,6 +26,15 @@
           wants = [ "network-online.target" ];
         };
 
+        # systemd-resolved handles split DNS between Blocky and Tailscale.
+        # Blocky on 127.0.0.1:53 serves .home.arpa (local LAN records from
+        # reservations.nix), while Tailscale MagicDNS on 100.100.100.100
+        # serves *.danio-cloud.ts.net via its own per-link configuration on
+        # the tailscale0 interface. resolved routes each domain to the right
+        # upstream automatically — no manual /etc/hosts or hardcoded IPs.
+        # Previously this was disabled with resolvconf, but Tailscale's
+        # resolvconf override hid Blocky from the system resolver entirely.
+        # Docs: https://wiki.archlinux.org/title/Systemd-resolved
         services.resolved = {
           enable = true;
           settings.Resolve = {
