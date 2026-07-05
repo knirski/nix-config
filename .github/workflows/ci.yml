@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@v16
-      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - uses: DeterminateSystems/nix-installer-action@v22
+      - uses: DeterminateSystems/magic-nix-cache-action@v14
       - run: nix run nixpkgs#deadnix
       - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml
 
@@ -29,8 +29,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@v16
-      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - uses: DeterminateSystems/nix-installer-action@v22
+      - uses: DeterminateSystems/magic-nix-cache-action@v14
       - run: nix flake check
 
   build:
@@ -40,8 +40,8 @@ jobs:
         host: [soyo]
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@v16
-      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - uses: DeterminateSystems/nix-installer-action@v22
+      - uses: DeterminateSystems/magic-nix-cache-action@v14
       - run: >
           nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel
           --keep-going
@@ -68,8 +68,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@v16
-      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - uses: DeterminateSystems/nix-installer-action@v22
+      - uses: DeterminateSystems/magic-nix-cache-action@v14
       - run: nix build .#topology
       - run: mkdir -p topology-output && cp result/*.svg topology-output/
       - uses: actions/upload-artifact@v4
