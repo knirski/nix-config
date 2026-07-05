@@ -5,8 +5,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/714a5f8c4ead";
 
     flake-parts.url = "github:hercules-ci/flake-parts";
-    import-tree.url = "github:vic/import-tree";
-
     nixos-facter-modules.url = "github:nix-community/nixos-facter-modules";
 
     disko.url = "github:nix-community/disko";
@@ -32,9 +30,10 @@
     nix-topology.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  # The whole flake is built by auto-importing every module file under ./modules
-  # (the dendritic pattern). `deploy-rs` is intentionally absent until M4.
+  # The whole flake is built by importing `modules/default.nix`, which lists
+  # every module file explicitly (the dendritic pattern).
+  # `deploy-rs` is intentionally absent until M4.
   outputs =
-    inputs@{ flake-parts, import-tree, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } (import-tree ./modules);
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } { imports = [ ./modules ]; };
 }

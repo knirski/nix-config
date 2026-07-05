@@ -38,12 +38,12 @@ and its docs must teach (see "Learning docs" below).
    PCR 0+2+7 with Limine Secure Boot. Never bind PCR 9 (kernel image) or PCR 8
    (store paths) — they break unattended auto-unlock. Always keep the passphrase
    keyslot as fallback.
-8. **flake-parts + the dendritic pattern.** `import-tree ./modules` auto-imports
+8. **flake-parts + the dendritic pattern.** `modules/default.nix` explicitly lists
    every file as a flake-parts module; aspects expose `aspects.nixos.<aspect>`
    (and `aspects.homeManager.<aspect>`). Hosts assemble by toggling aspects
    (`with config.aspects.nixos; [ … ]`) in the host assembler module, not by
-   sibling `imports` of aspect files. The assembler is a flake-parts module
-   (`modules/parts/soyo.nix`); `hosts/soyo/` holds hardware/data only.
+   sibling `imports` of aspect files.    The assembler (`modules/parts/soyo.nix`) is also a flake-parts module;
+   `hosts/soyo/` holds hardware/data only.
 9. **Reproducible + recoverable.** Everything declarative. Root is impermanent:
    wiped to a blank Btrfs snapshot (`root`/`root-blank`) in systemd initrd each
    boot, durable state only under `/persist` via the `preservation` module; the
@@ -143,11 +143,14 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
 - Build order follows the design doc's roadmap; M1 + M2 are the production
   cut-line, M3 hardens (Secure Boot), M4 expands (laptop, services).
 - Pre-commit hooks auto-install via `nix develop`.
+  Hooks: deadnix, statix, typos, treefmt, end-of-file-fixer, check-merge-conflicts,
+  actionlint (GitHub Actions), shellcheck (shell scripts), markdownlint (docs),
+  ruff (Python).
   Before committing: `nix flake check` and also run `gitleaks` locally
   (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose`).
 - After deploy or after changes that touch boot, unlock, networking, or
   services, run the automated healthcheck:
-  ```
+  ```bash
   nix run .#healthcheck [hostname] [ip]
   ```
   This checks DNS, services, metrics, timers, secrets, Secure Boot, and more

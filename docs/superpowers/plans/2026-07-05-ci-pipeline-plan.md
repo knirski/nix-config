@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Rewrite `ci.yml` — single job → 4 parallel jobs
+## Task 1: Rewrite `ci.yml` — single job → 4 parallel jobs
 
 **Files:**
 - Rewrite: `.github/workflows/ci.yml`
@@ -181,12 +181,12 @@ git commit -m "docs(readme): add CI badge to header"
 - [ ] **Update the CI pipeline description**
 
 Current (line 28):
-```
+```text
 | 20 | `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline, Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
 ```
 
 Replace with:
-```
+```text
 | 20 | `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline (lint → eval → build + closure diff → topology artifact), Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
 ```
 

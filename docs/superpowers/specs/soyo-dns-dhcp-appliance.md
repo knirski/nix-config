@@ -57,11 +57,11 @@ This repo doubles as a way to learn idiomatic Nix and NixOS from basics. This is
 
 This repo deliberately leans into radical-modern Nix as a learning vehicle: a dendritic flake (every file an aspect module, auto-imported), impermanence from day one, and declarative hardware via `nixos-facter`. The dendritic pattern and impermanence trade some flat-file legibility for higher learning value; the docs compensate by explaining the aspect→host wiring and the persisted-path inventory explicitly. Home Manager is the one deliberately mainstream idiom in the mix.
 
-**Beginner-friendly documentation is a first-class deliverable, not a by-product.** Precisely because the chosen stack (dendritic flake, `import-tree`, impermanence with blank-snapshot rollback, `nixos-facter`, agenix, TPM/Secure Boot) sits well above a beginner's starting point, the repo must ship a guided learning path that a Nix novice can actually follow:
+**Beginner-friendly documentation is a first-class deliverable, not a by-product.** Precisely because the chosen stack (dendritic flake, `modules/default.nix`, impermanence with blank-snapshot rollback, `nixos-facter`, agenix, TPM/Secure Boot) sits well above a beginner's starting point, the repo must ship a guided learning path that a Nix novice can actually follow:
 
 - a **design-journey narrative** that derives the design from basics: start from the simplest thing that could work and present the important transient steps that led here, showing what was tried, what was rejected, and *why* at each fork (flake → flake-parts → dendritic; mutable root → impermanence → blank-snapshot rollback + `preservation`; `nixos-generate-config` → `nixos-facter`; rustic/kopia → restic; deploy-rs → native `nixos-rebuild`; lanzaboote → Limine; AdGuard → Blocky + dnsmasq). The reader should see the design as a sequence of motivated choices, not a finished monolith; each step links to the matching Appendix entry
 - a single entry-point document (e.g. `docs/learning/README.md`) with an explicit reading order, from "what is a flake" through to the appliance's advanced pieces, mapped onto the M1–M4 roadmap so concepts arrive one at a time
-- a short glossary of the non-obvious terms this repo leans on (flake-parts, aspect module, dendritic, `import-tree`, impermanence, subvolume, PCR, keyslot, DoH, reservation)
+- a short glossary of the non-obvious terms this repo leans on (flake-parts, aspect module, dendritic, `modules/default.nix`, impermanence, subvolume, PCR, keyslot, DoH, reservation)
 - per-concept explainer notes: each new concept gets a few sentences of plain-language "what it is / why we use it here" plus a link to the canonical source, written for someone who has not seen it before
 - the dendritic indirection in particular must be documented so a reader can answer "given `hosts/soyo`, what is actually turned on and where does it come from?" without already knowing the pattern
 - worked, copy-pasteable command sequences in the operator runbooks (install, update, recovery), not just prose
@@ -74,7 +74,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 
 | Area | Decision |
 |---|---|
-| Flake organization | `flake-parts` + dendritic: `import-tree` auto-imports aspect modules into `aspects.nixos.*`; hosts assemble by toggling aspects |
+| Flake organization | `flake-parts` + dendritic: `modules/default.nix` lists every aspect module; hosts assemble by toggling aspects |
 | Filesystem | LUKS2 + Btrfs (zstd, subvolumes); impermanent root from day one; durable state under `/persist`, `/nix`, snapshots; no ZFS |
 | Impermanence | `preservation` for the persisted-path inventory; root rolled back to a blank Btrfs snapshot in systemd initrd each boot |
 | Hardware facts | `nixos-facter` (committed `facter.json`), not `nixos-generate-config` |
@@ -96,7 +96,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 ## Chosen Tooling
 
 - `flake-parts` — modular flake outputs and per-class module composition
-- `import-tree` — dendritic auto-import: every file under the module tree becomes a flake-parts module contributing to `aspects.nixos.*` / `aspects.homeManager.*`
+- `modules/default.nix` — dendritic module registry: lists every file under the module tree as a flake-parts module contributing to `aspects.nixos.*` / `aspects.homeManager.*`
 - `nixos-facter` — declarative hardware detection; a committed `facter.json` replaces the generated `hardware-configuration.nix`
 - `disko` — declarative GPT, LUKS2, Btrfs layout
 - `preservation` — explicit persisted-path inventory on top of a root rolled back to a blank snapshot each boot (a newer, more principled alternative to `impermanence`). Note: neither is in nixpkgs; `impermanence` is the more battle-tested, example-everywhere choice. The maturity argument (the same one that picks `restic` over `rustic`) was considered and **consciously overridden** here by the radical-modern learning goal — `preservation` is the deliberate teaching choice, with fewer examples accepted as part of the learning cost
@@ -138,7 +138,7 @@ A multi-host flake from day one.
 Built on `flake-parts` with the **dendritic pattern**, adopted deliberately as a radical-modern learning target:
 
 - `flake-parts` gives modular outputs (formatter, checks, dev shell, Home Manager) instead of one monolithic `flake.nix`
-- `import-tree` auto-imports every `.nix` file under the module tree as a flake-parts module; each file is one *aspect* and contributes to a shared namespace (`aspects.nixos.<aspect>`, `aspects.homeManager.<aspect>`)
+- `modules/default.nix` explicitly lists every `.nix` file under `modules/` as a flake-parts module; each file is one *aspect* and contributes to a shared namespace (`aspects.nixos.<aspect>`, `aspects.homeManager.<aspect>`)
 - a host is assembled by listing the aspects it turns on, not by `imports` of file paths; shared behavior lives in the aspect modules
 - legibility — which matters most during recovery — is preserved by documentation: the host file enumerates its aspects, and the docs explain the aspect→host wiring rather than relying on flat imports
 
@@ -146,7 +146,7 @@ The dendritic pattern's earlier rejection (see appendix) is explicitly reversed:
 
 ### Top Level
 
-- `flake.nix` — thin, on `flake-parts` with `import-tree`; declares inputs (`flake-parts`, `import-tree`, `nixos-facter-modules`, `home-manager`, `disko`, `preservation`, `agenix`, `agenix-rekey`); composes per-host `nixosConfigurations.<hostname>` by toggling aspect modules, with Home Manager as a NixOS module; exposes formatter, checks, dev shell, and any update/deploy helper apps (`deploy-rs` added at M4 for multi-host)
+- `flake.nix` — thin, on `flake-parts` with `imports = [ ./modules ];`; declares inputs (`flake-parts`, `nixos-facter-modules`, `home-manager`, `disko`, `preservation`, `agenix`, `agenix-rekey`); composes per-host `nixosConfigurations.<hostname>` by toggling aspect modules, with Home Manager as a NixOS module; exposes formatter, checks, dev shell, and any update/deploy helper apps (`deploy-rs` added at M4 for multi-host)
 - `hosts/` — one directory per machine
 - `modules/` — reusable NixOS modules by responsibility
 - `secrets/` — agenix secret files and recipient mapping
@@ -155,7 +155,7 @@ The dendritic pattern's earlier rejection (see appendix) is explicitly reversed:
 
 ### Proposed Module Layout
 
-`import-tree ./modules` auto-imports every file under `modules/` as a flake-parts module. Two kinds live there:
+`modules/default.nix` explicitly lists every `.nix` file under `modules/` as a flake-parts module. Two kinds live there:
 
 - *flake-parts modules* under `modules/parts/`, which build flake outputs:
   - `modules/parts/perSystem.nix` — `systems`, `treefmt`, formatter, `checks`, dev shell
@@ -859,13 +859,13 @@ These do not change the design direction.
 
 A small, focused custom flake that borrows patterns from established NixOS repos without forking any large personal repo.
 
-Borrow: `flake-parts` with the dendritic pattern (`import-tree`, aspect modules) and thin host dirs; declarative hardware via `nixos-facter`; `nixos-anywhere` install; `disko` layout; `preservation` with a blank-snapshot rollback and a documented persisted-path inventory; `agenix-rekey`'s `rekeyFile` flow (used from day one — master-encrypted files rekeyed per host at build time); native `nixos-rebuild --target-host` for routine remote activation (`deploy-rs` deferred to M4); systemd-native server/initrd patterns; TPM2 auto-unlock via `systemd-cryptenroll` hardened by Limine Secure Boot; headless Home Manager on a shared base; declarative `restic` backups via `services.restic.backups`.
+Borrow: `flake-parts` with the dendritic pattern (`modules/default.nix`, aspect modules) and thin host dirs; declarative hardware via `nixos-facter`; `nixos-anywhere` install; `disko` layout; `preservation` with a blank-snapshot rollback and a documented persisted-path inventory; `agenix-rekey`'s `rekeyFile` flow (used from day one — master-encrypted files rekeyed per host at build time); native `nixos-rebuild --target-host` for routine remote activation (`deploy-rs` deferred to M4); systemd-native server/initrd patterns; TPM2 auto-unlock via `systemd-cryptenroll` hardened by Limine Secure Boot; headless Home Manager on a shared base; declarative `restic` backups via `services.restic.backups`.
 
 Avoid: desktop policy; broad self-hosting stacks; ZFS; legacy initrd shell hacks; over-automation of unattended updates.
 
 ## Deliverables for the Implementation Phase
 
-1. New `flake.nix` on `flake-parts` + `import-tree` with `nixos-facter-modules`, `disko`, `preservation`, `agenix`, and `home-manager` inputs, plus optional operator tooling such as `agenix-rekey` (`deploy-rs` added at M4)
+1. New `flake.nix` on `flake-parts` + `modules/default.nix` with `nixos-facter-modules`, `disko`, `preservation`, `agenix`, and `home-manager` inputs, plus optional operator tooling such as `agenix-rekey` (`deploy-rs` added at M4)
 2. Dendritic aspect-module tree (base, server, service, user, Home Manager aspects in `aspects.*`), with each host toggling the aspects it uses
 3. `hosts/soyo` host assembly
 4. Boot config using `linuxPackages_latest` — in-tree `dwmac_motorcomm` driver, no pin needed
@@ -890,7 +890,7 @@ Before touching hardware, rehearse the host build and disk layout in a VM (`nixo
 
 ### M1 — Bootable appliance (MVP)
 
-- flake-parts + `import-tree` dendritic skeleton with base + server + service aspects; `nixos-facter` hardware report committed
+- flake-parts + `modules/default.nix` dendritic skeleton with base + server + service aspects; `nixos-facter` hardware report committed
 - `disko`: LUKS2 + Btrfs with `root`/`root-blank` subvolumes on the `ata-PELADN_512GB_...` disk
 - impermanent root via the initrd blank-snapshot rollback + `preservation`, with an explicit persisted-path inventory for host identity (incl. the agenix host key before decryption), declarative users, logs, and DHCP state
 - `linuxPackages_latest` + in-tree `dwmac_motorcomm` driver; `systemd-networkd` static LAN on `enp1s0`
@@ -946,7 +946,7 @@ Decision: **Blocky + dnsmasq** — a git-authoritative flake, DHCP robustness, a
 
 ### Flake organization: dendritic pattern
 
-The dendritic pattern (every file a flake-parts module, aspect-oriented across classes, auto-imported with `import-tree`) is purpose-built for sharing across host classes. It was initially rejected as a generic framework built before the second host exists, a large novel concept atop the Home Manager learning goal, and a legibility cost via auto-import and aspect scattering — and legibility matters most for recovery.
+The dendritic pattern (every file a flake-parts module, aspect-oriented across classes, explicitly listed in `modules/default.nix`) is purpose-built for sharing across host classes. It was initially rejected as a generic framework built before the second host exists, a large novel concept atop the Home Manager learning goal, and a legibility cost via module registry and aspect scattering — and legibility matters most for recovery.
 
 Decision (revised): **adopt the dendritic pattern.** With the project reframed around learning radical-modern Nix, the pattern's educational value now outweighs the legibility cost, and that cost is mitigated by documenting the aspect→host wiring. The original counter-arguments are acknowledged as the price paid: recovery legibility leans on docs rather than flat imports, and the second host doesn't exist yet — accepted deliberately for the learning goal.
 

@@ -11,7 +11,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 3 | [Flakes](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake) (Nix manual) | — | What a flake is, inputs/outputs |
 | 4 | [flake-parts](https://flake.parts) | M1 | Modular flake outputs, perSystem |
 | 5 | [Design doc](../superpowers/specs/soyo-dns-dhcp-appliance.md) | All | Every architectural decision and why |
-| 6 | `flake.nix` | M1 | The entry point — thin, delegates to flake-parts + import-tree |
+| 6 | `flake.nix` → `modules/default.nix` | M1 | The entry point — thin, delegates to flake-parts; `modules/default.nix` explicitly lists every module |
 | 7 | `modules/parts/soyo.nix` | M1 | How a host is assembled by toggling aspects |
 | 8 | `modules/nixos/base.nix` → `server.nix` → `users.nix` | M1 | The role-neutral base, server-only defaults, user policy |
 | 9 | `modules/nixos/persistence.nix`, `hosts/soyo/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + the concrete persisted-path inventory, including why boot signing state like `/var/lib/sbctl` belongs in it |
@@ -23,9 +23,9 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 15 | `modules/nixos/backup.nix`, `hosts/soyo/backup.nix` | M2 | restic to Synology, btrbk local snapshots |
 | 16 | `modules/nixos/observability.nix`, `lib/observability/`, `hosts/soyo/observability.nix`, [`docs/topology/`](../topology/) | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces, Alloy journal shipping. Reusable helpers extracted to `lib/observability/` (outside `import-tree`'s scope — see comment in the module). LAN observability adds passive inventory collector (`modules/nixos/observability/lan_inventory.py`), blackbox probes (ICMP + HTTP), an `LAN Overview` dashboard, and topology diagrams under `docs/topology/`. Host-local network metadata lives in `hosts/soyo/network.nix` (separated from the DHCP schema to keep the critical path boring). |
 | 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding, and Limine's `sbctl` signing model |
-| 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, pre-commit hooks (treefmt, deadnix, statix, typos, end-of-file-fixer, check-merge-conflicts), CI pipeline |
+| 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, pre-commit hooks (treefmt, deadnix, statix, typos, end-of-file-fixer, check-merge-conflicts, actionlint, shellcheck, markdownlint, ruff), CI pipeline |
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
-| 20 | [CI design doc](../superpowers/specs/2026-07-05-ci-pipeline-design.md), [CI plan](../superpowers/plans/2026-07-05-ci-pipeline-plan.md), `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline (lint: deadnix + statix + typos + gitleaks → eval: `nix flake check` → build + closure diff → topology artifact), Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
+| 20 | [CI design doc](../superpowers/specs/2026-07-05-ci-pipeline-design.md), [CI plan](../superpowers/plans/2026-07-05-ci-pipeline-plan.md), `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline (lint: deadnix + statix + typos + gitleaks + actionlint + shellcheck + markdownlint + ruff → eval: `nix flake check` → build + closure diff → topology artifact), Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
 
 ## What is this repo?
 
@@ -37,7 +37,7 @@ A NixOS flake that configures a small Intel N150 box ("Soyo") as a LAN DNS and D
 
 **flake-parts** — A framework that splits a flake into composable modules. Each module can contribute to outputs (packages, checks, dev shells, NixOS configs).
 
-**Dendritic pattern** — Every file under `modules/` is auto-imported as a flake-parts module by `import-tree`. Each file is one *aspect* (e.g. `blocky`, `dhcp`, `backup`) and contributes to a    shared namespace: `aspects.nixos.<aspect>`. A host is assembled by
+**Dendritic pattern** — `modules/default.nix` explicitly lists every `.nix` file under `modules/` as a flake-parts module. Each file is one *aspect* (e.g. `blocky`, `dhcp`, `backup`) and contributes to a    shared namespace: `aspects.nixos.<aspect>`. A host is assembled by
    toggling aspects on, not by `imports` of file paths.
 
 **Aspect module** — One file under `modules/nixos/` or `modules/home/` that exposes a toggleable feature. Convention: `{ aspects.nixos.<name> = { ... }; }` with an
@@ -71,14 +71,14 @@ using an encrypted auth key, so you can SSH in from anywhere.
 
 Given `hosts/soyo`, what's actually turned on? The answer is in `modules/parts/soyo.nix`:
 
-```
+```nix
 modules = (with config.aspects.nixos; [
   base server users persistence remote-unlock blocky dhcp
   maintenance backup observability
 ]) ++ [ ... host data files ... ]
 ```
 
-Each name in that list is an aspect contributed by a file under `modules/nixos/`. `import-tree` auto-discovers these files — no explicit import list. To add a new aspect, create a file under `modules/nixos/` that sets `aspects.nixos.<name>`, then toggle it in the host assembler.
+Each name in that list is an aspect contributed by a file under `modules/nixos/`. `modules/default.nix` lists every file explicitly. To add a new aspect, create a file under `modules/nixos/` that sets `aspects.nixos.<name>`, add it to `modules/default.nix`, then toggle it in the host assembler.
 
 ## Canonical sources
 
