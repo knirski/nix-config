@@ -23,6 +23,8 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
       - run: nix run .#deadnix -- .
+      - run: nix run nixpkgs#statix -- .
+      - run: nix run nixpkgs#typos -- .
       - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml
 
   eval:
