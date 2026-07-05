@@ -24,14 +24,13 @@
         inputs.agenix.nixosModules.default
         inputs.agenix-rekey.nixosModules.default
         inputs.home-manager.nixosModules.home-manager
-        (
-          { ... }:
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.krzysiek.imports = [ config.aspects.homeManager.base ];
-          }
-        )
+        {
+          home-manager = {
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            users.krzysiek.imports = [ config.aspects.homeManager.base ];
+          };
+        }
         ../../hosts/soyo/users.nix
         ../../hosts/soyo/disko.nix
         ../../hosts/soyo/boot.nix

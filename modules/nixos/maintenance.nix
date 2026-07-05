@@ -41,41 +41,24 @@
         };
 
         # --- journald: bounded log size ---
-        services.journald.extraConfig = ''
-          SystemMaxUse=500M
-        '';
-
         # --- timesyncd: IP-based NTP servers ---
-        services.timesyncd.enable = true;
+        # --- smartd: disk self-tests ---
+        services = {
+          journald.extraConfig = ''
+            SystemMaxUse=500M
+          '';
+          timesyncd.enable = true;
+          smartd = {
+            enable = true;
+            devices = map (dev: {
+              device = dev;
+              extraArgs = "-s (S/../.././02|L/../../7/03)";
+            }) cfg.smartdDevices;
+          };
+        };
         networking.timeServers = cfg.ntpServers;
 
         # --- Btrfs scrub: monthly, throttled to idle I/O ---
-        systemd.services.btrfs-scrub = {
-          description = "Btrfs scrub";
-          serviceConfig = {
-            Type = "oneshot";
-            IOSchedulingClass = "idle";
-            ExecStart = "${pkgs.btrfs-progs}/bin/btrfs scrub start -B /";
-            Nice = 19;
-          };
-        };
-        systemd.timers.btrfs-scrub = {
-          description = "Monthly Btrfs scrub";
-          wantedBy = [ "timers.target" ];
-          timerConfig = {
-            OnCalendar = "monthly";
-            RandomizedDelaySec = "1h";
-            Persistent = true;
-          };
-        };
-
-        # --- smartd: disk self-tests ---
-        services.smartd.enable = true;
-        services.smartd.devices = map (dev: {
-          device = dev;
-          extraArgs = "-s (S/../.././02|L/../../7/03)";
-        }) cfg.smartdDevices;
-
         # --- ntfy OnFailure: global drop-in so any failing service notifies ---
         # Applies to all .service units.  The template guards against infinite
         # recursion: if the failing unit itself is an ntfy-failure instance, it
@@ -85,85 +68,107 @@
           OnFailure=ntfy-failure@%N.service
         '';
 
-        systemd.services."ntfy-failure@" = {
-          description = "ntfy OnFailure notification for %i";
-          serviceConfig = {
-            Type = "oneshot";
-            # %i is expanded by systemd at runtime, so it MUST be outside the
-            # writeShellScript store path (systemd does not expand specifiers
-            # inside executed files).  Pass it as argument $1.
-            ExecStart = "${pkgs.writeShellScript "ntfy-failure" ''
-              set -euo pipefail
-              SERVICE="$1"
+        systemd = {
+          services = {
+            btrfs-scrub = {
+              description = "Btrfs scrub";
+              serviceConfig = {
+                Type = "oneshot";
+                IOSchedulingClass = "idle";
+                ExecStart = "${pkgs.btrfs-progs}/bin/btrfs scrub start -B /";
+                Nice = 19;
+              };
+            };
+            "ntfy-failure@" = {
+              description = "ntfy OnFailure notification for %i";
+              serviceConfig = {
+                Type = "oneshot";
+                # %i is expanded by systemd at runtime, so it MUST be outside the
+                # writeShellScript store path (systemd does not expand specifiers
+                # inside executed files).  Pass it as argument $1.
+                ExecStart = "${pkgs.writeShellScript "ntfy-failure" ''
+                  set -euo pipefail
+                  SERVICE="$1"
 
-              # Self-guard: if WE are the failing unit, stop — no recursion.
-              case "$SERVICE" in
-                ntfy-failure*) exit 0 ;;
-              esac
+                  # Self-guard: if WE are the failing unit, stop — no recursion.
+                  case "$SERVICE" in
+                    ntfy-failure*) exit 0 ;;
+                  esac
 
-              TOKEN=$(cat ${config.age.secrets.ntfy-token.path})
-              TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
-              curl -sS -o /dev/null \
-                -H "Authorization: Bearer $TOKEN" \
-                -H "Title: soyo unit failed" \
-                -d "$SERVICE failed on soyo — check journalctl -u $SERVICE" \
-                "$TOPIC"
-            ''} %i";
+                  TOKEN=$(cat ${config.age.secrets.ntfy-token.path})
+                  TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
+                  curl -sS -o /dev/null \
+                    -H "Authorization: Bearer $TOKEN" \
+                    -H "Title: soyo unit failed" \
+                    -d "$SERVICE failed on soyo — check journalctl -u $SERVICE" \
+                    "$TOPIC"
+                ''} %i";
+              };
+            };
+            free-space-check = {
+              description = "Free-space check with ntfy alert";
+              wantedBy = [ "multi-user.target" ];
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart = pkgs.writeShellScript "free-space-check" ''
+                  set -euo pipefail
+                  THRESHOLD=${toString cfg.freeSpaceThreshold}
+
+                  # btrfs filesystem usage -b gives byte-precise values.
+                  # df is misleading on Btrfs, so compute used % from device
+                  # size and Used bytes.
+                  USED_PCT=$( \
+                    ${pkgs.btrfs-progs}/bin/btrfs filesystem usage -b / \
+                    | ${pkgs.gawk}/bin/awk '
+                      /Device size/   { total = $NF }
+                      /^[[:space:]]+Used:[[:space:]]/ { used = $NF }
+                      END { if (total > 0) printf "%.0f", (used / total) * 100; else print "0" }
+                    ' )
+
+                  if [ -z "$USED_PCT" ]; then
+                    echo "free-space-check: could not parse btrfs usage" >&2
+                    exit 1
+                  fi
+
+                  # Export a Btrfs-aware Prometheus metric so Grafana alerts on the
+                  # same signal as the ntfy check, not df-style filesystem stats.
+                  mkdir -p /var/lib/prometheus/textfiles
+                  printf '%s\n' '# HELP soyo_btrfs_usage_percent Percent of Btrfs device space currently used.' '# TYPE soyo_btrfs_usage_percent gauge' "soyo_btrfs_usage_percent $USED_PCT" '# HELP soyo_btrfs_usage_threshold_percent Configured Btrfs usage alert threshold.' '# TYPE soyo_btrfs_usage_threshold_percent gauge' "soyo_btrfs_usage_threshold_percent $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
+                  mv /var/lib/prometheus/textfiles/btrfs-space.prom.$$ /var/lib/prometheus/textfiles/btrfs-space.prom
+
+                  if [ "$USED_PCT" -gt "$THRESHOLD" ]; then
+                    TOKEN=$(cat ${config.age.secrets.ntfy-token.path})
+                    TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
+                    curl -sS -o /dev/null \
+                      -H "Authorization: Bearer $TOKEN" \
+                      -H "Title: soyo low disk space" \
+                      -H "Tags: warning" \
+                      -d "Disk usage at $USED_PCT% (threshold: $THRESHOLD%). Check btrfs filesystem usage." \
+                      "$TOPIC"
+                  fi
+                '';
+              };
+            };
           };
-        };
-
-        # --- free-space check: hourly, Btrfs-aware (not df) ---
-        systemd.services.free-space-check = {
-          description = "Free-space check with ntfy alert";
-          wantedBy = [ "multi-user.target" ];
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = pkgs.writeShellScript "free-space-check" ''
-              set -euo pipefail
-              THRESHOLD=${toString cfg.freeSpaceThreshold}
-
-              # btrfs filesystem usage -b gives byte-precise values.
-              # df is misleading on Btrfs, so compute used % from device
-              # size and Used bytes.
-              USED_PCT=$( \
-                ${pkgs.btrfs-progs}/bin/btrfs filesystem usage -b / \
-                | ${pkgs.gawk}/bin/awk '
-                  /Device size/   { total = $NF }
-                  /^[[:space:]]+Used:[[:space:]]/ { used = $NF }
-                  END { if (total > 0) printf "%.0f", (used / total) * 100; else print "0" }
-                ' )
-
-              if [ -z "$USED_PCT" ]; then
-                echo "free-space-check: could not parse btrfs usage" >&2
-                exit 1
-              fi
-
-              # Export a Btrfs-aware Prometheus metric so Grafana alerts on the
-              # same signal as the ntfy check, not df-style filesystem stats.
-              mkdir -p /var/lib/prometheus/textfiles
-              printf '%s\n' '# HELP soyo_btrfs_usage_percent Percent of Btrfs device space currently used.' '# TYPE soyo_btrfs_usage_percent gauge' "soyo_btrfs_usage_percent $USED_PCT" '# HELP soyo_btrfs_usage_threshold_percent Configured Btrfs usage alert threshold.' '# TYPE soyo_btrfs_usage_threshold_percent gauge' "soyo_btrfs_usage_threshold_percent $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
-              mv /var/lib/prometheus/textfiles/btrfs-space.prom.$$ /var/lib/prometheus/textfiles/btrfs-space.prom
-
-              if [ "$USED_PCT" -gt "$THRESHOLD" ]; then
-                TOKEN=$(cat ${config.age.secrets.ntfy-token.path})
-                TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
-                curl -sS -o /dev/null \
-                  -H "Authorization: Bearer $TOKEN" \
-                  -H "Title: soyo low disk space" \
-                  -H "Tags: warning" \
-                  -d "Disk usage at $USED_PCT% (threshold: $THRESHOLD%). Check btrfs filesystem usage." \
-                  "$TOPIC"
-              fi
-            '';
-          };
-        };
-        systemd.timers.free-space-check = {
-          description = "Hourly free-space check";
-          wantedBy = [ "timers.target" ];
-          timerConfig = {
-            OnCalendar = "hourly";
-            RandomizedDelaySec = "120";
-            Persistent = true;
+          timers = {
+            btrfs-scrub = {
+              description = "Monthly Btrfs scrub";
+              wantedBy = [ "timers.target" ];
+              timerConfig = {
+                OnCalendar = "monthly";
+                RandomizedDelaySec = "1h";
+                Persistent = true;
+              };
+            };
+            free-space-check = {
+              description = "Hourly free-space check";
+              wantedBy = [ "timers.target" ];
+              timerConfig = {
+                OnCalendar = "hourly";
+                RandomizedDelaySec = "120";
+                Persistent = true;
+              };
+            };
           };
         };
       };

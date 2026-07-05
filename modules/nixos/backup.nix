@@ -203,7 +203,7 @@
               volume."/" = {
                 subvolume = lib.listToAttrs (
                   map (vol: {
-                    name = vol.name;
+                    inherit (vol) name;
                     value = {
                       snapshot_dir = vol.snapshotDir;
                       snapshot_create = "always";

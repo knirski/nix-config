@@ -10,7 +10,7 @@
       cfg = config.lanAppliance.services.observability;
       grafanaCfg = cfg.grafana;
 
-      networkData = cfg.networkData;
+      inherit (cfg) networkData;
       deviceMeta = networkData.deviceMeta or { };
 
       reservationProbeTargets = lib.concatMap (
@@ -20,8 +20,7 @@
         in
         lib.optionals ((meta != null) && (meta.monitor or false)) [
           {
-            name = r.name;
-            ip = r.ip;
+            inherit (r) name ip;
             kind = meta.kind or "host";
             displayName = meta.displayName or r.name;
           }
@@ -52,7 +51,7 @@
 
       fleetJson = import ../../lib/observability/fleet-dashboard.nix {
         inherit pkgs;
-        builder = builder;
+        inherit builder;
       };
       homeJson = import ../../lib/observability/soyo-dashboard.nix {
         inherit pkgs;
@@ -179,7 +178,7 @@
           )
         );
 
-      mkStaticLabelTarget = builder.mkStaticLabelTarget;
+      inherit (builder) mkStaticLabelTarget;
 
       # Reusable fragments live under lib/observability/ (not modules/) because
       # import-tree auto-imports every .nix under modules/ as flake-parts modules.
@@ -529,7 +528,7 @@
                       server = {
                         http_addr = "0.0.0.0";
                         http_port = 3000;
-                        domain = grafanaCfg.domain;
+                        inherit (grafanaCfg) domain;
                         root_url = "http://${grafanaCfg.domain}:3000";
                       };
                       analytics.reporting_enabled = false;

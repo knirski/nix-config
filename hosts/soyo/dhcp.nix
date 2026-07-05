@@ -9,7 +9,7 @@ in
     dnsServer = "10.0.0.9";
     searchDomain = "home.arpa";
     leaseFile = "/var/lib/dnsmasq/dnsmasq.leases";
-    reservations = reservations;
+    inherit reservations;
     dhcpRanges = [ "10.0.0.50,10.0.0.199,12h" ];
   };
 }

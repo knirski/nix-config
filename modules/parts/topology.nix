@@ -18,7 +18,7 @@ let
   inherit (inputs) nix-topology;
 
   networkData = import ../../hosts/soyo/network.nix;
-  reservations = networkData.reservations;
+  inherit (networkData) reservations;
 
   # Group reservations by name (multihomed hosts have multiple entries)
   grouped = lib.foldl (
@@ -46,7 +46,7 @@ let
           name = if builtins.length entries == 1 then "lan" else "eth${toString i}";
           value = {
             network = "lan";
-            mac = e.mac;
+            inherit (e) mac;
           }
           // lib.optionalAttrs e.isWiFi { type = "wifi"; };
         }) entries
@@ -163,17 +163,19 @@ in
               nixosConfigurations = lib.filterAttrs (_: c: c.config ? topology) self.nixosConfigurations;
             }
             {
-              networks.lan = {
-                name = "Home LAN";
-                cidrv4 = "10.0.0.0/24";
-              };
-              networks.rescue = {
-                name = "Direct-Link Rescue";
-                cidrv4 = "192.168.254.0/30";
-              };
-              networks.internet = {
-                name = "Internet";
-                cidrv4 = "0.0.0.0/0";
+              networks = {
+                lan = {
+                  name = "Home LAN";
+                  cidrv4 = "10.0.0.0/24";
+                };
+                rescue = {
+                  name = "Direct-Link Rescue";
+                  cidrv4 = "192.168.254.0/30";
+                };
+                internet = {
+                  name = "Internet";
+                  cidrv4 = "0.0.0.0/0";
+                };
               };
 
               nodes = builtins.listToAttrs allNodes;
