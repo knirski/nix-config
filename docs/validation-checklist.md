@@ -239,13 +239,16 @@ command and expected result.
 
 - [ ] **Grafana alert rules provisioned**
   ```sh
-  curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" \
-    http://127.0.0.1:3000/api/v1/provisioning/alert-rules \
-    | jq '.[].title'
+  curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://127.0.0.1:3000/api/v1/provisioning/alert-rules | jq '[.[] | {title, for, noDataState}]'
   ```
-  Expected: four rule titles — "Disk space low on /persist", "Backup failed",
-  "Service down: Blocky DNS", "Service down: dnsmasq". All have `for: 5m`
-  (tolerates `nixos-rebuild` service restarts without false alerts).
+  Expected: four rules with these titles:
+  - `💽 Btrfs space low` — `for: 5m`, `noDataState: KeepLast`
+  - `🛟 Backup failed` — `for: 30m`, `noDataState: KeepLast`
+  - `🧱 Blocky DNS down` — `for: 5m`, `noDataState: KeepLast`
+  - `📡 dnsmasq down` — `for: 5m`, `noDataState: KeepLast`
+  `execErrState` should also be `KeepLast` on all four rules.
+  The backup rule stays quiet until the first backup attempt finishes because
+  the textfile metric is seeded at boot with `restic_backup_ran 0`.
 
 - [ ] **Tailscale connected**
   ```sh
