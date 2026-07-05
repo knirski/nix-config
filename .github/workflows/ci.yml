@@ -85,8 +85,12 @@ jobs:
         run: |
           PREV=$(cat previous-closure.txt)
           CURR=$(readlink -f result)
-          echo "### Closure diff for ${{ matrix.host }}" >> "$GITHUB_STEP_SUMMARY"
-          nix store diff-closures "$PREV" "$CURR" >> "$GITHUB_STEP_SUMMARY" || true
+          if nix path-info "$PREV" &>/dev/null; then
+            echo "### Closure diff for ${{ matrix.host }}" >> "$GITHUB_STEP_SUMMARY"
+            nix store diff-closures "$PREV" "$CURR" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Previous closure not available in store; skipping diff." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Save current closure path
         run: readlink -f result > previous-closure.txt
