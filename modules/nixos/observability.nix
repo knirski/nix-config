@@ -182,6 +182,10 @@
 
       mkStaticLabelTarget = builder.mkStaticLabelTarget;
 
+      # Reusable fragments live under lib/observability/ (not modules/) because
+      # import-tree auto-imports every .nix under modules/ as flake-parts modules.
+      # lib/ is outside import-tree's scope, so these are plain Nix functions
+      # called here and spliced into config via mkMerge.
       alloyConfig = import ../../lib/observability/alloy-config.nix { };
       grafanaAlertSetup = import ../../lib/observability/grafana-alert-setup.nix {
         inherit lib config pkgs;

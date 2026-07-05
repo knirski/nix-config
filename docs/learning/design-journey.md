@@ -296,3 +296,21 @@ The fix (`65edb12`): add `"ruleGroup": "soyo", "orgID": 1` to every rule payload
 ### `LoadCredential` over `cat` on agenix paths
 
 The original script read secrets via `$(cat /run/agenix/...)` inline. This leaks the agenix internal path into the script text (stored in the Nix store). `LoadCredential=` mounts secrets at `$CREDENTIALS_DIRECTORY` at runtime — the agenix path never appears in the script. This is the idiomatic systemd pattern for secret injection.
+
+## Splitting the observability module: lib/ vs modules/
+
+The `modules/nixos/observability.nix` file grew from ~400 lines to ~2357 as features accumulated (dashboards, Loki, Alloy, Tempo, boot traces, alert provisioning). Breaking it into smaller files meant choosing where to put them.
+
+**Fork: modules/ vs lib/.** Putting helpers under `modules/observability/` would let them live next to the module they serve. But `import-tree ./modules` auto-imports every `.nix` file under `modules/` as a flake-parts module — those helpers would be treated as independent aspects with their own `flake.modules.nixos.*` entries, which they aren't. Putting them under `lib/observability/` keeps them invisible to import-tree while still colocated by feature domain.
+
+**Pattern:** `lib/observability/` holds plain Nix functions that return config fragments (dashboard JSON, systemd service definitions, Alloy River config). The main module imports them in its `let` block and splices them into the `mkMerge`:
+
+```nix
+alloyConfig = import ../../lib/observability/alloy-config.nix { };
+grafanaAlertSetup = import ../../lib/observability/grafana-alert-setup.nix { inherit lib config pkgs; };
+tempoTraces = import ../../lib/observability/tempo-traces.nix { inherit lib pkgs; };
+```
+
+**Key constraint:** When merging fragments that share nested attribute paths (e.g. both the base block and `tempoTraces` contribute to `services`), use `mkMerge` not `//`. Shallow `//` replaced the entire `services` attrset, dropping `services.grafana` and others — `mkMerge` recurses into nested structures correctly.
+
+**Lesson:** The dendritic pattern's auto-import makes `modules/` a reserved namespace. Reusable non-module code needs `lib/` or another directory outside import-tree's reach. The `lib/` directory at the repo root is the conventional choice and is called out in AGENTS.md as the place for reusable helpers.
