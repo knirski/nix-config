@@ -3,6 +3,7 @@
   systems = [ "x86_64-linux" ];
   imports = [
     inputs.treefmt-nix.flakeModule
+    inputs.git-hooks.flakeModule
     # Registers the `agenix-rekey.rekey` flake app used by `agenix rekey`.
     inputs.agenix-rekey.flakeModule
   ];
@@ -15,6 +16,36 @@
       ...
     }:
     {
+      pre-commit.settings = {
+        hooks = {
+          treefmt.enable = true;
+          deadnix.enable = true;
+          statix.enable = true;
+          statix.settings.ignore = [
+            "modules/nixos/observability.nix"
+            "lib/observability/*"
+          ];
+          typos.enable = true;
+          check-merge-conflicts.enable = true;
+          end-of-file-fixer.enable = true;
+          end-of-file-fixer.excludes = [
+            "facter\\.json$"
+            "\\.svg$"
+          ];
+          typos.settings.config = {
+            default = {
+              "extend-words" = {
+                crypted = "crypted";
+                facter = "facter";
+                HDA = "HDA";
+                Hed = "Hed";
+                FACTER = "FACTER";
+                sxl = "sxl";
+              };
+            };
+          };
+        };
+      };
       treefmt.config = {
         projectRootFile = "flake.nix";
         programs.nixfmt.enable = true;
@@ -35,6 +66,7 @@
           '';
 
       devShells.default = pkgs.mkShell {
+        shellHook = config.pre-commit.installationScript;
         packages = [
           pkgs.deadnix
           pkgs.gh
