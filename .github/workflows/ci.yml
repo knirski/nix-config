@@ -1,5 +1,4 @@
-# CI: validate the flake on every push — catches eval errors, formatting drift,
-# and broken builds before they reach a host.
+# CI: lint, eval, build, and topology check on every push.
 name: CI
 
 on:
@@ -9,10 +8,63 @@ on:
     branches: [main]
 
 jobs:
-  check:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - run: nix run nixpkgs#deadnix -- --fail
+      - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose
+
+  eval:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v16
       - uses: DeterminateSystems/magic-nix-cache-action@v9
       - run: nix flake check
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        host: [soyo]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - run: >
+          nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel
+          --keep-going
+
+      - name: Restore previous closure path
+        id: closure-cache
+        uses: actions/cache@v4
+        with:
+          path: previous-closure.txt
+          key: closure-${{ matrix.host }}-${{ github.ref_name }}
+
+      - name: Compare closures
+        if: steps.closure-cache.outputs.cache-hit == 'true'
+        run: |
+          PREV=$(cat previous-closure.txt)
+          CURR=$(nix path-info result)
+          echo "### Closure diff for ${{ matrix.host }}" >> $GITHUB_STEP_SUMMARY
+          nix store diff-closures "$PREV" "$CURR" >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Save current closure path
+        run: nix path-info result > previous-closure.txt
+
+  topology:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v9
+      - run: nix build .#topology.x86_64-linux.config.output
+      - run: mkdir -p topology-output && cp result/*.svg topology-output/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: topology
+          path: topology-output/
