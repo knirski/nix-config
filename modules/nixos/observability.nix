@@ -186,6 +186,14 @@
       # import-tree auto-imports every .nix under modules/ as flake-parts modules.
       # lib/ is outside import-tree's scope, so these are plain Nix functions
       # called here and spliced into config via mkMerge.
+      #
+      # networkData is supplied by the host (hosts/soyo/network.nix) and carries
+      # three sub-structures:
+      #   reservations     — from the DHCP schema (source of truth for who's on LAN)
+      #   monitoredInfrastructure — off-DHCP or off-LAN targets to probe anyway
+      #   deviceMeta       — observability-only labels (kind, displayName, monitor
+      #                      flag) keyed by reservation name, keeping rich labels
+      #                      off the reservations schema so the critical path stays boring.
       alloyConfig = import ../../lib/observability/alloy-config.nix { };
       grafanaAlertSetup = import ../../lib/observability/grafana-alert-setup.nix {
         inherit lib config pkgs;
@@ -348,6 +356,10 @@
               interfaces.enp1s0.allowedTCPPorts = lib.optionals grafanaCfg.enable [ 3000 ];
             };
 
+            # Blackbox exporter: Prometheus probes targets externally (ICMP ping + HTTP
+            # GET) rather than scraping an agent on the target. The NixOS module ships
+            # the binary; we configure two prober modules and the scrape jobs live in
+            # Prometheus's scrapeConfigs further down.
             services.prometheus.exporters.blackbox = {
               enable = true;
               listenAddress = cfg.blackboxExporter.listenAddress;
@@ -377,6 +389,12 @@
               "d /var/lib/prometheus/textfiles 0755 prometheus prometheus -"
             ];
 
+            # Passive LAN inventory: reads the dnsmasq lease file and kernel neighbour
+            # table (no active scanning) and writes Prometheus textfile metrics.
+            # node_exporter's textfile collector picks them up on its regular scrape.
+            # The inventory runs on a timer (2 min after boot, then every 5 min) and
+            # is CPU-quota'd since ip neigh queries are fast but we don't want them
+            # competing with DNS/DHCP.
             systemd.services.lan-inventory-exporter = {
               description = "Emit passive LAN inventory metrics for node_exporter textfile collector";
               after = [
