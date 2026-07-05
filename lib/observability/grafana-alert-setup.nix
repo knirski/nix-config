@@ -42,10 +42,10 @@
               }
 
               ensure_folder() {
-                curl -s -o /dev/null -w '%{http_code}' \
+                command curl -sS -u "$AUTH" -o /dev/null -w '%{http_code}' \
                   -X POST -H 'Content-Type: application/json' \
                   -d '{"uid":"soyo","title":"Soyo"}' \
-                  "$BASE/api/folders" | grep -qE '^200|^409'
+                  "$BASE/api/folders" | grep -qE '^200|^409|^412'
                 curl -sS -o /dev/null -X PUT \
                   -H 'Content-Type: application/json' \
                   -d '{"uid":"soyo","title":"Soyo","overwrite":true}' \
@@ -65,18 +65,15 @@
               }
 
               provision_contact_point() {
-                local topic token
+                local topic token existing payload
                 topic=$(<"$CREDENTIALS_DIRECTORY"/ntfy_topic)
                 token=$(<"$CREDENTIALS_DIRECTORY"/ntfy_token)
-                ${pkgs.jq}/bin/jq -nc \
-                  --arg url "$topic" \
-                  --arg token "$token" \
-                  '{name: "ntfy", type: "webhook", settings: {
-                    url: ($url + "?template=yes&title=%7B%7B.title%7D%7D&message=%7B%7B.message%7D%7D&priority=5&tags=warning,soyo"),
-                    httpMethod: "POST",
-                    authorization: {type: "Bearer", credentials: $token}}}' \
-                  | curl -X POST -H 'Content-Type: application/json' \
-                    -d @- "$BASE/api/v1/provisioning/contact-points"
+                existing=$(command curl -sS -u "$AUTH" "$BASE/api/v1/provisioning/contact-points")
+                if printf '%s' "$existing" | ${pkgs.jq}/bin/jq -e 'any(.. | objects; .name? == "ntfy")' >/dev/null; then
+                  return 0
+                fi
+                payload=$(${pkgs.jq}/bin/jq -nc --arg url "$topic" --arg token "$token" '{name: "ntfy", type: "webhook", settings: {url: ($url + "?template=yes&title=%7B%7B.title%7D%7D&message=%7B%7B.message%7D%7D&priority=5&tags=warning,soyo"), httpMethod: "POST", authorization: {type: "Bearer", credentials: $token}}}')
+                printf '%s' "$payload" | curl -X POST -H 'Content-Type: application/json' -d @- "$BASE/api/v1/provisioning/contact-points"
               }
 
               provision_policy() {
@@ -90,14 +87,25 @@
 
               delete_rule() {
                 local uid="$1" status
-                status=$(command curl -sS -u "$AUTH" -o /dev/null -w '%{http_code}' \
-                  -X DELETE "$BASE/api/v1/provisioning/alert-rules/$uid")
-                [ "$status" = 200 ] || [ "$status" = 202 ] || [ "$status" = 404 ]
+                status=$(command curl -sS -u "$AUTH" -o /dev/null -w '%{http_code}'                   -X DELETE "$BASE/api/v1/provisioning/alert-rules/$uid")
+                [ "$status" = 200 ] || [ "$status" = 202 ] || [ "$status" = 204 ] || [ "$status" = 404 ]
+              }
+
+              wait_rule_gone() {
+                local uid="$1"
+                for _ in $(seq 1 20); do
+                  if ! command curl -sS -u "$AUTH" "$BASE/api/v1/provisioning/alert-rules"                     | ${pkgs.jq}/bin/jq -e --arg uid "$uid" '.[] | select(.uid == $uid)' >/dev/null; then
+                    return 0
+                  fi
+                  sleep 1
+                done
+                return 1
               }
 
               post_rule() {
                 local uid="$1"
                 delete_rule "$uid"
+                wait_rule_gone "$uid"
                 ${pkgs.jq}/bin/jq -nc \
                   --arg uid "$uid" --arg title "$2" \
                   --arg expr "$3" --arg for "$4" \
@@ -105,7 +113,7 @@
                   '{uid: $uid, title: $title,
                     folderUID: "soyo", ruleGroup: "soyo", orgID: 1,
                     condition: "A", noDataState: $noData,
-                    execErrState: "Error", for: $for,
+                    execErrState: "KeepLast", for: $for,
                     data: [{
                       refId: "A",
                       relativeTimeRange: {from: 600, to: 0},
@@ -121,32 +129,32 @@
 
               provision_rules() {
                 post_rule soyo_blocky_down \
-                  "Service down: Blocky DNS" \
+                  "🧱 Blocky DNS down" \
                   'up{job="blocky"} == 0' \
-                  5m Alerting "Blocky DNS is unreachable"
+                  5m KeepLast "🧱 Blocky DNS is unreachable"
 
                 post_rule soyo_dnsmasq_down \
-                  "Service down: dnsmasq" \
+                  "📡 dnsmasq down" \
                   'up{job="dnsmasq"} == 0' \
-                  5m Alerting "dnsmasq unreachable — DHCP and reverse DNS down"
+                  5m KeepLast "📡 dnsmasq is unreachable — DHCP and reverse DNS are down"
 
                 post_rule soyo_backup_failed \
-                  "Backup failed" \
-                  "restic_backup_success == 0" \
-                  30m Alerting "restic backup to Synology failed — check journalctl"
+                  "🛟 Backup failed" \
+                  'restic_backup_ran == 1 and restic_backup_success == 0' \
+                  30m KeepLast "🛟 Restic backup to Synology failed — check journalctl"
 
                 post_rule soyo_disk_space_low \
-                  "Disk space low on /persist" \
-                  'node_filesystem_avail_bytes{mountpoint="/persist",fstype!=""} / node_filesystem_size_bytes{mountpoint="/persist",fstype!=""} * 100 < 10' \
-                  5m NoData "/persist disk usage below 10%"
+                  "💽 Btrfs space low" \
+                  'soyo_btrfs_usage_percent > soyo_btrfs_usage_threshold_percent' \
+                  5m KeepLast "💽 Btrfs filesystem usage is above the configured threshold"
               }
 
               wait_ready
-              ensure_folder || :
-              cleanup_legacy_folder || :
-              provision_contact_point || :
-              provision_policy || :
-              provision_rules || :
+              ensure_folder
+              cleanup_legacy_folder
+              provision_contact_point
+              provision_policy
+              provision_rules
             '';
           };
         in

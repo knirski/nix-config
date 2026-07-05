@@ -112,6 +112,7 @@
         # --- free-space check: hourly, Btrfs-aware (not df) ---
         systemd.services.free-space-check = {
           description = "Free-space check with ntfy alert";
+          wantedBy = [ "multi-user.target" ];
           serviceConfig = {
             Type = "oneshot";
             ExecStart = pkgs.writeShellScript "free-space-check" ''
@@ -133,6 +134,12 @@
                 echo "free-space-check: could not parse btrfs usage" >&2
                 exit 1
               fi
+
+              # Export a Btrfs-aware Prometheus metric so Grafana alerts on the
+              # same signal as the ntfy check, not df-style filesystem stats.
+              mkdir -p /var/lib/prometheus/textfiles
+              printf '%s\n' '# HELP soyo_btrfs_usage_percent Percent of Btrfs device space currently used.' '# TYPE soyo_btrfs_usage_percent gauge' "soyo_btrfs_usage_percent $USED_PCT" '# HELP soyo_btrfs_usage_threshold_percent Configured Btrfs usage alert threshold.' '# TYPE soyo_btrfs_usage_threshold_percent gauge' "soyo_btrfs_usage_threshold_percent $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
+              mv /var/lib/prometheus/textfiles/btrfs-space.prom.$$ /var/lib/prometheus/textfiles/btrfs-space.prom
 
               if [ "$USED_PCT" -gt "$THRESHOLD" ]; then
                 TOKEN=$(cat ${config.age.secrets.ntfy-token.path})

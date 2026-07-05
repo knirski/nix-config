@@ -88,6 +88,22 @@
       };
 
       config = lib.mkIf cfg.enable {
+        systemd.services.restic-backup-metric-bootstrap = {
+          description = "Seed restic backup alert metrics before the first backup run";
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = pkgs.writeShellScript "restic-backup-metric-bootstrap" ''
+              set -euo pipefail
+              mkdir -p /var/lib/prometheus/textfiles
+              if [ -e /var/lib/prometheus/textfiles/backup.prom ]; then
+                exit 0
+              fi
+
+              printf '%s\n' '# HELP restic_backup_ran 1 after the first backup attempt completes, 0 before that.' '# TYPE restic_backup_ran gauge' 'restic_backup_ran 0' '# HELP restic_backup_success 1 if the last completed backup succeeded, 0 otherwise.' '# TYPE restic_backup_success gauge' 'restic_backup_success 1' > /var/lib/prometheus/textfiles/backup.prom
+            '';
+          };
+        };
         # Off-host backups to the Synology DS423+ via restic (SFTP transport).
         # Repo password is an agenix secret; prune retention follows a 3-2-1
         # intent — local snapshots for quick mistakes, restic for real disaster.
@@ -154,20 +170,14 @@
                 -H 'Content-Type: application/json' \
                 -d @- http://localhost:4318/v1/traces || true
 
-                        # Write Prometheus textfile metric for alerting
+                        # Write Prometheus textfile metrics for alerting.
+                        # Seeded boot-time state distinguishes "no backup yet"
+                        # from "backup failed".
                         mkdir -p /var/lib/prometheus/textfiles
                         if [ "$RESULT" = "success" ]; then
-                          cat > /var/lib/prometheus/textfiles/backup.prom.$$ << EOF
-            # HELP restic_backup_success 1 if last backup succeeded, 0 otherwise
-            # TYPE restic_backup_success gauge
-            restic_backup_success 1
-            EOF
+                          printf '%s\n' '# HELP restic_backup_ran 1 after the first backup attempt completes, 0 before that.' '# TYPE restic_backup_ran gauge' 'restic_backup_ran 1' '# HELP restic_backup_success 1 if last backup succeeded, 0 otherwise' '# TYPE restic_backup_success gauge' 'restic_backup_success 1' > /var/lib/prometheus/textfiles/backup.prom.$$
                         else
-                          cat > /var/lib/prometheus/textfiles/backup.prom.$$ << EOF
-            # HELP restic_backup_success 1 if last backup succeeded, 0 otherwise
-            # TYPE restic_backup_success gauge
-            restic_backup_success 0
-            EOF
+                          printf '%s\n' '# HELP restic_backup_ran 1 after the first backup attempt completes, 0 before that.' '# TYPE restic_backup_ran gauge' 'restic_backup_ran 1' '# HELP restic_backup_success 1 if last backup succeeded, 0 otherwise' '# TYPE restic_backup_success gauge' 'restic_backup_success 0' > /var/lib/prometheus/textfiles/backup.prom.$$
                         fi
                         mv /var/lib/prometheus/textfiles/backup.prom.$$ /var/lib/prometheus/textfiles/backup.prom
           '';
