@@ -1558,7 +1558,8 @@ git commit -m "feat: harden soyo boot with secure boot plan"
 
 ## Self-Review
 
-**Spec coverage**
+### Spec coverage
+
 - Dendritic flake (`import-tree`, `flake.modules.nixos.*`, aspect→host assembler): Tasks 1–2, wired through every later task.
 - Impermanent root (blank-snapshot rollback + `preservation`), agenix host-key ordering, zstd, zram: Task 4.
 - `nixos-facter` hardware: Task 3.
@@ -1570,18 +1571,22 @@ git commit -m "feat: harden soyo boot with secure boot plan"
 - M3 Secure Boot: Task 9.
 - Incremental assembler growth so each checkpoint evaluates (B4): Tasks 1→7 each only reference aspects already created.
 
-**Design notes (now codified in the spec, called out here for implementers)**
+### Design notes (now codified in the spec, called out here for implementers)
+
 - The host **assembler** is `modules/parts/soyo.nix` (a flake-parts module — it must read `config.flake.modules.*`); `hosts/soyo/` holds hardware/data only. Home Manager wiring lives in the assembler because it needs `config.flake.modules.homeManager.base`. (Matches spec Repository Structure.)
 - `/etc/{passwd,shadow,group,…}` are intentionally **not** persisted: `mutableUsers = false` + `hashedPasswordFile` regenerate them declaratively each boot; only `/var/lib/nixos` is persisted for stable IDs. (Matches spec Impermanence Baseline.)
 
-**Gaps deliberately left out**
+### Gaps deliberately left out
+
 - Synology Uptime Kuma probe and off-site NAS replication are documented operator steps, not in-flake.
 - BIOS toggles and the final `systemd-cryptenroll` enroll are operator actions in the runbooks.
 - M4 (laptop host, `deploy-rs`, future services) is out of scope.
 
-**Placeholder scan**
+### Placeholder scan
+
 - No `TODO`/`TBD`. The plan is fully specified for implementation-critical code paths (modules, host data, assembler, checkpoints). Two deliverables are intentionally scaffolded, not literal: Task 5's Blocky migration is a diff-only wrapper change preserving the existing `settings` body verbatim, and Task 8's `docs/learning/README.md` is a guided skeleton the author fills in as prose. Every run step shows expected output. The Task 2 placeholder authorized key is explicitly replaced in Task 6.
 
-**Type consistency**
+### Type consistency
+
 - One host (`soyo`), one LAN IP (`10.0.0.9`), one rescue IP (`192.168.254.2/30`), one pool (`10.0.0.50-10.0.0.199`), one LUKS mapper (`crypted`), one root/blank pair (`root`/`root-blank`).
 - Option namespaces consistent: `lanAppliance.services.{blocky,dhcp,remoteUnlock,backup,maintenance,observability}`; aspect namespace `flake.modules.nixos.<aspect>`.

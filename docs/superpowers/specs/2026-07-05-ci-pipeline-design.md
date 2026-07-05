@@ -20,7 +20,7 @@ reach a host, and provides visibility into closure growth between commits.
 
 ## Pipeline overview — 4 parallel jobs
 
-```
+```text
 Push/PR
   │
   ├─ lint ────────── deadnix + gitleaks
@@ -119,7 +119,7 @@ Key decisions:
 - **Diff output**: written to `$GITHUB_STEP_SUMMARY` so it appears on the CI
   run page. Example:
 
-  ```
+  ```text
   nixos-system-soyo-25.05.20250301 → nixos-system-soyo-25.05.20250315
     linux: 6.13.2 → 6.13.5 (+12.3 MiB)
     python3: 3.12.8 → 3.12.9 (+8.1 MiB)

@@ -18,7 +18,7 @@ The simplest NixOS flake has one `nixosConfiguration` in `flake.nix` and a `hard
 
 **Fork: flake-parts or flat flakes.** A flat flake works for one host. `flake-parts` gives modular outputs (dev shell, formatter, checks, NixOS config) and a module system to compose them. Picked flake-parts: keeps `flake.nix` thin and lets each feature be its own module, shareable across hosts.
 
-**Fork: dendritic or flat imports.** The dendritic pattern (`import-tree` auto-discovers every file under `modules/`) is indirection — you can't see what's imported just by reading the file tree. The alternative is explicit `imports` lists in each host. Picked dendritic for its learning value: it forces understanding the aspect→host wiring, and the docs compensate for the indirection overhead. A future laptop toggles the same shared aspects.
+**Fork: dendritic or flat imports.** The dendritic pattern (`modules/default.nix` explicitly lists every module file) is indirection — you can't see what's imported just by reading the file tree. The alternative is explicit `imports` lists in each host. Picked dendritic for its learning value: it forces understanding the aspect→host wiring, and the docs compensate for the indirection overhead. A future laptop toggles the same shared aspects.
 
 ## Filesystem: impermanence
 
@@ -92,7 +92,7 @@ After replacement, template variables are deleted from `templating.list` so Graf
 Grafana's `$__rate_interval` is a built-in that auto-selects a range vector duration based on scrape interval and time window. On a 5-minute window with 1-minute scrape intervals, it resolved to ~15s — so `rate(…[$__rate_interval])` became `rate(…[15s])`, which returned zero data (1m scrape interval produces only 5 raw data points; a 15s window needs at least 2).
 
 Tested with `gcx`:
-```
+```text
 # Fails at 5m window, returns data at 15m window:
 rate(node_pressure_cpu_waiting_seconds_total[1m])   → No data
 rate(node_pressure_cpu_waiting_seconds_total[3m])   → data ✓
@@ -213,7 +213,7 @@ Grafana's webhook contact point sends the full alerting JSON payload to the conf
 
 The fix uses ntfy's built-in Go template engine (`?template=yes` query parameter on the topic URL):
 
-```
+```text
 https://ntfy.sh/soyo-alerts?template=yes&title=%7B%7B.title%7D%7D&message=%7B%7B.message%7D%7D&priority=5&tags=warning,soyo
 ```
 
@@ -301,7 +301,7 @@ The original script read secrets via `$(cat /run/agenix/...)` inline. This leaks
 
 The `modules/nixos/observability.nix` file grew from ~400 lines to ~2357 as features accumulated (dashboards, Loki, Alloy, Tempo, boot traces, alert provisioning). Breaking it into smaller files meant choosing where to put them.
 
-**Fork: modules/ vs lib/.** Putting helpers under `modules/observability/` would let them live next to the module they serve. But `import-tree ./modules` auto-imports every `.nix` file under `modules/` as a flake-parts module — those helpers would be treated as independent aspects with their own `aspects.nixos.*` entries, which they aren't. Putting them under `lib/observability/` keeps them invisible to import-tree while still colocated by feature domain.
+**Fork: modules/ vs lib/.** Putting helpers under `modules/observability/` would let them live next to the module they serve. But `modules/default.nix` lists every `.nix` file under `modules/` as a flake-parts module — those helpers would be treated as independent aspects with their own `aspects.nixos.*` entries, which they aren't. Putting them under `lib/observability/` keeps them invisible to the module registry while still colocated by feature domain.
 
 **Pattern:** `lib/observability/` holds plain Nix functions that return config fragments (dashboard JSON, systemd service definitions, Alloy River config). The main module imports them in its `let` block and splices them into the `mkMerge`:
 
@@ -313,4 +313,4 @@ tempoTraces = import ../../lib/observability/tempo-traces.nix { inherit lib pkgs
 
 **Key constraint:** When merging fragments that share nested attribute paths (e.g. both the base block and `tempoTraces` contribute to `services`), use `mkMerge` not `//`. Shallow `//` replaced the entire `services` attrset, dropping `services.grafana` and others — `mkMerge` recurses into nested structures correctly.
 
-**Lesson:** The dendritic pattern's auto-import makes `modules/` a reserved namespace. Reusable non-module code needs `lib/` or another directory outside import-tree's reach. The `lib/` directory at the repo root is the conventional choice and is called out in AGENTS.md as the place for reusable helpers.
+**Lesson:** The dendritic pattern's explicit module registry makes `modules/` a reserved namespace. Reusable non-module code needs `lib/` or another directory outside the module tree. The `lib/` directory at the repo root is the conventional choice and is called out in AGENTS.md as the place for reusable helpers.

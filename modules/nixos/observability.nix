@@ -181,8 +181,8 @@
       inherit (builder) mkStaticLabelTarget;
 
       # Reusable fragments live under lib/observability/ (not modules/) because
-      # import-tree auto-imports every .nix under modules/ as flake-parts modules.
-      # lib/ is outside import-tree's scope, so these are plain Nix functions
+      # modules/default.nix lists every .nix under modules/ as flake-parts modules.
+      # lib/ is outside modules/ scope, so these are plain Nix functions
       # called here and spliced into config via mkMerge.
       #
       # networkData is supplied by the host (hosts/soyo/network.nix) and carries
@@ -321,104 +321,93 @@
       config = lib.mkIf cfg.enable (
         lib.mkMerge [
           {
-            services.prometheus.exporters.node = {
-              enable = true;
-              listenAddress = cfg.nodeExporter.listenAddress;
-              extraFlags = [
-                "--collector.textfile.directory=/var/lib/prometheus/textfiles"
-                "--collector.processes"
-                "--collector.interrupts"
-              ];
-            };
-
-            services.prometheus.exporters.dnsmasq = {
-              enable = true;
-              listenAddress = cfg.dnsmasqExporter.listenAddress;
-              dnsmasqListenAddress = cfg.dnsmasqExporter.dnsmasqListenAddress;
-              leasesPath = cfg.dnsmasqExporter.leasesPath;
+            services.prometheus.exporters = {
+              node = {
+                enable = true;
+                listenAddress = cfg.nodeExporter.listenAddress;
+                extraFlags = [
+                  "--collector.textfile.directory=/var/lib/prometheus/textfiles"
+                  "--collector.processes"
+                  "--collector.interrupts"
+                ];
+              };
+              dnsmasq = {
+                enable = true;
+                listenAddress = cfg.dnsmasqExporter.listenAddress;
+                dnsmasqListenAddress = cfg.dnsmasqExporter.dnsmasqListenAddress;
+                leasesPath = cfg.dnsmasqExporter.leasesPath;
+              };
+              blackbox = {
+                enable = true;
+                listenAddress = cfg.blackboxExporter.listenAddress;
+                configFile = pkgs.writeText "blackbox.yml" (
+                  builtins.toJSON {
+                    modules = {
+                      icmp.prober = "icmp";
+                      http_2xx = {
+                        prober = "http";
+                        timeout = "5s";
+                        http = {
+                          preferred_ip_protocol = "ip4";
+                          method = "GET";
+                        };
+                      };
+                    };
+                  }
+                );
+              };
             };
 
             users.users.node-exporter.extraGroups = [ "prometheus" ];
-
-            systemd.services.prometheus-node-exporter.serviceConfig = {
-              MemoryMax = "64M";
-              CPUQuota = "10%";
-            };
-
-            systemd.services.prometheus-dnsmasq-exporter.serviceConfig = {
-              MemoryMax = "64M";
-              CPUQuota = "10%";
-            };
 
             networking.firewall = lib.mkIf cfg.openFirewall {
               interfaces.enp1s0.allowedTCPPorts = lib.optionals grafanaCfg.enable [ 3000 ];
             };
 
-            # Blackbox exporter: Prometheus probes targets externally (ICMP ping + HTTP
-            # GET) rather than scraping an agent on the target. The NixOS module ships
-            # the binary; we configure two prober modules and the scrape jobs live in
-            # Prometheus's scrapeConfigs further down.
-            services.prometheus.exporters.blackbox = {
-              enable = true;
-              listenAddress = cfg.blackboxExporter.listenAddress;
-              configFile = pkgs.writeText "blackbox.yml" (
-                builtins.toJSON {
-                  modules = {
-                    icmp.prober = "icmp";
-                    http_2xx = {
-                      prober = "http";
-                      timeout = "5s";
-                      http = {
-                        preferred_ip_protocol = "ip4";
-                        method = "GET";
-                      };
-                    };
+            systemd = {
+              services = {
+                prometheus-node-exporter.serviceConfig = {
+                  MemoryMax = "64M";
+                  CPUQuota = "10%";
+                };
+                prometheus-dnsmasq-exporter.serviceConfig = {
+                  MemoryMax = "64M";
+                  CPUQuota = "10%";
+                };
+                prometheus-blackbox-exporter.serviceConfig = {
+                  MemoryMax = "96M";
+                  CPUQuota = "10%";
+                };
+                lan-inventory-exporter = {
+                  description = "Emit passive LAN inventory metrics for node_exporter textfile collector";
+                  after = [
+                    "network-online.target"
+                    "dnsmasq.service"
+                  ];
+                  wants = [ "network-online.target" ];
+                  serviceConfig = {
+                    Type = "oneshot";
+                    User = "prometheus";
+                    Group = "prometheus";
+                    SupplementaryGroups = [ "dnsmasq" ];
+                    ExecStart = "${lanInventoryScript}/bin/lan-inventory-exporter";
+                    MemoryMax = "96M";
+                    CPUQuota = "10%";
                   };
-                }
-              );
-            };
-
-            systemd.services.prometheus-blackbox-exporter.serviceConfig = {
-              MemoryMax = "96M";
-              CPUQuota = "10%";
-            };
-
-            systemd.tmpfiles.rules = [
-              "d /var/lib/prometheus/textfiles 0755 prometheus prometheus -"
-            ];
-
-            # Passive LAN inventory: reads the dnsmasq lease file and kernel neighbour
-            # table (no active scanning) and writes Prometheus textfile metrics.
-            # node_exporter's textfile collector picks them up on its regular scrape.
-            # The inventory runs on a timer (2 min after boot, then every 5 min) and
-            # is CPU-quota'd since ip neigh queries are fast but we don't want them
-            # competing with DNS/DHCP.
-            systemd.services.lan-inventory-exporter = {
-              description = "Emit passive LAN inventory metrics for node_exporter textfile collector";
-              after = [
-                "network-online.target"
-                "dnsmasq.service"
+                };
+              };
+              timers.lan-inventory-exporter = {
+                wantedBy = [ "timers.target" ];
+                timerConfig = {
+                  OnBootSec = "2m";
+                  OnUnitActiveSec = "5m";
+                  RandomizedDelaySec = "30s";
+                  Unit = "lan-inventory-exporter.service";
+                };
+              };
+              tmpfiles.rules = [
+                "d /var/lib/prometheus/textfiles 0755 prometheus prometheus -"
               ];
-              wants = [ "network-online.target" ];
-              serviceConfig = {
-                Type = "oneshot";
-                User = "prometheus";
-                Group = "prometheus";
-                SupplementaryGroups = [ "dnsmasq" ];
-                ExecStart = "${lanInventoryScript}/bin/lan-inventory-exporter";
-                MemoryMax = "96M";
-                CPUQuota = "10%";
-              };
-            };
-
-            systemd.timers.lan-inventory-exporter = {
-              wantedBy = [ "timers.target" ];
-              timerConfig = {
-                OnBootSec = "2m";
-                OnUnitActiveSec = "5m";
-                RandomizedDelaySec = "30s";
-                Unit = "lan-inventory-exporter.service";
-              };
             };
           }
 
@@ -426,198 +415,199 @@
           (lib.mkIf grafanaCfg.enable (
             lib.mkMerge [
               {
-                services.prometheus = {
-                  enable = true;
-                  listenAddress = "localhost";
-                  port = 9090;
-                  scrapeConfigs = [
-                    {
-                      job_name = "node";
-                      static_configs = [ { targets = [ "localhost:9100" ]; } ];
-                    }
-                    {
-                      job_name = "dnsmasq";
-                      static_configs = [ { targets = [ "localhost:9153" ]; } ];
-                    }
-                    {
-                      job_name = "blocky";
-                      static_configs = [ { targets = [ "localhost:4000" ]; } ];
-                    }
-                  ];
-                };
-
-                services.loki = {
-                  enable = true;
-                  configuration = {
-                    auth_enabled = false;
-                    analytics.reporting_enabled = false;
-
-                    server = {
-                      http_listen_port = 3100;
-                      http_listen_address = "localhost";
-                      log_level = "warn";
-                    };
-
-                    ingester = {
-                      lifecycler = {
-                        address = "127.0.0.1";
-                        ring = {
-                          kvstore.store = "inmemory";
-                          replication_factor = 1;
-                        };
-                        final_sleep = "0s";
-                      };
-                      chunk_idle_period = "5m";
-                      chunk_retain_period = "30s";
-                      wal = {
-                        enabled = true;
-                        dir = "/var/lib/loki/wal";
-                      };
-                    };
-
-                    query_scheduler.use_scheduler_ring = false;
-
-                    schema_config.configs = [
+                services = {
+                  prometheus = {
+                    enable = true;
+                    listenAddress = "localhost";
+                    port = 9090;
+                    scrapeConfigs = [
                       {
-                        from = "2025-01-01";
-                        store = "tsdb";
-                        object_store = "filesystem";
-                        schema = "v13";
-                        index = {
-                          prefix = "index_";
-                          period = "24h";
-                        };
+                        job_name = "node";
+                        static_configs = [ { targets = [ "localhost:9100" ]; } ];
+                      }
+                      {
+                        job_name = "dnsmasq";
+                        static_configs = [ { targets = [ "localhost:9153" ]; } ];
+                      }
+                      {
+                        job_name = "blocky";
+                        static_configs = [ { targets = [ "localhost:4000" ]; } ];
                       }
                     ];
+                  };
+                  loki = {
+                    enable = true;
+                    configuration = {
+                      auth_enabled = false;
+                      analytics.reporting_enabled = false;
 
-                    storage_config = {
-                      tsdb_shipper = {
-                        active_index_directory = "/var/lib/loki/tsdb-index";
-                        cache_location = "/var/lib/loki/tsdb-cache";
-                        cache_ttl = "24h";
+                      server = {
+                        http_listen_port = 3100;
+                        http_listen_address = "localhost";
+                        log_level = "warn";
                       };
-                      filesystem.directory = "/var/lib/loki/chunks";
-                    };
 
-                    compactor = {
-                      working_directory = "/var/lib/loki/compactor";
-                      retention_enabled = true;
-                      delete_request_store = "filesystem";
-                    };
+                      ingester = {
+                        lifecycler = {
+                          address = "127.0.0.1";
+                          ring = {
+                            kvstore.store = "inmemory";
+                            replication_factor = 1;
+                          };
+                          final_sleep = "0s";
+                        };
+                        chunk_idle_period = "5m";
+                        chunk_retain_period = "30s";
+                        wal = {
+                          enabled = true;
+                          dir = "/var/lib/loki/wal";
+                        };
+                      };
 
-                    limits_config = {
-                      reject_old_samples = true;
-                      reject_old_samples_max_age = "168h";
-                      retention_period = "720h";
-                      allow_structured_metadata = false;
-                      ingestion_rate_mb = 12;
-                      ingestion_burst_size_mb = 18;
+                      query_scheduler.use_scheduler_ring = false;
+
+                      schema_config.configs = [
+                        {
+                          from = "2025-01-01";
+                          store = "tsdb";
+                          object_store = "filesystem";
+                          schema = "v13";
+                          index = {
+                            prefix = "index_";
+                            period = "24h";
+                          };
+                        }
+                      ];
+
+                      storage_config = {
+                        tsdb_shipper = {
+                          active_index_directory = "/var/lib/loki/tsdb-index";
+                          cache_location = "/var/lib/loki/tsdb-cache";
+                          cache_ttl = "24h";
+                        };
+                        filesystem.directory = "/var/lib/loki/chunks";
+                      };
+
+                      compactor = {
+                        working_directory = "/var/lib/loki/compactor";
+                        retention_enabled = true;
+                        delete_request_store = "filesystem";
+                      };
+
+                      limits_config = {
+                        reject_old_samples = true;
+                        reject_old_samples_max_age = "168h";
+                        retention_period = "720h";
+                        allow_structured_metadata = false;
+                        ingestion_rate_mb = 12;
+                        ingestion_burst_size_mb = 18;
+                      };
                     };
                   };
-                };
-
-                services.alloy = {
-                  enable = true;
-                  extraFlags = [ "--disable-reporting" ];
+                  alloy = {
+                    enable = true;
+                    extraFlags = [ "--disable-reporting" ];
+                  };
+                  grafana =
+                    let
+                      config' = {
+                        server = {
+                          http_addr = "0.0.0.0";
+                          http_port = 3000;
+                          inherit (grafanaCfg) domain;
+                          root_url = "http://${grafanaCfg.domain}:3000";
+                        };
+                        analytics.reporting_enabled = false;
+                        grafana_news.new_news_enabled = false;
+                        security.secret_key = "$__file{${config.age.secrets.grafana-secret-key.path}}";
+                        security.admin_password = "$__file{${config.age.secrets.grafana-admin-password.path}}";
+                        unified_alerting.enabled = true;
+                        dashboards.default_home_dashboard_path = "${fleetJson}";
+                      };
+                    in
+                    {
+                      enable = true;
+                      settings = config';
+                      provision.datasources.settings = {
+                        apiVersion = 1;
+                        datasources = [
+                          {
+                            name = "Prometheus";
+                            type = "prometheus";
+                            access = "proxy";
+                            url = "http://localhost:9090";
+                            uid = "soyo-prometheus";
+                            isDefault = true;
+                          }
+                          {
+                            name = "Loki";
+                            type = "loki";
+                            access = "proxy";
+                            url = "http://localhost:3100";
+                            uid = "soyo-loki";
+                          }
+                          {
+                            name = "Tempo";
+                            type = "tempo";
+                            access = "proxy";
+                            url = "http://localhost:3200";
+                            uid = "soyo-tempo";
+                          }
+                        ];
+                      };
+                      provision.dashboards.settings = {
+                        apiVersion = 1;
+                        providers = [
+                          {
+                            name = "fleet";
+                            type = "file";
+                            options.path = pkgs.runCommand "fleet-grafana-dashboards" { } ''
+                              mkdir -p $out
+                              cp ${fleetJson} $out/001-fleet-overview.json
+                              cp ${nodeExporterJson} $out/002-node-exporter-full.json
+                              cp ${lanOverviewJson} $out/003-lan-overview.json
+                            '';
+                          }
+                          {
+                            name = "soyo";
+                            type = "file";
+                            folder = "Soyo";
+                            folderUid = "soyo";
+                            options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
+                              mkdir -p $out
+                              cp ${homeJson} $out/001-soyo-control-plane.json
+                              cp ${dnsmasqJson} $out/dnsmasq.json
+                              cp ${blockyJson} $out/blocky.json
+                            '';
+                          }
+                        ];
+                      };
+                    };
                 };
                 environment.etc."alloy/config.alloy".text = alloyConfig;
-
-                services.grafana =
-                  let
-                    config' = {
-                      server = {
-                        http_addr = "0.0.0.0";
-                        http_port = 3000;
-                        inherit (grafanaCfg) domain;
-                        root_url = "http://${grafanaCfg.domain}:3000";
-                      };
-                      analytics.reporting_enabled = false;
-                      grafana_news.new_news_enabled = false;
-                      security.secret_key = "$__file{${config.age.secrets.grafana-secret-key.path}}";
-                      security.admin_password = "$__file{${config.age.secrets.grafana-admin-password.path}}";
-                      unified_alerting.enabled = true;
-                      dashboards.default_home_dashboard_path = "${fleetJson}";
-                    };
-                  in
-                  {
-                    enable = true;
-                    settings = config';
-                    provision.datasources.settings = {
-                      apiVersion = 1;
-                      datasources = [
-                        {
-                          name = "Prometheus";
-                          type = "prometheus";
-                          access = "proxy";
-                          url = "http://localhost:9090";
-                          uid = "soyo-prometheus";
-                          isDefault = true;
-                        }
-                        {
-                          name = "Loki";
-                          type = "loki";
-                          access = "proxy";
-                          url = "http://localhost:3100";
-                          uid = "soyo-loki";
-                        }
-                        {
-                          name = "Tempo";
-                          type = "tempo";
-                          access = "proxy";
-                          url = "http://localhost:3200";
-                          uid = "soyo-tempo";
-                        }
-                      ];
-                    };
-                    provision.dashboards.settings = {
-                      apiVersion = 1;
-                      providers = [
-                        {
-                          name = "fleet";
-                          type = "file";
-                          options.path = pkgs.runCommand "fleet-grafana-dashboards" { } ''
-                            mkdir -p $out
-                            cp ${fleetJson} $out/001-fleet-overview.json
-                            cp ${nodeExporterJson} $out/002-node-exporter-full.json
-                            cp ${lanOverviewJson} $out/003-lan-overview.json
-                          '';
-                        }
-                        {
-                          name = "soyo";
-                          type = "file";
-                          folder = "Soyo";
-                          folderUid = "soyo";
-                          options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
-                            mkdir -p $out
-                            cp ${homeJson} $out/001-soyo-control-plane.json
-                            cp ${dnsmasqJson} $out/dnsmasq.json
-                            cp ${blockyJson} $out/blocky.json
-                          '';
-                        }
-                      ];
-                    };
-                  };
               }
               {
-                systemd.services.grafana.serviceConfig = {
-                  MemoryMax = "256M";
-                  CPUQuota = "20%";
-                  Nice = 10;
-                };
-                systemd.services.prometheus.serviceConfig = {
-                  MemoryMax = "512M";
-                  CPUQuota = "30%";
-                  Nice = 10;
-                };
-                systemd.services.loki.serviceConfig = {
-                  MemoryMax = "512M";
-                  CPUQuota = "20%";
-                  Nice = 10;
-                };
-                systemd.services.alloy.serviceConfig = {
-                  MemoryMax = "128M";
-                  CPUQuota = "10%";
-                  Nice = 10;
+                systemd.services = {
+                  grafana.serviceConfig = {
+                    MemoryMax = "256M";
+                    CPUQuota = "20%";
+                    Nice = 10;
+                  };
+                  prometheus.serviceConfig = {
+                    MemoryMax = "512M";
+                    CPUQuota = "30%";
+                    Nice = 10;
+                  };
+                  loki.serviceConfig = {
+                    MemoryMax = "512M";
+                    CPUQuota = "20%";
+                    Nice = 10;
+                  };
+                  alloy.serviceConfig = {
+                    MemoryMax = "128M";
+                    CPUQuota = "10%";
+                    Nice = 10;
+                  };
                 };
               }
               grafanaAlertSetup

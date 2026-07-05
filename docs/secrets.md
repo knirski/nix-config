@@ -56,10 +56,10 @@ format).  age uses **asymmetric (public-key) cryptography**:
 
 You share your public key freely; you guard your private key with your life.
 
-```
-                  public key                    private key
-                     │                              │
-  "hello" ──► encrypt ──► encrypted file ──► decrypt ──► "hello"
+```text
+                    public key                    private key
+                       │                              │
+   "hello" ──► encrypt ──► encrypted file ──► decrypt ──► "hello"
 ```
 
 ### SSH keys are already age keys
@@ -152,7 +152,7 @@ Instead of encrypting every secret for every machine directly (which would
 mean re-encrypting *N* secrets × *M* hosts every time a password changes),
 we use a two-layer approach:
 
-```
+```text
 Layer 1 (in git)                    Layer 2 (in git)
 ┌─────────────────┐    agenix rekey   ┌──────────────────────┐
 │ secrets/        │ ─────────────────►│ secrets/rekeyed/     │
@@ -201,7 +201,7 @@ Layer 1 (in git)                    Layer 2 (in git)
 
 ## File layout in this repo
 
-```
+```text
 secrets/
 ├── krzysiek.age.pub        # Master identity public key (plaintext)
 ├── soyo.pub                # Soyo host SSH public key (plaintext; placeholder

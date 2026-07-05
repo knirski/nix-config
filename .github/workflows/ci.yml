@@ -22,9 +22,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
+      - uses: cachix/cachix-action@v16
+        if: github.ref_name == 'main'
+        with:
+          name: knirski-nix-config
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: nix run .#deadnix -- .
       - run: nix run nixpkgs#statix -- .
       - run: nix run nixpkgs#typos -- .
+      - run: nix run nixpkgs#actionlint -- .
+      - run: nix run nixpkgs#shellcheck -- scripts/healthcheck.sh scripts/deploy-soyo.sh
+      - run: nix run nixpkgs#markdownlint-cli -- '*.md' 'docs/**/*.md'
+      - run: nix run nixpkgs#ruff -- check modules/nixos/observability/lan_inventory.py modules/nixos/observability/lan_inventory_test.py
       - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml
 
   eval:
@@ -33,7 +42,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
-      - run: nix flake check
+      - uses: cachix/cachix-action@v16
+        if: github.ref_name == 'main'
+        with:
+          name: knirski-nix-config
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - run: nix flake check --no-build
 
   build:
     runs-on: ubuntu-24.04
@@ -44,6 +58,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
+      - uses: cachix/cachix-action@v16
+        if: github.ref_name == 'main'
+        with:
+          name: knirski-nix-config
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: >
           nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel
           --keep-going
@@ -53,15 +72,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: previous-closure.txt
-          key: closure-${{ matrix.host }}-${{ github.ref_name }}
+          key: closure-${{ matrix.host }}-${{ github.base_ref || github.ref_name }}
 
       - name: Compare closures
         if: steps.closure-cache.outputs.cache-hit == 'true'
         run: |
           PREV=$(cat previous-closure.txt)
           CURR=$(readlink -f result)
-          echo "### Closure diff for ${{ matrix.host }}" >> $GITHUB_STEP_SUMMARY
-          nix store diff-closures "$PREV" "$CURR" >> $GITHUB_STEP_SUMMARY || true
+          echo "### Closure diff for ${{ matrix.host }}" >> "$GITHUB_STEP_SUMMARY"
+          nix store diff-closures "$PREV" "$CURR" >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Save current closure path
         run: readlink -f result > previous-closure.txt
@@ -72,6 +91,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
+      - uses: cachix/cachix-action@v16
+        if: github.ref_name == 'main'
+        with:
+          name: knirski-nix-config
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: nix build .#topology
       - run: mkdir -p topology-output && cp result/*.svg topology-output/
       - uses: actions/upload-artifact@v4

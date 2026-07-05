@@ -46,8 +46,10 @@ check_val() {
   fi
 }
 
-run_ssh()  { ssh $SSH_OPTS "krzysiek@$HOST" "$@"; }
-run_sudo() { ssh $SSH_OPTS "krzysiek@$HOST" "sudo $@"; }
+# shellcheck disable=SC2029,SC2329
+run_ssh()  { ssh "$SSH_OPTS" "krzysiek@$HOST" "$@"; }
+# shellcheck disable=SC2029,SC2329
+run_sudo() { ssh "$SSH_OPTS" "krzysiek@$HOST" sudo "$@"; }
 
 echo "=== Healthcheck: $HOST ==="
 echo ""

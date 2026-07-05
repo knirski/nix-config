@@ -4,13 +4,13 @@
   <a href="https://nixos.org"><img src="https://img.shields.io/badge/NixOS-26.05-5277C3?logo=nixos&logoColor=white" alt="NixOS"></a>
   <a href="https://nixos.wiki/wiki/Flakes"><img src="https://img.shields.io/badge/flakes-enabled-7eb6e0?logo=nixos&logoColor=white" alt="Flakes"></a>
   <a href="https://flake.parts"><img src="https://img.shields.io/badge/built%20with-flake--parts-7eb6e0" alt="flake-parts"></a>
-  <a href="https://github.com/vic/import-tree"><img src="https://img.shields.io/badge/pattern-dendritic-7eb6e0" alt="dendritic"></a>
+  <a href="https://flake.parts"><img src="https://img.shields.io/badge/pattern-dendritic-7eb6e0" alt="dendritic"></a>
   <a href="https://github.com/oddlama/nix-topology"><img src="https://img.shields.io/badge/diagrams-nix--topology-7eb6e0" alt="nix-topology"></a>
   <a href="https://github.com/knirski/nix-config/actions/workflows/ci.yml"><img src="https://github.com/knirski/nix-config/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
 </p>
 
 Multi-host [NixOS](https://nixos.org) flake built with [flake-parts](https://flake.parts)
-and the [dendritic](https://github.com/vic/import-tree) pattern.
+and the [dendritic](https://flake.parts) pattern.
 
 ## Hosts
 
@@ -33,7 +33,7 @@ For the guided learning path through this repo, start at [docs/learning/README.m
 
 ## Structure
 
-```
+```text
 ├── hosts/<name>/          # Per-host hardware data (facter.json, disko, networking, …)
 ├── modules/
 │   ├── nixos/             # Reusable NixOS aspect modules (base, blocky, dhcp, …)
@@ -44,9 +44,9 @@ For the guided learning path through this repo, start at [docs/learning/README.m
 └── flake.nix              # Entry point — auto-imports modules/
 ```
 
-Aspect modules expose `flake.modules.nixos.<name>` and are toggled in the host
-assembler (`modules/parts/soyo.nix`). Host directories hold machine-specific
-data only.
+Aspect modules are listed in `modules/default.nix`, expose `flake.modules.nixos.<name>`,
+and are toggled in the host assembler (`modules/parts/soyo.nix`).
+Host directories hold machine-specific data only.
 
 ## Design
 
@@ -67,6 +67,8 @@ Key principles:
 
 ```bash
 # CI (runs on every push via GitHub Actions)
+# Lint: deadnix, statix, typos, gitleaks, actionlint, shellcheck,
+#       markdownlint, ruff
 # https://github.com/knirski/nix-config/actions
 
 # Generate network topology diagram

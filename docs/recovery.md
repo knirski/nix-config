@@ -90,7 +90,6 @@ When the LAN/router is down **and** the box is headless:
 5. Enter the LUKS passphrase.
 6. After boot, reconnect Soyo to the LAN switch/router.
 
-
 ### After successful unlock (Phase 2 — Secure Boot)
 
 If the cause was a PCR change (kernel/initrd/bootloader update), re-enroll against PCR 0+2+7:

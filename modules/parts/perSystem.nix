@@ -1,5 +1,6 @@
 # flake-parts module: dev shell, formatter, and repo checks.
-{ inputs, ... }: {
+{ inputs, ... }:
+{
   systems = [ "x86_64-linux" ];
   imports = [
     inputs.treefmt-nix.flakeModule
@@ -21,10 +22,6 @@
           treefmt.enable = true;
           deadnix.enable = true;
           statix.enable = true;
-          statix.settings.ignore = [
-            "modules/nixos/observability.nix"
-            "lib/observability/*"
-          ];
           typos.enable = true;
           check-merge-conflicts.enable = true;
           end-of-file-fixer.enable = true;
@@ -44,6 +41,18 @@
               };
             };
           };
+          actionlint.enable = true;
+          shellcheck.enable = true;
+          markdownlint.enable = true;
+          markdownlint.settings.configuration = {
+            MD013 = false;
+            MD033 = false;
+            MD060 = false;
+            MD029 = false;
+            MD031 = false;
+            MD032 = false;
+          };
+          ruff.enable = true;
         };
       };
       treefmt.config = {
