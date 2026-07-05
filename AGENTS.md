@@ -142,9 +142,25 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
 
 - Build order follows the design doc's roadmap; M1 + M2 are the production
   cut-line, M3 hardens (Secure Boot), M4 expands (laptop, services).
-- Pre-commit hooks (treefmt, deadnix) auto-install via `nix develop`.
+- Pre-commit hooks auto-install via `nix develop`.
   Before committing: `nix flake check` and also run `gitleaks` locally
   (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose`).
+- After deploy or after changes that touch boot, unlock, networking, or
+  services, run the automated healthcheck:
+  ```
+  nix run .#healthcheck [hostname] [ip]
+  ```
+  This checks DNS, services, metrics, timers, secrets, Secure Boot, and more
+  over SSH. Expect all \[PASS\]; investigate any \[FAIL\].
+- The following **can only be verified manually** (reboot, physical access, or
+  destructive action):
+  - TPM auto-unlock (reboot, should unlock without passphrase)
+  - Break-glass passphrase unlock (wipe TPM slot, reboot with passphrase)
+  - LAN initrd SSH unlock (reboot, SSH port 2222)
+  - Direct-link rescue unlock (physical connection, static IP)
+  - DHCP client receives correct DNS/search domain
+  - Forced unit failure sends ntfy notification
+  - restic restore drill
+  - Tampered boot fails checksum verification (M3)
+  - TPM re-enrollment restores auto-unlock after PCR change
 - Keep host directories thin; push reusable logic into modules.
-- Run [`docs/validation-checklist.md`](docs/validation-checklist.md) after changes that touch boot,
-  unlock, networking, or services.
