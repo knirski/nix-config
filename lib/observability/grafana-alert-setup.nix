@@ -52,17 +52,6 @@
                   "$BASE/api/folders/soyo" || :
               }
 
-              cleanup_legacy_folder() {
-                local legacy_uids uid status
-                legacy_uids=$(command curl -sS -u "$AUTH" "$BASE/api/folders" \
-                  | ${pkgs.jq}/bin/jq -r '.[] | select(.title == "soyo" and .uid != "soyo") | .uid')
-
-                for uid in $legacy_uids; do
-                  status=$(command curl -sS -u "$AUTH" -o /dev/null -w '%{http_code}' \
-                    -X DELETE "$BASE/api/folders/$uid")
-                  [ "$status" = 200 ] || [ "$status" = 204 ] || [ "$status" = 404 ]
-                done
-              }
 
               provision_contact_point() {
                 local topic token existing payload
@@ -151,7 +140,6 @@
 
               wait_ready
               ensure_folder
-              cleanup_legacy_folder
               provision_contact_point
               provision_policy
               provision_rules
