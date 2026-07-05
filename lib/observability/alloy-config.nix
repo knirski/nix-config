@@ -1,5 +1,4 @@
-{ }:
-''
+_: ''
   loki.relabel "journal_drilldown" {
     forward_to = []
 

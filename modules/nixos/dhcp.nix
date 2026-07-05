@@ -34,7 +34,7 @@
           resolveLocalQueries = false;
           settings = {
             port = 5353; # Blocky owns :53; dnsmasq serves local reverse on 5353.
-            interface = cfg.interface;
+            inherit (cfg) interface;
             "bind-interfaces" = true;
             "dhcp-authoritative" = true;
             "dhcp-range" = cfg.dhcpRanges;

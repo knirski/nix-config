@@ -274,7 +274,7 @@ pkgs.writeText "fleet-overview.json" (
         h = 7;
         title = "Network";
         unit = "Bps";
-        refIds = refIds;
+        inherit refIds;
         description = "Per-host traffic across non-loopback interfaces";
         targets = [
           {

@@ -18,7 +18,7 @@
       config = lib.mkIf cfg.enable {
         services.blocky = {
           enable = true;
-          settings = cfg.settings;
+          inherit (cfg) settings;
         };
 
         systemd.services.blocky = {

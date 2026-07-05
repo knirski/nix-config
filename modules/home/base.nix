@@ -2,22 +2,24 @@
   aspects.homeManager.base =
     { pkgs, ... }:
     {
-      home.stateVersion = "26.05";
-      home.sessionVariables.EDITOR = "nvim";
-
-      programs.bash.enable = true;
-      programs.git.enable = true;
-      programs.home-manager.enable = true;
-
-      programs.direnv = {
-        enable = true;
-        nix-direnv.enable = true;
+      home = {
+        stateVersion = "26.05";
+        sessionVariables.EDITOR = "nvim";
+        packages = with pkgs; [
+          fd
+          ripgrep
+          tmux
+        ];
       };
 
-      home.packages = with pkgs; [
-        fd
-        ripgrep
-        tmux
-      ];
+      programs = {
+        bash.enable = true;
+        git.enable = true;
+        home-manager.enable = true;
+        direnv = {
+          enable = true;
+          nix-direnv.enable = true;
+        };
+      };
     };
 }

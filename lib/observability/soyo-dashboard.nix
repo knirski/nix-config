@@ -232,7 +232,7 @@ pkgs.writeText "soyo-home.json" (
         h = 10;
         title = "DNS Pipeline";
         unit = "short";
-        refIds = refIds;
+        inherit refIds;
         description = "Incoming queries, blocked queries, and dnsmasq upstream forwards";
         targets = [
           {
@@ -257,7 +257,7 @@ pkgs.writeText "soyo-home.json" (
         h = 10;
         title = "Host Pressure";
         unit = "percent";
-        refIds = refIds;
+        inherit refIds;
         description = "Capacity trends that can eventually threaten the appliance role";
         targets = [
           {
