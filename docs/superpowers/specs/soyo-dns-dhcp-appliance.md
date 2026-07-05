@@ -74,7 +74,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 
 | Area | Decision |
 |---|---|
-| Flake organization | `flake-parts` + dendritic: `import-tree` auto-imports aspect modules into `flake.modules.nixos.*`; hosts assemble by toggling aspects |
+| Flake organization | `flake-parts` + dendritic: `import-tree` auto-imports aspect modules into `aspects.nixos.*`; hosts assemble by toggling aspects |
 | Filesystem | LUKS2 + Btrfs (zstd, subvolumes); impermanent root from day one; durable state under `/persist`, `/nix`, snapshots; no ZFS |
 | Impermanence | `preservation` for the persisted-path inventory; root rolled back to a blank Btrfs snapshot in systemd initrd each boot |
 | Hardware facts | `nixos-facter` (committed `facter.json`), not `nixos-generate-config` |
@@ -96,7 +96,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 ## Chosen Tooling
 
 - `flake-parts` — modular flake outputs and per-class module composition
-- `import-tree` — dendritic auto-import: every file under the module tree becomes a flake-parts module contributing to `flake.modules.nixos.*` / `flake.modules.homeManager.*`
+- `import-tree` — dendritic auto-import: every file under the module tree becomes a flake-parts module contributing to `aspects.nixos.*` / `aspects.homeManager.*`
 - `nixos-facter` — declarative hardware detection; a committed `facter.json` replaces the generated `hardware-configuration.nix`
 - `disko` — declarative GPT, LUKS2, Btrfs layout
 - `preservation` — explicit persisted-path inventory on top of a root rolled back to a blank snapshot each boot (a newer, more principled alternative to `impermanence`). Note: neither is in nixpkgs; `impermanence` is the more battle-tested, example-everywhere choice. The maturity argument (the same one that picks `restic` over `rustic`) was considered and **consciously overridden** here by the radical-modern learning goal — `preservation` is the deliberate teaching choice, with fewer examples accepted as part of the learning cost
@@ -138,7 +138,7 @@ A multi-host flake from day one.
 Built on `flake-parts` with the **dendritic pattern**, adopted deliberately as a radical-modern learning target:
 
 - `flake-parts` gives modular outputs (formatter, checks, dev shell, Home Manager) instead of one monolithic `flake.nix`
-- `import-tree` auto-imports every `.nix` file under the module tree as a flake-parts module; each file is one *aspect* and contributes to a shared namespace (`flake.modules.nixos.<aspect>`, `flake.modules.homeManager.<aspect>`)
+- `import-tree` auto-imports every `.nix` file under the module tree as a flake-parts module; each file is one *aspect* and contributes to a shared namespace (`aspects.nixos.<aspect>`, `aspects.homeManager.<aspect>`)
 - a host is assembled by listing the aspects it turns on, not by `imports` of file paths; shared behavior lives in the aspect modules
 - legibility — which matters most during recovery — is preserved by documentation: the host file enumerates its aspects, and the docs explain the aspect→host wiring rather than relying on flat imports
 
@@ -159,8 +159,8 @@ The dendritic pattern's earlier rejection (see appendix) is explicitly reversed:
 
 - *flake-parts modules* under `modules/parts/`, which build flake outputs:
   - `modules/parts/perSystem.nix` — `systems`, `treefmt`, formatter, `checks`, dev shell
-  - `modules/parts/soyo.nix` — **the host assembler**: builds `flake.nixosConfigurations.soyo` by toggling aspects (`with config.flake.modules.nixos; [ … ]`), importing the input modules (disko, preservation, agenix, home-manager, facter), and importing the host-data files from `hosts/soyo/`. Home Manager is wired here (it needs `config.flake.modules.homeManager.base`).
-- *aspect modules*, each defining `flake.modules.nixos.<aspect>` (or `flake.modules.homeManager.<aspect>`) that a host opts into. Paths are organisational; the namespace, not the directory, is what hosts reference:
+  - `modules/parts/soyo.nix` — **the host assembler**: builds `flake.nixosConfigurations.soyo` by toggling aspects (`with config.aspects.nixos; [ … ]`), importing the input modules (disko, preservation, agenix, home-manager, facter), and importing the host-data files from `hosts/soyo/`. Home Manager is wired here (it needs `config.aspects.homeManager.base`).
+- *aspect modules*, each defining `aspects.nixos.<aspect>` (or `aspects.homeManager.<aspect>`) that a host opts into. Paths are organisational; the namespace, not the directory, is what hosts reference:
   - `modules/nixos/base.nix` — common defaults shared across hosts
   - `modules/nixos/server.nix` — server-only defaults
   - `modules/nixos/users.nix` — user policy and the agenix secret inventory
@@ -175,7 +175,7 @@ The dendritic pattern's earlier rejection (see appendix) is explicitly reversed:
 
 ### Soyo Host Layout
 
-The assembler is the flake-parts module `modules/parts/soyo.nix` (it must read `config.flake.modules.*`, which a plain `hosts/soyo/default.nix` cannot). `hosts/soyo/` therefore holds **only** machine facts and host-specific data/values that the assembler imports; reusable behavior lives in the aspect modules above.
+The assembler is the flake-parts module `modules/parts/soyo.nix` (it must read `config.aspects.*`, which a plain `hosts/soyo/default.nix` cannot). `hosts/soyo/` therefore holds **only** machine facts and host-specific data/values that the assembler imports; reusable behavior lives in the aspect modules above.
 
 - `hosts/soyo/facter.json` — committed `nixos-facter` hardware report (replaces `hardware-configuration.nix`)
 - `hosts/soyo/boot.nix` — kernel, firmware, systemd initrd, TPM2 auto-unlock, Limine (Secure Boot in Phase 2), zram
@@ -190,7 +190,7 @@ The assembler is the flake-parts module `modules/parts/soyo.nix` (it must read `
 - `hosts/soyo/backup.nix` — Soyo backup paths, schedule, Synology target (restic)
 - `hosts/soyo/observability.nix` — Soyo exporter settings and LAN-facing metrics bindings
 
-Home Manager additions are wired in the assembler (which can reach `config.flake.modules.homeManager.base`); there is no `hosts/soyo/home.nix`. This separates machine facts from reusable service behavior, so a future laptop reuses the base and user aspects without inheriting server networking or unlock logic.
+Home Manager additions are wired in the assembler (which can reach `config.aspects.homeManager.base`); there is no `hosts/soyo/home.nix`. This separates machine facts from reusable service behavior, so a future laptop reuses the base and user aspects without inheriting server networking or unlock logic.
 
 ## Host Role
 
@@ -352,7 +352,7 @@ Off-host, offline backup for material that cannot be regenerated from repo state
 The admin user's shell and dotfiles are declarative via Home Manager — an explicit learning goal and the canonical way operator tooling is defined.
 
 - runs as a NixOS module inside each `nixosConfiguration`, so one `nixos-rebuild` applies system and user state
-- `modules/home/base.nix` holds the headless profile (shell, prompt, git, editor, CLI tools) as `flake.modules.homeManager.base`; the host assembler (`modules/parts/soyo.nix`) wires it in and layers any Soyo additions
+- `modules/home/base.nix` holds the headless profile (shell, prompt, git, editor, CLI tools) as `aspects.homeManager.base`; the host assembler (`modules/parts/soyo.nix`) wires it in and layers any Soyo additions
 - headless only: no desktop, GUI, or theming
 - manages config/dotfiles, not real user data (documents, app databases) — that is a backup concern
 
@@ -807,7 +807,7 @@ The first implementation adopts Home Manager as a small headless server profile 
 Soyo is likely to grow into a small home server (e.g. Jellyfin) with the Synology DS423+ kept as storage. Anticipated, not implemented in the first version. This section is intentionally detailed as a planning reference for later phases (M4), not first-implementation scope; the rules below keep the door open without building ahead of need:
 
 - compute on Soyo, storage on Synology — services run on Soyo; bulk data (media) stays on the DS423+ over NFS, keeping Soyo's disk small
-- prefer native NixOS modules (e.g. `services.jellyfin`); fall back to a container only where no native module exists; each service its own opt-in aspect at `modules/nixos/<name>.nix` (exposing `flake.modules.nixos.<name>`), toggled on per host
+- prefer native NixOS modules (e.g. `services.jellyfin`); fall back to a container only where no native module exists; each service its own opt-in aspect at `modules/nixos/<name>.nix` (exposing `aspects.nixos.<name>`), toggled on per host
 - use the Intel N150 iGPU (QuickSync via `renderD128`/VAAPI) for hardware transcoding
 - give each service a local `home.arpa` Blocky record, with a reverse proxy (e.g. Caddy) and internal TLS once there is more than one web service
 - back up service state (databases, config) as class 3 via restic; media on the Synology is the NAS's backup job
@@ -866,7 +866,7 @@ Avoid: desktop policy; broad self-hosting stacks; ZFS; legacy initrd shell hacks
 ## Deliverables for the Implementation Phase
 
 1. New `flake.nix` on `flake-parts` + `import-tree` with `nixos-facter-modules`, `disko`, `preservation`, `agenix`, and `home-manager` inputs, plus optional operator tooling such as `agenix-rekey` (`deploy-rs` added at M4)
-2. Dendritic aspect-module tree (base, server, service, user, Home Manager aspects in `flake.modules.*`), with each host toggling the aspects it uses
+2. Dendritic aspect-module tree (base, server, service, user, Home Manager aspects in `aspects.*`), with each host toggling the aspects it uses
 3. `hosts/soyo` host assembly
 4. Boot config using `linuxPackages_latest` — in-tree `dwmac_motorcomm` driver, no pin needed
 5. Encrypted Btrfs `disko` definition with `root`/`root-blank` subvolumes and an initrd blank-snapshot rollback for the impermanent root
