@@ -85,11 +85,13 @@ master-encrypted secrets:
 ```bash
 # Find Soyo's live ISO IP from the output of `ip -4 addr show`.
 # Then, from YOUR WORKSTATION:
-#   scp ~/.ssh/id_ed25519 nixos@<soyo-ip>:~
+#   scp ~/.ssh/soyo_ed25519 nixos@<soyo-ip>:~
 #
 # Back on Soyo's live ISO:
 mkdir -p -m 700 ~/.ssh
-mv ~/id_ed25519 ~/.ssh/ 2>/dev/null || echo "Paste manually if scp failed"
+# The scp'd file lands as soyo_ed25519; rename to id_ed25519 to match the
+# live ISO masterIdentities path in modules/parts/soyo.nix:
+mv ~/soyo_ed25519 ~/.ssh/id_ed25519 2>/dev/null || echo "Paste manually if scp failed"
 chmod 600 ~/.ssh/id_ed25519
 ```
 
@@ -242,7 +244,7 @@ Now rekey (this builds the devshell, which takes a few minutes the first time):
 
 ```bash
 nix develop '.#' -c agenix rekey
-ls -la secrets/rekeyed/soyo/   # verify: 7 .age files
+ls -la secrets/rekeyed/soyo/   # verify: 8 .age files
 ```
 
 Commit and push the new host key and rekeyed secrets:
@@ -298,11 +300,11 @@ procedure), re-enroll against PCR 0+2+7 for stronger tamper detection.
 ### Post-install deploy from a workstation
 
 Update `modules/parts/soyo.nix` to point `masterIdentities` to your
-workstation's SSH key path (e.g. `/home/krzysiek/.ssh/id_ed25519`)
+workstation's SSH key path (e.g. `/home/krzysiek/.ssh/soyo_ed25519`)
 instead of the live ISO path. Then from any workstation on the LAN:
 
 ```bash
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
 ```
 
 > **First remote deploy gotcha:** The freshly installed system runs a base
@@ -319,8 +321,6 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote
 
 ## Step 9: Validate
 
-Run through the [validation checklist](validation-checklist.md) to confirm:
-
 - `enp1s0` comes up with the `dwmac_motorcomm` driver
 - Blocky answers DNS on port 53 and filters known ad domains
 - dnsmasq hands out DHCP leases with the correct nameserver option
@@ -329,8 +329,6 @@ Run through the [validation checklist](validation-checklist.md) to confirm:
 - agenix secrets are decrypted (`ls /run/agenix/`)
 - Backups to the Synology run and restore drills pass
 
-See the full checklist at [`docs/validation-checklist.md`](validation-checklist.md).
-
 ---
 
 ## Subsequent deploys
@@ -338,7 +336,7 @@ See the full checklist at [`docs/validation-checklist.md`](validation-checklist.
 For normal config-only changes, use the direct deploy path from a workstation on the LAN:
 
 ```bash
-nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 If DNS is not working yet, replace `krzysiek@soyo` with `krzysiek@10.0.0.9`.
@@ -353,7 +351,7 @@ Manual equivalent for secret changes:
 
 ```bash
 nix develop '.#' -c agenix rekey
-nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 See [`docs/update-and-rollback.md`](update-and-rollback.md) for the full

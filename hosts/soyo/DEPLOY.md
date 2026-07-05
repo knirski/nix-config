@@ -20,12 +20,14 @@ ISO (e.g. you SSHed in with agent forwarding), skip this.
 ip -4 addr show | grep inet
 # Look for something like "192.168.1.42/24" — that's Soyo's address.
 # Then, from YOUR WORKSTATION, run:
-#   scp ~/.ssh/id_ed25519 nixos@192.168.1.42:~
-#   (replace id_ed25519 with your actual key file and IP)
+#   scp ~/.ssh/soyo_ed25519 nixos@192.168.1.42:~
+#   (replace soyo_ed25519 with your actual key file and IP, update the IP)
 #
 # Back on Soyo's live ISO, install the key:
 mkdir -p -m 700 ~/.ssh
-mv ~/id_ed25519 ~/.ssh/ 2>/dev/null || echo "Key not found via scp — you can paste it manually:"
+# The scp'd file lands as soyo_ed25519; rename to id_ed25519 to match the
+# live ISO masterIdentities path in modules/parts/soyo.nix:
+mv ~/soyo_ed25519 ~/.ssh/id_ed25519 2>/dev/null || echo "Key not found via scp — you can paste it manually:"
 # If the mv failed, paste manually:
 #   cat > ~/.ssh/id_ed25519
 #   (paste the private key contents, press Ctrl+D)
@@ -192,8 +194,7 @@ nix develop '.#' -c agenix rekey
 ```bash
 # Verify (b): rekeyed secrets exist
 ls -la secrets/rekeyed/soyo/
-# Expected: 7 .age files (root-password, krzysiek-password, restic-password,
-# ntfy-token, ntfy-topic, grafana-admin-password, tailscale-auth-key)
+# Expected: 8 .age files
 ```
 
 ```bash
@@ -263,7 +264,7 @@ sudo journalctl -u systemd-cryptsetup@crypted --no-pager | tail
 ```
 
 > **Post-deploy:** Update `masterIdentities` in `modules/parts/soyo.nix` to
-> your workstation's SSH key path (e.g. `/home/krzysiek/.ssh/id_ed25519`)
+> your workstation's SSH key path (e.g. `/home/krzysiek/.ssh/soyo_ed25519`)
 > before running `agenix rekey` from your workstation later.
 
 ## Subsequent deploys
@@ -291,7 +292,7 @@ sudo journalctl -u systemd-cryptsetup@crypted --no-pager | tail
 From a workstation on the LAN:
 
 ```bash
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
 ```
 
 Or locally on Soyo:
@@ -321,7 +322,7 @@ nix develop '.#' -c agenix rekey
 # 4. Commit and deploy
 git add secrets/root-password.age secrets/rekeyed/
 git commit -m "chore: update root password"
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
 ```
 
 Same flow for `krzysiek-password.age` or any other secret.

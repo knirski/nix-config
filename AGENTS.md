@@ -147,7 +147,8 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   actionlint (GitHub Actions), shellcheck (shell scripts), markdownlint (docs),
   ruff (Python).
   Before committing: `nix flake check` and also run `gitleaks` locally
-  (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose`).
+  (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml`).
+- Everyday deploy: `./scripts/deploy-soyo.sh` (or `nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo`).
 - After deploy or after changes that touch boot, unlock, networking, or
   services, run the automated healthcheck:
   ```bash

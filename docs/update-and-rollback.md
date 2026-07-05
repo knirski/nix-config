@@ -9,7 +9,7 @@ The day-2 remote deploy uses native `nixos-rebuild --target-host` — your works
 ### Config-only deploy (fast path, no secret changes)
 
 ```sh
-nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 Use this when you are changing NixOS config, dashboards, alerts, services, or docs and **none of the master-encrypted secret files changed**. It builds the full closure locally, copies it to Soyo over SSH, and activates it remotely. Soyo's N150 never compiles. If DNS isn't working, use `krzysiek@10.0.0.9`.
@@ -23,7 +23,7 @@ Use this when you are changing NixOS config, dashboards, alerts, services, or do
 This runs:
 
 1. `agenix rekey` — re-encrypts every master `.age` secret for Soyo's host key. Run this on your workstation with your SSH private key available (the `masterIdentities` in `modules/parts/soyo.nix` must point to it). Failure here means Soyo gets stale secrets.
-2. `nixos-rebuild switch --target-host krzysiek@soyo --use-remote-sudo` — builds the full closure locally, copies it to Soyo over SSH, and activates it remotely.
+2. `nixos-rebuild switch --target-host krzysiek@soyo --sudo` — builds the full closure locally, copies it to Soyo over SSH, and activates it remotely.
 
 ## Updating nixpkgs
 
@@ -79,7 +79,7 @@ git checkout flake.lock
 
 ```sh
 # Build and activate, but don't make it the boot default:
-nixos-rebuild test --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nixos-rebuild test --flake .#soyo --target-host krzysiek@soyo --sudo
 
 # If it's good, make it permanent:
 ssh krzysiek@soyo sudo nixos-rebuild switch
@@ -98,5 +98,5 @@ git commit
 Secrets are rekeyed automatically by `deploy-soyo` as the first step. If you need a faster iteration without rekeying, run:
 
 ```sh
-nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```

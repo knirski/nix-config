@@ -86,7 +86,7 @@ This repo uses **two separate keypairs** for two different jobs:
 
 - **Who holds it:** the operator (you).
 - **What it does:** lets you edit and rekey secrets.
-- **Where it lives:** `~/.ssh/id_ed25519` on your workstation.
+- **Where it lives:** `~/.ssh/soyo_ed25519` on your workstation.
 - **Its public key in the repo:** `secrets/krzysiek.age.pub`.
 
 Every master-encrypted `.age` file in `secrets/` can be decrypted only by
@@ -204,8 +204,9 @@ Layer 1 (in git)                    Layer 2 (in git)
 ```text
 secrets/
 ├── krzysiek.age.pub        # Master identity public key (plaintext)
-├── soyo.pub                # Soyo host SSH public key (plaintext; placeholder
-│                           #   before first install)
+├── krzysiek-authorized-key.pub  # krzysiek's SSH authorized key (plaintext)
+├── soyo.pub                # Soyo host SSH public key (plaintext; enrolled
+│                           #   during first install)
 ├── root-password.age       # Master-encrypted (krzysiek's key)
 ├── krzysiek-password.age   # Master-encrypted
 ├── restic-password.age     # Master-encrypted
@@ -238,23 +239,53 @@ for a specific host's SSH key instead of your master key.
 | `secrets/krzysiek-password.age` | krzysiek's SHA-512 password hash | master identity |
 | `secrets/restic-password.age` | Restic repo passphrase | master identity |
 | `secrets/ntfy-token.age` | ntfy.sh access token | master identity |
+| `secrets/ntfy-topic.age` | ntfy.sh topic URL | master identity |
+| `secrets/grafana-admin-password.age` | Grafana admin password | master identity |
+| `secrets/grafana-secret-key.age` | Grafana session signing key | master identity |
+| `secrets/tailscale-auth-key.age` | Tailscale pre-auth key | master identity |
+| `secrets/krzysiek-authorized-key.pub` | krzysiek's SSH public key (plaintext) | n/a — configured via `users.users.krzysiek.openssh.authorizedKeys.keyFiles` |
 | `secrets/rekeyed/soyo/...` | same content as above | Soyo's SSH host key |
 
 ---
 
 ## Bootstrap: first install without a known host key
 
-There is a chicken-and-egg problem: we need Soyo's SSH host key to rekey
-secrets for it, but Soyo generates its host key during the first install.
-And we need the rekeyed secrets to build the system for that first install.
+There is a chicken-and-egg problem: we need the target's SSH host key to
+rekey secrets for it, but the host key is generated during first install.
+And we need rekeyed secrets before `nixos-install` runs.
 
-**agenix-rekey solves this with a dummy placeholder:**
+**The install procedure solves this by generating the host key on the live
+ISO, before installation.**  The rough order:
 
-The file at `age.rekey.hostPubkey` is pre-seeded with a well-known dummy
-SSH public key for which **no one has the private key**.  When the system
-sees this dummy key during `nix build`, it does not look for real rekeyed
-files.  Instead it auto-generates **placeholder secrets** — dummy encrypted
-files that satisfy the build but cannot actually be decrypted.
+1. Boot the NixOS live ISO on the target.
+2. Clone this repo and generate the SSH host key into `/mnt/persist/etc/ssh/`:
+
+   ```bash
+   sudo install -d -m 700 /mnt/persist/etc/ssh
+   sudo ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
+   ```
+
+3. Overwrite `secrets/soyo.pub` with the real host public key:
+
+   ```bash
+   sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub > secrets/soyo.pub
+   ```
+
+4. Rekey all secrets for the new host key:
+
+   ```bash
+   nix develop '.#' -c agenix rekey
+   ```
+
+5. Commit the enrolled pubkey and rekeyed files:
+
+   ```bash
+   git add secrets/soyo.pub secrets/rekeyed/
+   git commit -m "feat: enroll soyo agenix recipient and rekey secrets"
+   ```
+
+6. Run `nixos-install --flake .#soyo` — the rekeyed secrets are already in
+   the repo, so they land on the target and are decrypted on first boot.
 
 **Why an SSH public key and not an age X25519 key?**  The agenix activation
 script on the target uses the Go `age` binary with `-i ssh_key` to decrypt
@@ -263,28 +294,13 @@ given an `-> ssh-ed25519` recipient, but it *cannot* match an SSH private
 key to an `-> X25519` recipient.  Therefore `hostPubkey` must point to the
 raw SSH public key so rekeyed files use `-> ssh-ed25519` recipients.
 
-This allows:
+**Why generate the host key before `nixos-install`?**  The normal pattern
+for agenix-rekey is to deploy with a dummy placeholder, then overwrite
+it after first boot.  Generating the key on the live ISO avoids this dance:
+the host key is real from the start, the rekeyed secrets are real, and the
+first boot decrypts them without a manual password-copying step.
 
-1. Build and deploy the system (the placeholders get copied to the target).
-2. During activation, decryption **fails** (expected — placeholder secrets
-   cannot be decrypted by the real host key either).
-3. A one-time manual step creates or copies the real password hashes onto
-   the target, and the system boots without secrets.
-
-Then:
-
-4. Generate the SSH host key (first boot creates it on `/persist`).
-5. Overwrite `secrets/soyo.pub` with the real SSH public key (the
-   `hostPubkey` option already points to this file, so no config edit
-   needed).
-6. Run `agenix rekey` to produce real rekeyed files.
-7. Redeploy — now the target can decrypt them.
-
-> **Note:** The design doc's M1/M2 cut-line places the first install without
-> rekeyed secrets; the full rekey workflow is completed as part of the
-> deploy checklist.
-
-See [`docs/install-soyo.md`](install-soyo.md) for the concrete steps.
+See [`docs/install-soyo.md`](install-soyo.md) for the full concrete steps.
 
 ---
 
@@ -306,7 +322,7 @@ nix develop '.#' -c agenix rekey
 # 4. Commit and deploy
 git add secrets/root-password.age secrets/rekeyed/
 git commit -m "chore: update root password"
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 ### Add a new secret
@@ -323,7 +339,7 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sud
 
    ```bash
    echo -n "my-api-token-value" \
-     | nix run nixpkgs#rage -- -e -i ~/.ssh/id_ed25519 \
+     | nix run nixpkgs#rage -- -e -i ~/.ssh/soyo_ed25519 \
        -o secrets/my-api-token.age
    ```
 
@@ -351,15 +367,26 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sud
 
 1. Create the host directory and assembler module (see AGENTS.md "Adding a host").
 2. Include the `users` aspect to reuse the secret inventory.
-3. In the host assembler, set `age.rekey.hostPubkey = ../../secrets/<host>.pub;`
-   and create a placeholder `secrets/<host>.pub` containing a dummy SSH public
-   key (e.g. `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKnownDummyKeyNoOneHasThePrivateKey=`).
-   The dummy allows building before the real key exists.
-4. On the target (or a one-time bootstrap key):
-   - Generate an SSH host key.
-   - Copy the SSH public key into the repo as `secrets/<host>.pub`.
-5. Run `agenix rekey` — it will rekey all secrets for the new host.
-6. Deploy.
+3. In the host assembler, set `age.rekey.hostPubkey = ../../secrets/<host>.pub;`.
+4. On the target machine (or live ISO), generate an SSH host key:
+
+   ```bash
+   sudo install -d -m 700 /mnt/persist/etc/ssh
+   sudo ssh-keygen -t ed25519 -N "" -f /mnt/persist/etc/ssh/ssh_host_ed25519_key
+   ```
+
+5. Copy the public key into the repo:
+
+   ```bash
+   sudo cat /mnt/persist/etc/ssh/ssh_host_ed25519_key.pub > secrets/<host>.pub
+   ```
+
+6. Run `agenix rekey` — it will rekey all secrets for the new host.
+7. Deploy.
+
+   If the host key can't be generated before the first build (e.g. you're
+   provisioning remotely), seed `secrets/<host>.pub` with a dummy SSH public
+   key to satisfy the build, then follow steps 4–6 after the host is running.
 
 ---
 
@@ -376,7 +403,7 @@ echo -n "new-ntfy-token" > /dev/null # replace with your actual token
 
 # 2. Re-encrypt the master file with your SSH key
 echo -n "new-value" \
-  | nix run nixpkgs#rage -- -e -i ~/.ssh/id_ed25519 \
+  | nix run nixpkgs#rage -- -e -i ~/.ssh/soyo_ed25519 \
     -o secrets/ntfy-token.age
 
 # 3. Rekey for all hosts
@@ -385,7 +412,7 @@ nix develop '.#' -c agenix rekey
 # 4. Commit and deploy
 git add secrets/ntfy-token.age secrets/rekeyed/
 git commit -m "chore: update ntfy token"
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 After deploy, the new value is live. No reboot needed.
@@ -426,7 +453,7 @@ git add secrets/
 git commit -m "fix: rotate compromised master key"
 
 # 7. Deploy to every host
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 **After deploy:**
@@ -464,7 +491,7 @@ nix develop '.#' -c agenix rekey
 # 4. Commit and deploy
 git add secrets/soyo.pub secrets/rekeyed/
 git commit -m "fix: rotate compromised soyo host key"
-nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 **After deploy:**
@@ -487,9 +514,9 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sud
 
 | File | Purpose | Created by |
 |---|---|---|
-| `~/.ssh/id_ed25519` | Master **private** key (YOUR SSH key) | `ssh-keygen` on your workstation |
-| `~/.ssh/id_ed25519.pub` | Master public key | same |
-| `secrets/krzysiek.age.pub` | Master age public key, stored in repo | `ssh-to-age < ~/.ssh/id_ed25519.pub` (one-time setup) |
+| `~/.ssh/soyo_ed25519` | Master **private** key (YOUR SSH key) | `ssh-keygen` on your workstation |
+| `~/.ssh/soyo_ed25519.pub` | Master public key | same |
+| `secrets/krzysiek.age.pub` | Master age public key, stored in repo | `ssh-to-age < ~/.ssh/soyo_ed25519.pub` (one-time setup) |
 | `secrets/soyo.pub` | Soyo's SSH public key (raw, not age-converted) | `cat /persist/etc/ssh/ssh_host_ed25519_key.pub` during install |
 | `/persist/etc/ssh/ssh_host_ed25519_key` | Soyo's SSH host **private** key | `ssh-keygen` during first install |
 | `/persist/etc/ssh/ssh_host_ed25519_key.pub` | Soyo's SSH host public key | same |
