@@ -28,10 +28,12 @@ Every task's requirements implicitly include these (exact values, copied from th
 ## File Structure
 
 **Reuse (already in the repo as committed host data):**
+
 - `hosts/soyo/reservations.nix` — single source of truth `{ name; mac; ip; }` list (plaintext; MAC/IP are not secrets).
 - `hosts/soyo/dns.nix` — existing full Blocky policy; only its outer wrapper is adapted to the shared aspect option (body preserved verbatim).
 
 **Create — dendritic flake-parts modules (auto-imported by `import-tree ./modules`):**
+
 - `flake.nix` — thin: inputs + `import-tree ./modules`.
 - `modules/parts/perSystem.nix` — `systems`, `treefmt`, formatter, `checks.formatting`, dev shell.
 - `modules/parts/soyo.nix` — the host assembler: `flake.nixosConfigurations.soyo`.
@@ -48,6 +50,7 @@ Every task's requirements implicitly include these (exact values, copied from th
 - `modules/home/base.nix` — `flake.modules.homeManager.base` (headless HM profile).
 
 **Create — host-specific hardware/data (plain Nix, imported by the assembler):**
+
 - `hosts/soyo/facter.json` — `nixos-facter` report.
 - `hosts/soyo/boot.nix` — kernel pin, NIC module, Limine, systemd initrd, TPM crypttab, zram.
 - `hosts/soyo/disko.nix` — GPT, EFI, LUKS2, Btrfs `root`/`nix`/`persist`/`snapshots` subvolumes.
@@ -60,6 +63,7 @@ Every task's requirements implicitly include these (exact values, copied from th
 - `hosts/soyo/observability.nix` — exporter bindings.
 
 **Create — secrets, docs, scripts:**
+
 - `secrets/{krzysiek.age.pub,soyo.age.pub,krzysiek-authorized-key.pub,secrets.nix}`
 - `docs/learning/README.md` — beginner-friendly guided reading path + glossary (first-class deliverable).
 - `docs/{install-soyo.md,update-and-rollback.md,recovery.md,backup-and-restore.md,validation-checklist.md}`
@@ -70,6 +74,7 @@ Every task's requirements implicitly include these (exact values, copied from th
 ## Task 1: Scaffold the thin dendritic flake and top-level checks
 
 **Files:**
+
 - Create: `flake.nix`
 - Create: `modules/parts/perSystem.nix`
 - Create: `modules/parts/soyo.nix`
@@ -202,6 +207,7 @@ git commit -m "feat: scaffold thin dendritic flake for soyo"
 ## Task 2: Add base/server/users aspects and the headless Home Manager profile
 
 **Files:**
+
 - Create: `modules/nixos/base.nix`
 - Create: `modules/nixos/server.nix`
 - Create: `modules/nixos/users.nix`
@@ -210,6 +216,7 @@ git commit -m "feat: scaffold thin dendritic flake for soyo"
 - Modify: `modules/parts/soyo.nix`
 
 **Interfaces:**
+
 - Produces: `flake.modules.nixos.{base,server,users}`, `flake.modules.homeManager.base`. The assembler turns these on and wires Home Manager.
 
 - [ ] **Step 1: Verify the base aspect is not yet present**
@@ -375,11 +382,13 @@ git commit -m "feat: add base, server, users, and home-manager aspects"
 ## Task 3: Add declarative hardware (nixos-facter) and static networking
 
 **Files:**
+
 - Create: `hosts/soyo/facter.json`
 - Create: `hosts/soyo/networking.nix`
 - Modify: `modules/parts/soyo.nix`
 
 **Interfaces:**
+
 - Consumes: `inputs.nixos-facter-modules.nixosModules.facter`, option `facter.reportPath`.
 
 - [ ] **Step 1: Confirm the host still has no hardware report wired**
@@ -446,6 +455,7 @@ git commit -m "feat: add nixos-facter hardware and static networking"
 ## Task 4: Add disk layout, impermanent root (preservation + rollback), kernel/Limine, and Phase 1 unlock
 
 **Files:**
+
 - Create: `hosts/soyo/disko.nix`
 - Create: `hosts/soyo/boot.nix`
 - Create: `modules/nixos/persistence.nix`
@@ -455,6 +465,7 @@ git commit -m "feat: add nixos-facter hardware and static networking"
 - Modify: `modules/parts/soyo.nix`
 
 **Interfaces:**
+
 - Consumes: `inputs.disko.nixosModules.disko`, `inputs.preservation.nixosModules.preservation`.
 - Produces: `flake.modules.nixos.{persistence,remote-unlock}`. LUKS mapper name is `crypted`; root subvolume is `root`, blank snapshot is `root-blank`.
 
@@ -762,6 +773,7 @@ git commit -m "feat: add disk layout, impermanent root, and phase-1 boot path"
 ## Task 5: Implement Blocky, dnsmasq DHCP, and reservation-driven LAN naming
 
 **Files:**
+
 - Create: `modules/nixos/blocky.nix`
 - Create: `modules/nixos/dhcp.nix`
 - Create: `hosts/soyo/dhcp.nix`
@@ -769,6 +781,7 @@ git commit -m "feat: add disk layout, impermanent root, and phase-1 boot path"
 - Modify: `modules/parts/soyo.nix`
 
 **Interfaces:**
+
 - Produces: `flake.modules.nixos.{blocky,dhcp}`; options `lanAppliance.services.blocky.{enable,lanInterface,settings}` and `lanAppliance.services.dhcp.{enable,interface,routerAddress,dnsServer,searchDomain,leaseFile,dhcpRanges,reservations}`.
 
 - [ ] **Step 1: Prove DNS and DHCP are not wired yet**
@@ -984,6 +997,7 @@ git commit -m "feat: add soyo dns and dhcp aspects"
 ## Task 6: Add agenix secrets and complete the operator account policy
 
 **Files:**
+
 - Create: `secrets/krzysiek.age.pub`
 - Create: `secrets/soyo.age.pub`
 - Create: `secrets/krzysiek-authorized-key.pub` (replace the Task 2 placeholder)
@@ -992,6 +1006,7 @@ git commit -m "feat: add soyo dns and dhcp aspects"
 - Modify: `hosts/soyo/users.nix`
 
 **Interfaces:**
+
 - Consumes: `config.age.secrets.{root-password,krzysiek-password,restic-password,ntfy-token}.path`. The agenix identity is `/persist/etc/ssh/ssh_host_ed25519_key` (set in Task 4).
 
 - [x] **Step 1: Show the agenix inventory is missing**
@@ -1010,6 +1025,7 @@ git commit -m "feat: add agenix-managed operator secrets"
 ## Task 7: Add backup, maintenance, and observability aspects (M2 cut-line)
 
 **Files:**
+
 - Create: `modules/nixos/backup.nix`
 - Create: `modules/nixos/maintenance.nix`
 - Create: `modules/nixos/observability.nix`
@@ -1018,6 +1034,7 @@ git commit -m "feat: add agenix-managed operator secrets"
 - Modify: `modules/parts/soyo.nix`
 
 **Interfaces:**
+
 - Consumes: `config.age.secrets.{restic-password,ntfy-token}.path`.
 - Produces: `flake.modules.nixos.{backup,maintenance,observability}`; options `lanAppliance.services.backup.*`, `lanAppliance.services.maintenance.{ntfyTopicUrl,ntfyTokenFile}`, `lanAppliance.services.observability.*`. The shared `ntfy-notify@` template and `OnFailure` wiring live in the maintenance aspect.
 
@@ -1277,6 +1294,7 @@ git commit -m "feat: add backup, maintenance, and observability aspects"
 ## Task 8: Write operator + beginner-friendly docs and native deploy/rebuild helpers
 
 **Files:**
+
 - Create: `docs/learning/README.md`
 - Create: `docs/install-soyo.md`
 - Create: `docs/update-and-rollback.md`
@@ -1497,6 +1515,7 @@ git commit -m "docs: add learning path, runbooks, and native deploy helpers"
 ## Task 9: Add M3 Secure Boot hardening and the validation checklist
 
 **Files:**
+
 - Modify: `hosts/soyo/boot.nix`
 - Modify: `docs/recovery.md`
 - Modify: `docs/validation-checklist.md`

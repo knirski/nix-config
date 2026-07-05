@@ -13,6 +13,7 @@
 ## Task 1: Rewrite `ci.yml` — single job → 4 parallel jobs
 
 **Files:**
+
 - Rewrite: `.github/workflows/ci.yml`
 
 - [ ] **Replace the entire workflow content**
@@ -96,6 +97,7 @@ jobs:
 ```bash
 nix flake check
 ```
+
 Expected: exit 0, no errors.
 
 - [ ] **Verify YAML is well-formed**
@@ -103,6 +105,7 @@ Expected: exit 0, no errors.
 ```bash
 python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"
 ```
+
 Expected: exit 0, no syntax errors.
 
 - [ ] **Commit**
@@ -117,6 +120,7 @@ git commit -m "ci: expand to 4 parallel jobs — lint, eval, build+closure-diff,
 ### Task 2: Update README CI badge
 
 **Files:**
+
 - Modify: `README.md` (line 68–69 area, the CI section in the Tooling block)
 
 - [ ] **Update the CI badge URL**
@@ -135,6 +139,7 @@ Looking at the README, there are badges for NixOS, Flakes, flake-parts, dendriti
 Replace the badge row (lines 3-9) to add a CI badge:
 
 Old:
+
 ```html
 <p>
   <a href="https://nixos.org"><img src="https://img.shields.io/badge/NixOS-26.05-5277C3?logo=nixos&logoColor=white" alt="NixOS"></a>
@@ -146,6 +151,7 @@ Old:
 ```
 
 New:
+
 ```html
 <p>
   <a href="https://nixos.org"><img src="https://img.shields.io/badge/NixOS-26.05-5277C3?logo=nixos&logoColor=white" alt="NixOS"></a>
@@ -162,6 +168,7 @@ New:
 ```bash
 nix fmt
 ```
+
 Expected: no changes (nixfmt only formats `.nix` files, but confirms nothing is broken).
 
 - [ ] **Commit**
@@ -176,16 +183,19 @@ git commit -m "docs(readme): add CI badge to header"
 ### Task 3: Update learning docs
 
 **Files:**
+
 - Modify: `docs/learning/README.md` (line 28)
 
 - [ ] **Update the CI pipeline description**
 
 Current (line 28):
+
 ```text
 | 20 | `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline, Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
 ```
 
 Replace with:
+
 ```text
 | 20 | `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline (lint → eval → build + closure diff → topology artifact), Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
 ```

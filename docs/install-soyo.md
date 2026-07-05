@@ -32,16 +32,21 @@ checklist; this doc explains *why* each step exists.
 - A **NixOS 26.05 ISO** (or later). The live environment's kernel must have
   the in-tree `dwmac_motorcomm` driver so `enp1s0` comes up. The 26.05 ISO
   ships with `linuxPackages_latest`, which includes it.
+
 - The target disk is identified by-id:
   `/dev/disk/by-id/ata-PELADN_512GB_20250522100164`. If the disk differs,
   update `hosts/soyo/disko.nix` before running disko.
+
 - **Fallback connectivity:** If the wired NIC does not come up (kernel
   regression, different ISO), use onboard WiFi (`RTL8852BE`, in-tree
   `rtw89_8852be` driver on `wlp2s0`) or a USB Ethernet adapter.
+
 - A **GitHub personal access token** (classic, with `repo` scope) for `gh`
   CLI auth during the install.
+
 - Your **SSH private key** (the one that matches
   `secrets/krzysiek.age.pub`) so `agenix rekey` can decrypt master secrets.
+
 - Write access to the repo's remote (you will push the new host key).
 
 ### What is nixos-facter?
@@ -60,6 +65,7 @@ would run `nixos-facter` first.
 
 Boot Soyo from the NixOS live USB. The firmware should be configured as
 described in the design doc:
+
 - **UEFI only** (CSM/Legacy off)
 - **"State After G3" = S0** (powers on after power loss)
 - **TPM 2.0 enabled** (visible as `MSFT0101` under `tpm_crb`)
@@ -225,8 +231,10 @@ Secrets in this repo use the **two-layer rekeyFile flow** (see
 
 1. Master-encrypted `.age` files in `secrets/` are decryptable by the
    operator's SSH key.
+
 2. `agenix rekey` decrypts each master file and re-encrypts it for
    Soyo's host key, writing the result to `secrets/rekeyed/soyo/`.
+
 3. At boot, agenix on Soyo decrypts the rekeyed files with the host
    key placed at `/persist/etc/ssh/`.
 
@@ -312,9 +320,11 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
 > `sudo` passwordless escalation (these are added in
 > `modules/nixos/base.nix` and `modules/nixos/users.nix`). If the remote
 > deploy fails, build locally on Soyo once first:
+>
 > ```bash
 > git pull && sudo nixos-rebuild switch --flake .#soyo
 > ```
+>
 > After that activation, remote deploys work.
 
 ---

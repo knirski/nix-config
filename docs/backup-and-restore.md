@@ -3,7 +3,7 @@
 ## Data classes
 
 | Class | What | Recovery model |
-|-------|------|---------------|
+| ------- | ------ | --------------- |
 | 1 | Declarative config (flake, NixOS modules, Home Manager) | Rebuild from GitHub |
 | 2 | Secrets & recovery material (agenix, operator key, LUKS header) | Encrypted in repo + offline copy |
 | 3 | Real persistent data (`/persist`, user data, including `/var/lib/sbctl` Secure Boot signing state) | restic to Synology + btrbk local snapshots |
@@ -50,6 +50,7 @@ Restic backs up `/persist` daily (with a 1h randomized delay) to the Synology ov
 The repo password is an agenix secret (`restic-password`). Transport is SFTP to the NAS user `soyo-backup`.
 
 DNS resolution uses **systemd-resolved** with split DNS:
+
 - `*.home.arpa` → Blocky on `127.0.0.1:53` (local LAN records)
 - `*.danio-cloud.ts.net` → Tailscale MagicDNS
 
@@ -148,6 +149,7 @@ sudo journalctl -u restic-backups-soyo --since "1 day ago"
 ```
 
 Common failure causes:
+
 - Synology unreachable (network, power) — restic retries next run
 - Disk full on Synology — prune older snapshots or expand volume
 - Password changed on Synology user — update the `soyo-backup` user's password

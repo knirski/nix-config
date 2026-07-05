@@ -151,9 +151,11 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
 - Everyday deploy: `./scripts/deploy-soyo.sh` (or `nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo`).
 - After deploy or after changes that touch boot, unlock, networking, or
   services, run the automated healthcheck:
+
   ```bash
   nix run .#healthcheck [hostname] [ip]
   ```
+
   This checks DNS, services, metrics, timers, secrets, Secure Boot, and more
   over SSH. Expect all \[PASS\]; investigate any \[FAIL\].
 - The following **can only be verified manually** (reboot, physical access, or

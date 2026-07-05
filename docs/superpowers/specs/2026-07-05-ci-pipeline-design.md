@@ -163,6 +163,6 @@ status:
 ### Files changed
 
 | File | Change |
-|------|--------|
+| ---- | ------ |
 | `.github/workflows/ci.yml` | Rewrite: 1 job → 4 parallel jobs |
 | `README.md` | Update badge URL to include `?branch=main` |

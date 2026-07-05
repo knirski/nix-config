@@ -20,12 +20,18 @@ then the concrete file layout and daily commands.
 - [Bootstrap: first install without a known host key](#bootstrap-first-install-without-a-known-host-key)
 - [Daily operations](#daily-operations)
   - [Edit a secret (change a password)](#edit-a-secret-change-a-password)
+
   - [Add a new secret](#add-a-new-secret)
+
   - [Add a new host](#add-a-new-host)
+
 - [Key rotation & recovery](#key-rotation--recovery)
   - [Change a secret on a running system](#change-a-secret-on-a-running-system)
+
   - [Rotate the master key](#rotate-the-master-key)
+
   - [Rotate a host key](#rotate-a-host-key)
+
 - [Reference: key files and where they live](#reference-key-files-and-where-they-live)
 
 ---
@@ -118,10 +124,14 @@ this.**  Here is why:
 - **Blast radius.** If you copy your personal private key onto Soyo so it
   can decrypt secrets, a compromised Soyo gives an attacker your personal
   key.  Now they can:
+
   - SSH into every other machine as you.
+
   - Sign commits and git operations as you.
+
   - Decrypt every secret in the repo (master files + any host's rekeyed
     files).
+
   - Re-encrypt secrets for their own keys and push them to the repo.
 
   With separate keys, a compromised Soyo only gives the attacker Soyo's
@@ -179,10 +189,14 @@ Layer 1 (in git)                    Layer 2 (in git)
 
 1. You create or edit a secret and encrypt it with your **master identity**
    (your SSH key).  The result goes in `secrets/<name>.age`.
+
 2. You run `agenix rekey`.  This app:
    - Decrypts each `.age` file using your SSH private key (you are the master).
+
    - Re-encrypts the plaintext with each **host's public key**.
+
    - Writes the host-specific files to `secrets/rekeyed/<host>/`.
+
 3. You commit both layers to git.
 4. When `nixos-rebuild` runs on the target, agenix's activation script
    decrypts the rekeyed files using the target's **SSH host private key**
@@ -193,8 +207,10 @@ Layer 1 (in git)                    Layer 2 (in git)
 
 - **One source of truth.**  Edit one master file, rekey, and every host gets
   the update — no per-host editing.
+
 - **Host isolation.**  A compromised host's SSH key can only decrypt its own
   rekeyed files, not the master files or another host's files.
+
 - **Git-safe.**  Both layers are encrypted; public repo is fine.
 
 ---
@@ -234,7 +250,7 @@ for a specific host's SSH key instead of your master key.
 ### What each file is
 
 | File | Contains | Encrypted for |
-|---|---|---|
+| ---- | -------- | -------------- |
 | `secrets/root-password.age` | root's SHA-512 password hash | master identity |
 | `secrets/krzysiek-password.age` | krzysiek's SHA-512 password hash | master identity |
 | `secrets/restic-password.age` | Restic repo passphrase | master identity |
@@ -457,9 +473,11 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 **After deploy:**
+
 - The old key can no longer decrypt new master files.
 - Hosts continue working — their rekeyed files are unchanged (still encrypted
   with each host's own key).
+
 - Update your SSH config, GitHub deploy keys, etc. to use the new key.
 - Securely destroy the old private key.
 
@@ -495,6 +513,7 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```
 
 **After deploy:**
+
 - The new host key is in use. Add it to your `known_hosts`:
 
   ```bash
@@ -505,6 +524,7 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 - The old host key is replaced. If other machines had it in their
   `known_hosts`, they will warn on next SSH connection — verify and accept
   the new fingerprint.
+
 - Secrets are now encrypted for the new key. The old key can no longer
   decrypt them.
 
@@ -513,7 +533,7 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ## Reference: key files and where they live
 
 | File | Purpose | Created by |
-|---|---|---|
+| ---- | ------- | ----------- |
 | `~/.ssh/soyo_ed25519` | Master **private** key (YOUR SSH key) | `ssh-keygen` on your workstation |
 | `~/.ssh/soyo_ed25519.pub` | Master public key | same |
 | `secrets/krzysiek.age.pub` | Master age public key, stored in repo | `ssh-to-age < ~/.ssh/soyo_ed25519.pub` (one-time setup) |
