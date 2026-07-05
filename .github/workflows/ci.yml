@@ -22,13 +22,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
+        with:
+          use-flakehub: false
       - uses: cachix/cachix-action@v16
         if: github.ref_name == 'main'
         with:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: nix run .#deadnix -- .
-      - run: nix run nixpkgs#statix -- .
+      - run: nix run nixpkgs#statix -- check .
       - run: nix run nixpkgs#typos -- .
       - run: nix run nixpkgs#actionlint -- .
       - run: nix run nixpkgs#shellcheck -- scripts/healthcheck.sh scripts/deploy-soyo.sh
@@ -42,6 +44,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
+        with:
+          use-flakehub: false
       - uses: cachix/cachix-action@v16
         if: github.ref_name == 'main'
         with:
@@ -58,6 +62,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
+        with:
+          use-flakehub: false
       - uses: cachix/cachix-action@v16
         if: github.ref_name == 'main'
         with:
@@ -91,6 +97,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v22
       - uses: DeterminateSystems/magic-nix-cache-action@v14
+        with:
+          use-flakehub: false
       - uses: cachix/cachix-action@v16
         if: github.ref_name == 'main'
         with:
