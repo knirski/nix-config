@@ -21,7 +21,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 13 | [agenix/agenix-rekey](https://github.com/ryantm/agenix), `docs/secrets.md` | M1 | Encrypted secrets, rekeyFile flow |
 | 14 | `modules/nixos/maintenance.nix` | M2 | Scheduled upkeep: gc, scrub, SMART, ntfy alerts |
 | 15 | `modules/nixos/backup.nix`, `hosts/soyo/backup.nix` | M2 | restic to Synology, btrbk local snapshots |
-| 16 | `modules/nixos/observability.nix`, `lib/observability/`, `hosts/soyo/observability.nix` | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces, Alloy journal shipping. Reusable helpers extracted to `lib/observability/` (outside `import-tree`'s scope — see comment in the module). |
+| 16 | `modules/nixos/observability.nix`, `lib/observability/`, `hosts/soyo/observability.nix`, [`docs/topology/`](../topology/) | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces, Alloy journal shipping. Reusable helpers extracted to `lib/observability/` (outside `import-tree`'s scope — see comment in the module). LAN observability adds passive inventory collector (`modules/nixos/observability/lan_inventory.py`), blackbox probes (ICMP + HTTP), an `LAN Overview` dashboard, and topology diagrams under `docs/topology/`. Host-local network metadata lives in `hosts/soyo/network.nix` (separated from the DHCP schema to keep the critical path boring). |
 | 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding, and Limine's `sbctl` signing model |
 | 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, checks, CI pipeline |
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
