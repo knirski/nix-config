@@ -1,9 +1,5 @@
 # Soyo Control Plane dashboard — appliance drilldown for DNS, DHCP, capacity.
-{
-  lib,
-  pkgs,
-  builder,
-}:
+{ pkgs, builder }:
 let
   inherit (builder) mkText mkStat mkTimeseries;
 

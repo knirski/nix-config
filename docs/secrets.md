@@ -212,6 +212,7 @@ secrets/
 ├── ntfy-token.age          # Master-encrypted (ntfy.sh access token)
 ├── ntfy-topic.age          # Master-encrypted (ntfy.sh topic URL)
 ├── grafana-admin-password.age # Master-encrypted (Grafana admin password)
+├── grafana-secret-key.age     # Master-encrypted (Grafana session signing key)
 ├── tailscale-auth-key.age  # Master-encrypted (Tailscale pre-auth key)
 └── rekeyed/
     └── soyo/               # Host-specific rekeyed files (soyo's key)
@@ -221,6 +222,7 @@ secrets/
         ├── ntfy-token.age
         ├── ntfy-topic.age
         ├── grafana-admin-password.age
+        ├── grafana-secret-key.age
         └── tailscale-auth-key.age
 ```
 

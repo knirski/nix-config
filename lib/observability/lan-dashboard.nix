@@ -1,43 +1,5 @@
 # LAN Overview dashboard — blackbox probe insights and device inventory.
-{ pkgs, networkData }:
-let
-  deviceMeta = networkData.deviceMeta or { };
-
-  reservationProbeTargets = builtins.concatMap (
-    r:
-    let
-      meta = deviceMeta.${r.name} or null;
-    in
-    builtins.filter (m: m != null) (
-      [ ]
-      ++ (
-        if (meta != null) && (meta.monitor or false) then
-          [
-            {
-              name = r.name;
-              ip = r.ip;
-              kind = meta.kind or "host";
-              displayName = meta.displayName or r.name;
-            }
-          ]
-        else
-          [ ]
-      )
-    )
-  ) networkData.reservations;
-
-  probeTargets =
-    reservationProbeTargets
-    ++ (map (
-      t:
-      t
-      // {
-        displayName = t.displayName or t.name;
-      }
-    ) networkData.monitoredInfrastructure);
-
-  httpProbeTargets = builtins.filter (t: t ? probeHttpUrl) probeTargets;
-in
+{ pkgs }:
 pkgs.writeText "lan-overview.json" (
   builtins.toJSON {
     title = "LAN Overview";
