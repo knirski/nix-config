@@ -37,9 +37,11 @@ A NixOS flake that configures a small Intel N150 box ("Soyo") as a LAN DNS and D
 
 **flake-parts** — A framework that splits a flake into composable modules. Each module can contribute to outputs (packages, checks, dev shells, NixOS configs).
 
-**Dendritic pattern** — Every file under `modules/` is auto-imported as a flake-parts module by `import-tree`. Each file is one *aspect* (e.g. `blocky`, `dhcp`, `backup`) and contributes to a shared namespace: `flake.modules.nixos.<aspect>`. A host is assembled by toggling aspects on, not by `imports` of file paths.
+**Dendritic pattern** — Every file under `modules/` is auto-imported as a flake-parts module by `import-tree`. Each file is one *aspect* (e.g. `blocky`, `dhcp`, `backup`) and contributes to a    shared namespace: `aspects.nixos.<aspect>`. A host is assembled by
+   toggling aspects on, not by `imports` of file paths.
 
-**Aspect module** — One file under `modules/nixos/` or `modules/home/` that exposes a toggleable feature. Convention: `{ flake.modules.nixos.<name> = { ... }; }` with an `options.lanAppliance.*` namespace for host data.
+**Aspect module** — One file under `modules/nixos/` or `modules/home/` that exposes a toggleable feature. Convention: `{ aspects.nixos.<name> = { ... }; }` with an
+`options.lanAppliance.*` namespace for host data.
 
 **Host assembler** — A flake-parts module (e.g. `modules/parts/soyo.nix`) that builds a `nixosConfiguration` by listing which aspects to toggle and importing host-specific data files.
 
@@ -70,13 +72,13 @@ using an encrypted auth key, so you can SSH in from anywhere.
 Given `hosts/soyo`, what's actually turned on? The answer is in `modules/parts/soyo.nix`:
 
 ```
-modules = (with config.flake.modules.nixos; [
+modules = (with config.aspects.nixos; [
   base server users persistence remote-unlock blocky dhcp
   maintenance backup observability
 ]) ++ [ ... host data files ... ]
 ```
 
-Each name in that list is an aspect contributed by a file under `modules/nixos/`. `import-tree` auto-discovers these files — no explicit import list. To add a new aspect, create a file under `modules/nixos/` that sets `flake.modules.nixos.<name>`, then toggle it in the host assembler.
+Each name in that list is an aspect contributed by a file under `modules/nixos/`. `import-tree` auto-discovers these files — no explicit import list. To add a new aspect, create a file under `modules/nixos/` that sets `aspects.nixos.<name>`, then toggle it in the host assembler.
 
 ## Canonical sources
 
