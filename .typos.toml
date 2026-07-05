@@ -1,1 +1,10 @@
-default.extend-words = { crypted = "crypted", facter = "facter", HDA = "HDA", Hed = "Hed", FACTER = "FACTER", sxl = "sxl" }
+[default.extend-words]
+crypted = "crypted"
+facter = "facter"
+HDA = "HDA"
+Hed = "Hed"
+FACTER = "FACTER"
+sxl = "sxl"
+
+[files]
+extend-exclude = ["*.age"]
