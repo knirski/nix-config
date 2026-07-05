@@ -49,6 +49,12 @@ Restic backs up `/persist` daily (with a 1h randomized delay) to the Synology ov
 
 The repo password is an agenix secret (`restic-password`). Transport is SFTP to the NAS user `soyo-backup`.
 
+DNS resolution uses **systemd-resolved** with split DNS:
+- `*.home.arpa` → Blocky on `127.0.0.1:53` (local LAN records)
+- `*.danio-cloud.ts.net` → Tailscale MagicDNS
+
+The SSH host key is persisted at `/persist/etc/restic/known_hosts` so it survives reboots (declared in `hosts/soyo/persistence.nix`).
+
 Because `/persist` is what gets backed up, the Secure Boot signing keys under `/persist/var/lib/sbctl` are part of the restic restore story too. Losing those keys does not stop the current signed boot path from booting, but it does break the next Limine update until the keys are restored or regenerated and re-enrolled.
 
 ### Prerequisites on the Synology
@@ -56,7 +62,7 @@ Because `/persist` is what gets backed up, the Secure Boot signing keys under `/
 1. Create a dedicated user `soyo-backup` on the Synology DSM.
 2. Enable the SFTP service in DSM Control Panel → File Services → FTP → SFTP.
 3. Set the user's home directory to the backup volume (e.g. `/volume1/homes/soyo-backup`).
-4. Create the repo directory: `ssh soyo-backup@czworaczki mkdir -p /backup/soyo` (or use File Station).
+4. Create the repo directory: `ssh soyo-backup@czworaczki.home.arpa mkdir -p /backup/soyo` (or use File Station).
 
 ### SSH key setup (required for unattended backups)
 
@@ -72,9 +78,9 @@ Copy the public key output and add it to the Synology user's authorized keys:
 
 1. SSH into the Synology: `ssh soyo-backup@czworaczki`
 2. Add the public key to `~/.ssh/authorized_keys`
-3. Confirm: `ssh -i /persist/etc/restic/ssh-key soyo-backup@czworaczki echo "works"`
+3. Confirm: `ssh -i /persist/etc/restic/ssh-key soyo-backup@czworaczki.home.arpa echo "works"`
 
-The `ssh-key` file is persisted under `/persist/etc/restic/` (declared in `hosts/soyo/persistence.nix`) and survives reboots. The generated config in `hosts/soyo/backup.nix` references it as `sshKeyFile`. No password prompts during scheduled backups.
+The `ssh-key` file is persisted under `/persist/etc/restic/` (declared in `hosts/soyo/persistence.nix`) and survives reboots. The host key fingerprint is also persisted (`/persist/etc/restic/known_hosts`) so unattended SSH works after reboot. The generated config in `hosts/soyo/backup.nix` references it as `sshKeyFile`. No password prompts during scheduled backups.
 
 ### List restic snapshots
 

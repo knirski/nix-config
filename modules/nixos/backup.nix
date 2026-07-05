@@ -121,7 +121,7 @@
           extraOptions =
             cfg.restic.extraOptions
             ++ lib.optionals (cfg.restic.sshKeyFile != null) [
-              "sftp.command=ssh soyo-backup@czworaczki -i ${cfg.restic.sshKeyFile} -s sftp"
+              "sftp.command='ssh soyo-backup@czworaczki.home.arpa -i ${cfg.restic.sshKeyFile} -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/persist/etc/restic/known_hosts -s sftp'"
             ];
           pruneOpts = cfg.restic.pruneOpts;
           checkOpts = cfg.restic.checkOpts;
