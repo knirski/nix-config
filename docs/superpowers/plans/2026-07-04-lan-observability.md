@@ -14,26 +14,35 @@
 
 - `hosts/soyo/reservations.nix`
   Keeps the existing DHCP/DNS reservation list unchanged. This remains the critical appliance source of truth required by the repo invariants.
+
 - `hosts/soyo/network.nix`
   New host-local network namespace. Wraps `reservations` and adds observability-only `monitoredInfrastructure` and `deviceMeta`.
+
 - `hosts/soyo/observability.nix`
   Passes `networkData` into the observability aspect.
+
 - `modules/parts/topology.nix`
   Switch to consuming `network.nix.reservations` so non-critical LAN consumers read the host-local namespace.
+
 - `modules/nixos/observability.nix`
   Extend the existing aspect with blackbox exporter configuration, target synthesis, LAN inventory service/timer, and the new root-level dashboard.
+
 - `modules/nixos/observability/lan_inventory.py`
   New helper script for passive LAN inventory collection and Prometheus textfile rendering.
+
 - `modules/nixos/observability/lan_inventory_test.py`
   New `unittest` coverage for the collector's merge logic and metric rendering.
+
 - `docs/validation-checklist.md`
   Add runtime validation steps for blackbox probes, LAN inventory metrics, and the new dashboard.
+
 - `docs/learning/design-journey.md`
   Add the learning note for the host-local network namespace and why observability data is adjacent to, but not merged into, the DHCP/DNS source of truth.
 
 ### Task 1: Introduce the host-local network namespace
 
 **Files:**
+
 - Create: `hosts/soyo/network.nix`
 - Modify: `hosts/soyo/observability.nix`
 - Modify: `modules/parts/topology.nix`
@@ -41,6 +50,7 @@
 - [ ] **Step 1: Prove the namespace file does not exist yet**
 
 Run:
+
 ```bash
 nix eval --json --expr '(import ./hosts/soyo/network.nix).monitoredInfrastructure'
 ```
@@ -143,12 +153,14 @@ Expected: FAIL with a path-not-found error for `./hosts/soyo/network.nix`.
 - [ ] **Step 5: Run the namespace checks and verify topology didn't regress**
 
 Run:
+
 ```bash
 nix eval --json --expr '(import ./hosts/soyo/network.nix).deviceMeta' | jq 'keys'
 nix build .#topology.x86_64-linux
 ```
 
 Expected:
+
 - first command prints the monitored device keys, including `"czworaczki"` and `"drukarka"`
 - second command succeeds (verified visually by inspecting `result/main.svg` for the expected device nodes)
 
@@ -162,11 +174,13 @@ git commit -m "feat(observability): add soyo network data namespace"
 ### Task 2: Add blackbox exporter provisioning and target synthesis
 
 **Files:**
+
 - Modify: `modules/nixos/observability.nix`
 
 - [ ] **Step 1: Verify blackbox jobs are absent before the change**
 
 Run:
+
 ```bash
 nix eval --json .#nixosConfigurations.soyo.config.services.prometheus.scrapeConfigs \
   | jq 'map(.job_name) | map(select(startswith("blackbox")))'
@@ -371,12 +385,14 @@ systemd.services.prometheus-blackbox-exporter.serviceConfig = {
 - [ ] **Step 5: Evaluate the blackbox jobs and labels**
 
 Run:
+
 ```bash
 nix eval --json .#nixosConfigurations.soyo.config.services.prometheus.scrapeConfigs \
   | jq '[.[] | select(.job_name | startswith("blackbox")) | .job_name]'
 ```
 
 Expected:
+
 ```json
 [
   "blackbox-exporter",
@@ -395,6 +411,7 @@ git commit -m "feat(observability): add lan blackbox probes"
 ### Task 3: Add the passive LAN inventory collector and tests
 
 **Files:**
+
 - Create: `modules/nixos/observability/lan_inventory.py`
 - Create: `modules/nixos/observability/lan_inventory_test.py`
 - Modify: `modules/nixos/observability.nix`
@@ -452,6 +469,7 @@ if __name__ == "__main__":
 - [ ] **Step 2: Run the test to confirm it fails before implementation**
 
 Run:
+
 ```bash
 python3 modules/nixos/observability/lan_inventory_test.py
 ```
@@ -665,12 +683,14 @@ in
 - [ ] **Step 5: Run the collector tests and the Nix evaluation**
 
 Run:
+
 ```bash
 python3 modules/nixos/observability/lan_inventory_test.py
 nix eval --raw .#nixosConfigurations.soyo.config.systemd.services.lan-inventory-exporter.serviceConfig.ExecStart
 ```
 
 Expected:
+
 - Python test exits `OK`
 - Nix eval prints a store path ending in `/bin/lan-inventory-exporter`
 
@@ -684,6 +704,7 @@ git commit -m "feat(observability): add passive lan inventory collector"
 ### Task 4: Add the LAN dashboard, docs, deployment, and runtime validation
 
 **Files:**
+
 - Modify: `modules/nixos/observability.nix`
 - Modify: `docs/validation-checklist.md`
 - Modify: `docs/learning/design-journey.md`
@@ -691,6 +712,7 @@ git commit -m "feat(observability): add passive lan inventory collector"
 - [ ] **Step 1: Confirm the LAN dashboard is not defined in the module yet**
 
 Run:
+
 ```bash
 grep -rn "lan-overview\|LAN Overview" modules/nixos/observability.nix
 ```
@@ -852,6 +874,7 @@ This keeps `LAN Overview`, `Fleet Overview`, and `Node Exporter Full` at the roo
 - [ ] **Step 4: Run full validation, deploy to Soyo, and check the live system**
 
 Run:
+
 ```bash
 nix flake check
 sudo nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
@@ -861,6 +884,7 @@ curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:30
 ```
 
 Expected:
+
 - `nix flake check` passes
 - deployment completes successfully
 - textfile metrics are present under node_exporter

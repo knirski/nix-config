@@ -73,7 +73,7 @@ The success test: a competent engineer new to Nix can read the learning docs in 
 Load-bearing choices at a glance; rationale and rejected alternatives are in the body and appendix.
 
 | Area | Decision |
-|---|---|
+| ---- | -------- |
 | Flake organization | `flake-parts` + dendritic: `modules/default.nix` lists every aspect module; hosts assemble by toggling aspects |
 | Filesystem | LUKS2 + Btrfs (zstd, subvolumes); impermanent root from day one; durable state under `/persist`, `/nix`, snapshots; no ZFS |
 | Impermanence | `preservation` for the persisted-path inventory; root rolled back to a blank Btrfs snapshot in systemd initrd each boot |
@@ -932,7 +932,7 @@ Outcome: signed boot, cmdline-injection closed, auto-unlock surviving updates. V
 AdGuard Home (`services.adguardhome`) was evaluated as a single-module alternative (DNS, ad-blocking, DHCP, MAC→IP reservations via `settings.dhcp.static_leases`, local PTR).
 
 | Priority | Better choice |
-|---|---|
+| -------- | ------------- |
 | Fewest moving parts, built-in UI, fast setup | AdGuard Home |
 | No inter-daemon glue | AdGuard Home |
 | Git-authoritative / declarative purity | Blocky + dnsmasq |

@@ -5,7 +5,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 ## Reading order & roadmap
 
 | # | Document | Milestone | What you'll learn |
-|---|----------|-----------|-------------------|
+| --- | ---------- | ----------- | ------------------- |
 | 1 | This README | — | Glossary, repo layout, dendritic wiring |
 | 2 | [Nix language basics](https://nix.dev/tutorials/nix-language) (nix.dev) | — | The Nix expression language — read before the flake |
 | 3 | [Flakes](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake) (Nix manual) | — | What a flake is, inputs/outputs |
@@ -83,7 +83,7 @@ Each name in that list is an aspect contributed by a file under `modules/nixos/`
 ## Canonical sources
 
 | Topic | Link |
-|---|---|
+| ----- | ---- |
 | Nix language | [nix.dev tutorial](https://nix.dev/tutorials/nix-language) |
 | Flakes | [Nix manual](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake) |
 | flake-parts | [flake.parts](https://flake.parts) |

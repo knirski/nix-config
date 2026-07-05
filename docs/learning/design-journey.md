@@ -92,6 +92,7 @@ After replacement, template variables are deleted from `templating.list` so Graf
 Grafana's `$__rate_interval` is a built-in that auto-selects a range vector duration based on scrape interval and time window. On a 5-minute window with 1-minute scrape intervals, it resolved to ~15s — so `rate(…[$__rate_interval])` became `rate(…[15s])`, which returned zero data (1m scrape interval produces only 5 raw data points; a 15s window needs at least 2).
 
 Tested with `gcx`:
+
 ```text
 # Fails at 5m window, returns data at 15m window:
 rate(node_pressure_cpu_waiting_seconds_total[1m])   → No data
@@ -157,6 +158,7 @@ Early config had a `common.ring` stanza and ran Loki with `-target=all`. Both ar
 **`-target=all`** is the documented way to run single-binary mode, but Loki `3.7.2` defaults to `all` when no target is specified. Explicitly specifying it just adds a redundant CLI flag. Dropped it — one less thing to maintain.
 
 Other production-aligned defaults:
+
 - `allow_structured_metadata = false` — avoids unnecessary parsing overhead
 - `analytics.reporting_enabled = false` — no telemetry home
 - `compactor.retention_enabled = true` — enable log retention via the compactor (not just the table manager)
@@ -165,6 +167,7 @@ Other production-aligned defaults:
 ### Alloy: loopback-only, `--disable-reporting`, and cursor persistence
 
 Alloy's config was already idiomatic — `loki.source.journal` scraping local systemd journals and forwarding to `loki.write`, with `prometheus.exporter.unix` for node metrics. Three production patterns mattered in the end:
+
 - **Loopback ports only** (`127.0.0.1:xxxxx`) for all collectors — no LAN-facing listeners. The collectors serve local scrapers (Prometheus, Loki write), not the network.
 - **`--disable-reporting`** CLI flag — Alloy phones home by default. Production configs suppress this.
 - **Persist the journal cursor** on an impermanent host. Alloy stores `loki.source.journal` positions under `/var/lib/private/alloy/data-alloy/.../positions.yml` because the unit uses `DynamicUser=true` and `StateDirectory=alloy`. Without persisting that private directory, every reboot makes Alloy start over from `max_age`, which means Loki is ingesting logs but Grafana's recent windows can still look empty until Alloy catches up.
@@ -176,6 +179,7 @@ The practical rule: on a wiped-root system, treat `StateDirectory=` paths as fir
 Tempo was the last observability component to get idiomatic. The original config defined Tempo as a manual systemd service with raw YAML — skipping the nixpkgs module entirely.
 
 The `services.tempo.settings` module converts attrsets to the Tempo YAML config, handles user/group creation, and generates the systemd unit. Moving to it fixed several things:
+
 - **Static user** (`users.users.tempo`) instead of `DynamicUser` — Tempo needs writes to `/var/lib/tempo/traces` (OWNED by tempo, not a runtime bind-mount), which DynamicUser breaks. `lib.mkForce false` on the module's DynamicUser default.
 - **Resource isolation** matching the rest of the stack (`MemoryMax=512M`, `CPUQuota=20%`, `Nice=10`).
 
@@ -248,6 +252,7 @@ The first implementation used Python `writeShellApplication` scripts. Each trace
 The rewrite followed a simple principle: **"For HTTP calls use simplest possible commands."**
 
 Every tracer now follows this pattern:
+
 ```bash
 TRACE_ID=$(uuidgen | tr -d -)
 SPAN_ID=$(uuidgen | tr -d - | cut -c1-16)
@@ -270,6 +275,7 @@ Dependencies: `curl`, `jq`, `util-linux` (for `uuidgen`). No Python, no Go, no i
 `writeShellApplication` wraps the script in `shellcheck` validation and adds runtime dependencies to `PATH`.
 
 **Three recurring gotchas** with `writeShellApplication`:
+
 1. **Missing `runtimeInputs`** — `uuidgen` lives in `util-linux`, not in bash. Each tracer that uses `uuidgen` needs `pkgs.util-linux` in `runtimeInputs`. Forgetting this produces `command not found` at runtime, not at build time (shellcheck can't know about commands used in `$(…)` expansions).
 2. **`set -o pipefail` + `head` = SIGPIPE** — `head -N` closes its stdin after N lines, which sends SIGPIPE to the producer. With `pipefail`, this becomes exit 141. The fix is `producer | head -N || true`. Only `boot-trace` hits this (parsing `systemd-analyze blame`).
 3. **`CREDENTIALS_DIRECTORY` only exists under systemd** — `LoadCredential=` mounts secrets into a per-unit directory at `$CREDENTIALS_DIRECTORY`. Running the script directly (e.g. for debugging) means the variable is unset. The `set -eu` fix: `: "${CREDENTIALS_DIRECTORY:=/dev/null}"` at script top.

@@ -15,7 +15,7 @@ and the [dendritic](https://flake.parts) pattern.
 ## Hosts
 
 | Host | Role |
-|------|------|
+| ---- | ---- |
 | **Soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB, single Gigabit NIC |
 
 ## Quick start
