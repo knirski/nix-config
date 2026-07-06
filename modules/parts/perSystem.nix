@@ -43,18 +43,18 @@
           };
           actionlint.enable = true;
           shellcheck.enable = true;
-          markdownlint.enable = true;
-          markdownlint.settings.configuration = {
-            MD013 = false;
-            MD033 = false;
-            MD060 = false;
-            MD029 = false;
-            MD031 = false;
-            MD032 = false;
+          markdownlint = {
+            enable = true;
+            settings.configuration = {
+              MD013 = false;
+              MD033 = false;
+              MD060 = false;
+              MD029 = false;
+              MD031 = false;
+              MD032 = false;
+            };
+            excludes = [ "\\.commandcode/" ];
           };
-          markdownlint.excludes = [
-            "\\.commandcode/"
-          ];
           ruff.enable = true;
         };
       };

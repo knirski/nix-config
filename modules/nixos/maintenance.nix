@@ -58,16 +58,9 @@
         };
         networking.timeServers = cfg.ntpServers;
 
-        # --- Btrfs scrub: monthly, throttled to idle I/O ---
-        # --- ntfy OnFailure: global drop-in so any failing service notifies ---
-        # Applies to all .service units.  The template guards against infinite
-        # recursion: if the failing unit itself is an ntfy-failure instance, it
-        # exits early instead of cascading.
-        environment.etc."systemd/system/service.d/ntfy-onfailure.conf".text = ''
-          [Unit]
-          OnFailure=ntfy-failure@%N.service
-        '';
-
+        # --- ntfy OnFailure: individual service drop-ins ---
+        # Set on services defined in this module (global drop-ins via
+        # systemd/system/service.d/ are not portable across nixpkgs versions).
         systemd = {
           services = {
             btrfs-scrub = {
@@ -78,6 +71,7 @@
                 ExecStart = "${pkgs.btrfs-progs}/bin/btrfs scrub start -B /";
                 Nice = 19;
               };
+              unitConfig.OnFailure = "ntfy-failure@%N.service";
             };
             "ntfy-failure@" = {
               description = "ntfy OnFailure notification for %i";
@@ -99,8 +93,8 @@
                   TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
                   curl -sS -o /dev/null \
                     -H "Authorization: Bearer $TOKEN" \
-                    -H "Title: soyo unit failed" \
-                    -d "$SERVICE failed on soyo — check journalctl -u $SERVICE" \
+                    -H "Title: ${config.networking.hostName} unit failed" \
+                    -d "$SERVICE failed on ${config.networking.hostName} — check journalctl -u $SERVICE" \
                     "$TOPIC"
                 ''} %i";
               };
@@ -133,7 +127,8 @@
                   # Export a Btrfs-aware Prometheus metric so Grafana alerts on the
                   # same signal as the ntfy check, not df-style filesystem stats.
                   mkdir -p /var/lib/prometheus/textfiles
-                  printf '%s\n' '# HELP soyo_btrfs_usage_percent Percent of Btrfs device space currently used.' '# TYPE soyo_btrfs_usage_percent gauge' "soyo_btrfs_usage_percent $USED_PCT" '# HELP soyo_btrfs_usage_threshold_percent Configured Btrfs usage alert threshold.' '# TYPE soyo_btrfs_usage_threshold_percent gauge' "soyo_btrfs_usage_threshold_percent $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
+                  host="${config.networking.hostName}"
+                  printf '%s\n' '# HELP btrfs_usage_percent Percent of Btrfs device space currently used.' '# TYPE btrfs_usage_percent gauge' "btrfs_usage_percent{host=\"$host\"} $USED_PCT" '# HELP btrfs_usage_threshold_percent Configured Btrfs usage alert threshold.' '# TYPE btrfs_usage_threshold_percent gauge' "btrfs_usage_threshold_percent{host=\"$host\"} $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
                   mv /var/lib/prometheus/textfiles/btrfs-space.prom.$$ /var/lib/prometheus/textfiles/btrfs-space.prom
 
                   if [ "$USED_PCT" -gt "$THRESHOLD" ]; then
@@ -141,7 +136,7 @@
                     TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
                     curl -sS -o /dev/null \
                       -H "Authorization: Bearer $TOKEN" \
-                      -H "Title: soyo low disk space" \
+                      -H "Title: ${config.networking.hostName} low disk space" \
                       -H "Tags: warning" \
                       -d "Disk usage at $USED_PCT% (threshold: $THRESHOLD%). Check btrfs filesystem usage." \
                       "$TOPIC"
