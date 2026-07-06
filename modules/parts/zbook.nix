@@ -56,6 +56,7 @@
         {
           networking.hostName = "zbook";
           nixpkgs.hostPlatform = "x86_64-linux";
+          nixpkgs.config.allowUnfree = true;
           system.stateVersion = "26.05";
 
           # Maintenance: enable for this host, set disk to zbook's NVMe
