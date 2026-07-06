@@ -52,6 +52,9 @@
             MD031 = false;
             MD032 = false;
           };
+          markdownlint.excludes = [
+            "\\.commandcode/"
+          ];
           ruff.enable = true;
         };
       };
