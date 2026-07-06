@@ -41,11 +41,8 @@ as the sole operating system, replacing the existing dual-boot (Windows + Ubuntu
 **WARNING: This wipes the entire NVMe drive.**
 
 ```bash
-# 1. Create blank Btrfs root reference snapshot
-#    (done by disko, but we also need the root-blank anchor)
-
-# 2. Partition and format
-sudo nix --experimental-features 'nix-command flakes' run github:nix-community/disko -- --mode disk-format --flake .#zbook
+# 1. Partition, format, and mount
+sudo nix run github:nix-community/disko -- --mode destroy,format,mount --flake .#zbook
 
 # 3. Generate SSH host key (for agenix)
 sudo install -d -m 700 /mnt/persist/etc/ssh
