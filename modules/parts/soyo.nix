@@ -23,7 +23,7 @@
         inputs.disko.nixosModules.disko
         inputs.agenix.nixosModules.default
         inputs.agenix-rekey.nixosModules.default
-        inputs.home-manager.nixosModules.home-manager
+        inputs.home-manager-stable.nixosModules.home-manager
         {
           home-manager = {
             useGlobalPkgs = true;
