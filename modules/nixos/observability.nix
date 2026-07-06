@@ -415,6 +415,16 @@
           (lib.mkIf grafanaCfg.enable (
             lib.mkMerge [
               {
+                age.secrets = {
+                  grafana-admin-password = {
+                    rekeyFile = ../../secrets/grafana-admin-password.age;
+                    owner = "grafana";
+                  };
+                  grafana-secret-key = {
+                    rekeyFile = ../../secrets/grafana-secret-key.age;
+                    owner = "grafana";
+                  };
+                };
                 services = {
                   prometheus = {
                     enable = true;
