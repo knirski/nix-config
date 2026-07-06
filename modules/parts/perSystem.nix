@@ -53,7 +53,7 @@
               MD031 = false;
               MD032 = false;
             };
-            excludes = [ "\\.commandcode/" ];
+            excludes = [ "\.commandcode" ];
           };
           ruff.enable = true;
         };
