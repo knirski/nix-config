@@ -36,13 +36,9 @@
       fonts.packages = with pkgs; [
         noto-fonts
         noto-fonts-color-emoji
-        (nerdfonts.override {
-          fonts = [
-            "JetBrainsMono"
-            "FiraCode"
-            "NerdFontsSymbolsOnly"
-          ];
-        })
+        nerd-fonts.jetbrains-mono
+        nerd-fonts.fira-code
+        nerd-fonts.symbols-only
       ];
 
       environment.systemPackages = with pkgs; [
