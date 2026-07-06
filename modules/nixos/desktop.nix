@@ -2,8 +2,6 @@
   # This module depends on package overrides in the host assembler:
   #   - cosmic-ext-* packages come from the stable nixpkgs input overlay
   #     (not available in nixpkgs-unstable used as the primary channel).
-  #   - cosmic-fan-control is a local package under modules/pkgs/.
-  # See modules/parts/zbook.nix for the overlay declaration.
   # Future hosts toggling this aspect must replicate that overlay.
   aspects.nixos.desktop =
     { pkgs, ... }:
@@ -13,7 +11,7 @@
         desktopManager.cosmic.enable = true;
         displayManager.cosmic-greeter.enable = true;
 
-        # Flatpak for apps not in nixpkgs (e.g. fan-control)
+        # Flatpak for apps not in nixpkgs
         flatpak.enable = true;
 
         # Audio: PipeWire with WirePlumber
@@ -45,7 +43,6 @@
         firefox
         cosmic-ext-applet-external-monitor-brightness
         cosmic-ext-tweaks
-        cosmic-fan-control
       ];
 
       hardware.bluetooth.enable = true;

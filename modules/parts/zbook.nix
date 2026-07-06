@@ -17,14 +17,13 @@
         maintenance
       ])
       ++ [
-        # Overlay cosmic-ext packages from stable (not available in unstable snapshot)
+        # Overlay cosmic-ext packages from stable (not available in nixpkgs-unstable)
         {
           nixpkgs.overlays = [
-            (final: _: {
+            (_final: _prev: {
               cosmic-ext-applet-external-monitor-brightness =
                 inputs.nixpkgs.legacyPackages.x86_64-linux.cosmic-ext-applet-external-monitor-brightness;
               cosmic-ext-tweaks = inputs.nixpkgs.legacyPackages.x86_64-linux.cosmic-ext-tweaks;
-              cosmic-fan-control = final.callPackage ../../modules/pkgs/cosmic-fan-control { };
             })
           ];
         }
