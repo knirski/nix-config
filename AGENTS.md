@@ -1,7 +1,11 @@
 # AGENTS.md — guidelines and guardrails for this repo
 
-A multi-host NixOS flake. First host: **Soyo** (Intel N150), a LAN DNS + DHCP
-appliance. Future hosts (e.g. a gaming laptop) layer on the same base.
+A multi-host NixOS flake.
+
+| Host | Role | Status |
+| ---- | ---- | ------ |
+| **Soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | M1/M2 complete, M3 pending |
+| **zbook** (HP ZBook Studio 16" G10) | Desktop/gaming workstation, 32 GB, NVIDIA RTX 4000 Ada | M4 in progress |
 
 **Read first:** [`docs/superpowers/specs/soyo-dns-dhcp-appliance.md`](docs/superpowers/specs/soyo-dns-dhcp-appliance.md)
 is the canonical design — decisions, hardware facts, the M1–M4 roadmap, and an
@@ -136,7 +140,7 @@ Conventional commits: `type(scope): message`. No period.
 
 ## SSH access
 
-SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh krzysiek@soyo`).
+SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh krzysiek@soyo`, `ssh krzysiek@zbook`).
 
 ## Workflow
 
@@ -148,7 +152,7 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   ruff (Python).
   Before committing: `nix flake check` and also run `gitleaks` locally
   (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml`).
-- Everyday deploy: `./scripts/deploy-soyo.sh` (or `nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo`).
+- Everyday deploy: `./scripts/deploy-soyo.sh` (Soyo) or `./scripts/deploy-zbook.sh` (zbook; or `nixos-rebuild switch --flake .#zbook --target-host krzysiek@zbook --sudo`).
 - After deploy or after changes that touch boot, unlock, networking, or
   services, run the automated healthcheck:
 

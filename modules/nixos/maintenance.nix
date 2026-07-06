@@ -7,10 +7,10 @@
       ...
     }:
     let
-      cfg = config.lanAppliance.maintenance;
+      cfg = config.maintenance;
     in
     {
-      options.lanAppliance.maintenance = {
+      options.maintenance = {
         enable = lib.mkEnableOption "scheduled maintenance (gc, scrub, smartd, timesyncd, free-space alerts, ntfy OnFailure)";
         ntpServers = lib.mkOption {
           type = lib.types.listOf lib.types.str;
@@ -52,7 +52,7 @@
             enable = true;
             devices = map (dev: {
               device = dev;
-              extraArgs = "-s (S/../.././02|L/../../7/03)";
+              options = "-s (S/../.././02|L/../../7/03)";
             }) cfg.smartdDevices;
           };
         };

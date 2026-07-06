@@ -17,14 +17,20 @@ and the [dendritic](https://flake.parts) pattern.
 | Host | Role |
 | ---- | ---- |
 | **Soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB, single Gigabit NIC |
+| **zbook** (HP ZBook Studio 16" G10) | Desktop/gaming workstation, 32 GB, NVIDIA RTX 4000 Ada |
 
 ## Quick start
 
 ```bash
+# Soyo (DNS/DHCP appliance)
 ./scripts/deploy-soyo.sh
-# Or manually: nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
-# If DNS isn't working: nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
+
+# zbook (desktop/gaming workstation)
+./scripts/deploy-zbook.sh
 ```
+
+For first install from a NixOS live ISO, see [docs/install-soyo.md](docs/install-soyo.md)
+or [hosts/zbook/INSTALL.md](hosts/zbook/INSTALL.md).
 
 For a first install from the NixOS live ISO, see [docs/install-soyo.md](docs/install-soyo.md).
 For the condensed checklist, see [hosts/soyo/DEPLOY.md](hosts/soyo/DEPLOY.md).

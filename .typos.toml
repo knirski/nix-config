@@ -7,4 +7,4 @@ FACTER = "FACTER"
 sxl = "sxl"
 
 [files]
-extend-exclude = ["*.age"]
+extend-exclude = ["*.age", "hosts/*/facter.json"]

@@ -26,10 +26,15 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, pre-commit hooks (treefmt, deadnix, statix, typos, end-of-file-fixer, check-merge-conflicts, actionlint, shellcheck, markdownlint, ruff), CI pipeline |
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
 | 20 | [CI design doc](../superpowers/specs/2026-07-05-ci-pipeline-design.md), [CI plan](../superpowers/plans/2026-07-05-ci-pipeline-plan.md), `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline (lint: deadnix + statix + typos + gitleaks + actionlint + shellcheck + markdownlint + ruff → eval: `nix flake check` → build + closure diff → topology artifact), Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
+| 21 | `modules/nixos/laptop.nix`, `modules/nixos/workstation.nix` | M4 | Laptop power management (tlp, battery thresholds) and workstation defaults (docker, ssh agent) |
+| 22 | `modules/nixos/desktop.nix`, `modules/home/desktop.nix` | M4 | COSMIC desktop environment session, NixOS display-manager + HM user-config |
+| 23 | `modules/nixos/nvidia.nix` | M4 | NVIDIA proprietary driver (RTX 4000 Ada), prime sync, offload modes |
+| 24 | `modules/nixos/gaming.nix` | M4 | Steam, gamemode, MangoHud, game-specific tweaks |
+| 25 | `modules/parts/zbook.nix`, `hosts/zbook/` | M4 | zbook host assembler — toggles laptop, workstation, desktop, nvidia, and gaming aspects onto the same base modules used by Soyo |
 
 ## What is this repo?
 
-A NixOS flake that configures a small Intel N150 box ("Soyo") as a LAN DNS and DHCP appliance. Future hosts (gaming laptop, etc.) will layer on the same base modules. The repository doubles as a deliberate way to learn modern Nix — see [Learning Goals](../superpowers/specs/soyo-dns-dhcp-appliance.md#learning-goals).
+A NixOS flake that configures a small Intel N150 box ("Soyo") as a LAN DNS and DHCP appliance and an HP ZBook Studio G10 ("zbook") as a desktop/gaming workstation. The repository doubles as a deliberate way to learn modern Nix — see [Learning Goals](../superpowers/specs/soyo-dns-dhcp-appliance.md#learning-goals).
 
 ## Glossary
 

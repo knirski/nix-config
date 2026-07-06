@@ -10,9 +10,16 @@
     ./nixos/maintenance.nix
     ./nixos/backup.nix
     ./nixos/observability.nix
+    ./nixos/desktop.nix
+    ./nixos/nvidia.nix
+    ./nixos/laptop.nix
+    ./nixos/gaming.nix
+    ./nixos/workstation.nix
     ./home/base.nix
+    ./home/desktop.nix
     ./parts/perSystem.nix
     ./parts/soyo.nix
+    ./parts/zbook.nix
     ./parts/aspect-options.nix
     ./parts/topology.nix
   ];

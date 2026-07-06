@@ -1,0 +1,27 @@
+{ config, ... }:
+{
+  workstation.services.backup = {
+    enable = true;
+
+    restic = {
+      repository = "sftp:zbook-backup@czworaczki:/backup/zbook";
+      passwordFile = config.age.secrets.restic-password.path;
+      paths = [
+        "/persist"
+      ];
+      sshKeyFile = "/persist/etc/restic/ssh-key";
+    };
+
+    btrbk.subvolumes = [
+      {
+        name = "persist";
+        snapshotDir = "/snapshots/persist";
+        retention = {
+          daily = 7;
+          weekly = 4;
+          monthly = 3;
+        };
+      }
+    ];
+  };
+}
