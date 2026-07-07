@@ -38,6 +38,10 @@
       };
 
       config = lib.mkIf cfg.enable {
+        # Must set videoDrivers to "nvidia" — hardware.nvidia.enabled is
+        # read-only (computed from elem "nvidia" videoDrivers). Without this,
+        # nouveau loads instead of the proprietary driver, killing GPU perf.
+        services.xserver.videoDrivers = [ "nvidia" ];
         hardware = {
           # Latest NVIDIA driver (from nixpkgs-unstable)
           nvidia = {

@@ -91,11 +91,51 @@ sudo systemd-cryptenroll --tpm2-device=auto \
 
 Test TPM unlock: `sudo systemd-cryptsetup attach crypted /dev/disk/by-partlabel/luks`
 
+## Post-install gotchas
+
+### NVIDIA: first boot uses nouveau
+
+On first boot after `nixos-install`, the proprietary NVIDIA driver is **not
+loaded** — nouveau (the open-source reverse-engineered driver) runs instead.
+This means the COSMIC desktop will be laggy with no GPU acceleration,
+because `hardware.nvidia.enabled` is read-only and only becomes `true` when
+`"nvidia"` is in `services.xserver.videoDrivers`. The initial install from
+the flake includes that fix, but a reboot is needed because nouveau claims
+the GPU first — the NVIDIA kernel module can't hot-swap.
+
+After first boot:
+
+```bash
+# If desktop is laggy, switch to the NVIDIA driver and reboot:
+sudo nixos-rebuild switch --flake .#zbook
+sudo reboot
+```
+
+After reboot, verify with `nvidia-smi`. The desktop should be smooth.
+
+### Suspend: USB-C dock causes immediate wake
+
+When connected to a USB-C dock (ethernet, monitor, Logitech receiver), the
+laptop may wake immediately after suspend. This is fixed by udev rules that
+disable ACPI wake for USB and Thunderbolt controllers — see
+`modules/nixos/laptop.nix`. The rules target the specific Intel Raptor Lake
+PCI IDs for this hardware, following the pattern from
+[nixos-hardware PR #1394](https://github.com/NixOS/nixos-hardware/pull/1394).
+
+If you still see immediate wake after deploy:
+
+```bash
+sudo reboot
+```
+
+A full reboot ensures the udev rules are processed at device-probe time.
+
 ## Post-install manual checks
 
-- COSMIC desktop boots and renders correctly
-- GPU switching works (NVIDIA on demand)
+- COSMIC desktop boots and renders correctly (after NVIDIA driver activates)
+- GPU switching works (Intel integrated for desktop, NVIDIA on-demand)
 - Steam launches and can render with DXVK/VKD3D
+- Suspend works with USB-C dock connected (laptop stays asleep)
 - Restic backup completes successfully
 - TPM auto-unlock on reboot
 - Tailscale connects and provides remote access

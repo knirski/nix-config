@@ -31,6 +31,8 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 23 | `modules/nixos/nvidia.nix` | M4 | NVIDIA proprietary driver (RTX 4000 Ada), prime sync, offload modes |
 | 24 | `modules/nixos/gaming.nix` | M4 | Steam, gamemode, MangoHud, game-specific tweaks |
 | 25 | `modules/parts/zbook.nix`, `hosts/zbook/` | M4 | zbook host assembler — toggles laptop, workstation, desktop, nvidia, and gaming aspects onto the same base modules used by Soyo |
+| 26 | Nvidia bug (this section) | M4 | The read-only `hardware.nvidia.enabled` trap; udev over systemd services for suspend wake |
+| 27 | `modules/nixos/laptop.nix` — udev wake rules | M4 | Udev rules for USB/Thunderbolt ACPI wake, following nixos-hardware PR #1394 (udev over systemd oneshot) |
 
 ## What is this repo?
 
@@ -84,6 +86,86 @@ modules = (with config.aspects.nixos; [
 ```
 
 Each name in that list is an aspect contributed by a file under `modules/nixos/`. `modules/default.nix` lists every file explicitly. To add a new aspect, create a file under `modules/nixos/` that sets `aspects.nixos.<name>`, add it to `modules/default.nix`, then toggle it in the host assembler.
+
+## M4 learnings: NVIDIA and laptop suspend fixes
+
+Two gotchas came up during zbook setup that are worth understanding because
+they show how NixOS's option system interacts with real hardware quirks.
+
+### The `hardware.nvidia.enabled` trap
+
+The `nvidia.nix` module sets every NVIDIA sub-option you'd expect:
+`modesetting.enable`, `powerManagement.enable`, `prime.offload.enable`, the
+driver package — but it never added `"nvidia"` to `services.xserver.videoDrivers`.
+
+Here's why that matters: `hardware.nvidia.enabled` is a **read-only** option
+(`readOnly = true`). Its default value is computed from whether `"nvidia"` is
+in `services.xserver.videoDrivers`:
+
+```nix
+nvidiaEnabled = lib.elem "nvidia" config.services.xserver.videoDrivers;
+enabled = lib.mkOption {
+  readOnly = true;
+  type = lib.types.bool;
+  default = nvidiaEnabled || cfg.datacenter.enable;
+};
+```
+
+If `videoDrivers` is `["modesetting" "fbdev"]` (the default), then
+`hardware.nvidia.enabled` stays `false`, the NVIDIA module in nixpkgs
+skips its `mkIf cfg.enabled` block, and **nouveau loads instead**. No GPU
+acceleration, terrible desktop performance.
+
+**The fix** — add `services.xserver.videoDrivers = [ "nvidia" ];` in the
+aspect module's config block. This makes `hardware.nvidia.enabled = true`,
+which triggers all the nvidia-persistenced service, kernel module loading,
+nouveau blacklist, and proper GPU initialization:
+
+```nix
+config = lib.mkIf cfg.enable {
+  services.xserver.videoDrivers = [ "nvidia" ];
+  hardware.nvidia = {
+    ...
+  };
+};
+```
+
+After this change, a **reboot** is required (nouveau already has the GPU
+claimed; the NVIDIA module can't hot-swap).
+
+### Udev rules over systemd services for suspend wake
+
+The zbook immediately woke from suspend when a USB-C dock (ethernet, monitor,
+Logitech receiver) was connected. The first attempt used systemd oneshot
+services to write to `/proc/acpi/wakeup` — but these had three problems:
+
+1. **Race with powertop** — powertop's `--auto-tune` re-enables ACPI wake
+   for some controllers after the service runs.
+2. **Race with udev events** — hotplug events during boot can re-arm the
+   ACPI wake state after the service has already disabled it.
+3. **Needs resume hooks** — a separate service is needed after
+   `suspend.target` in case the controller gets re-armed during resume.
+
+The canonical approach (from [nixos-hardware PR #1394](https://github.com/NixOS/nixos-hardware/pull/1394)
+and the [NixOS Wiki](https://wiki.nixos.org/wiki/Power_Management)) is
+**udev rules targeting PCI subsystem IDs**. Udev rules fire at device-probe
+time, survive device re-enumeration, and are automatically re-applied on
+resume:
+
+```nix
+services.udev.extraRules = lib.mkAfter ''
+  ACTION=="add", SUBSYSTEM=="pci", DRIVER=="xhci_hcd", ATTR{power/wakeup}="disabled"
+  ACTION=="add", SUBSYSTEM=="pci", DRIVER=="thunderbolt", ATTR{power/wakeup}="disabled"
+  ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa76e", ATTR{power/wakeup}="disabled"
+'';
+```
+
+`lib.mkAfter` is used so nixos-hardware's own udev rules take precedence
+(seen on the Framework 16 wiki). The three rule categories target:
+- **`xhci_hcd` driver** — USB xHCI controllers (both internal USB and USB4 host)
+- **`thunderbolt` driver** — USB4/Thunderbolt controllers
+- **Specific device IDs** — PCIe root ports that can't be matched by driver
+  name alone (e.g. non-Thunderbolt PCIe ports should preserve wake)
 
 ## Canonical sources
 

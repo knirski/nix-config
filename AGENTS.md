@@ -174,3 +174,13 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   - Tampered boot fails checksum verification (M3)
   - TPM re-enrollment restores auto-unlock after PCR change
 - Keep host directories thin; push reusable logic into modules.
+
+## Zbook known issues
+
+- **First boot: nouveau instead of NVIDIA.** The flake sets `services.xserver.videoDrivers = [ "nvidia" ]`
+  which makes `hardware.nvidia.enabled = true`, but this requires a reboot
+  (nouveau claims the GPU first; kernel modules can't hot-swap). Run
+  `nixos-rebuild switch --flake .#zbook` then `sudo reboot` after first install.
+- **Suspend: USB-C dock immediate wake.** Udev rules in `modules/nixos/laptop.nix`
+  disable ACPI wake for USB/Thunderbolt controllers. If wake still happens,
+  reboot to ensure udev rules fire at device-probe time.
