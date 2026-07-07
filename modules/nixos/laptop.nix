@@ -37,6 +37,12 @@
       ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa76e", ATTR{power/wakeup}="disabled"
       ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa72f", ATTR{power/wakeup}="disabled"
       ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x51bb", ATTR{power/wakeup}="disabled"
+      # Logitech Unifying Receiver — disable USB autosuspend so powertop
+      # doesn't make the keyboard/mouse stutter by suspending the receiver
+      # every few seconds (common with 046d:c52b, c532, c539).
+      ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c52b", ATTR{power/control}="on"
+      ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c532", ATTR{power/control}="on"
+      ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c539", ATTR{power/control}="on"
     '';
   };
 }
