@@ -15,3 +15,10 @@
 - If the user expresses indifference about USB wake (e.g., "I don't care about waking up from USB"), remove all USB/Thunderbolt related udev wake suppression rules entirely rather than trying to selectively disable wake for specific dock devices. Confidence: 0.70
 - When deploying to a flake host (e.g., `nixos-rebuild switch --flake .#zbook`), first verify whether the user is currently on that machine; if they are physically at the target host, perform a local deployment (no `--target-host` SSH flag) instead of a remote SSH deployment. Confidence: 0.65
 - On first deploy of a host with Limine + Secure Boot, create sbctl keys (`sudo sbctl create-keys`) before the NixOS rebuild, then use `sudo nixos-rebuild boot` (not `switch`) to sign the bootloader on first build; after that the keys must be persisted to `/persist/var/lib/sbctl/` to survive ephemeral root resets. Confidence: 0.70
+
+# general
+- When an SSH key or other critical credential is broken/incompatible with the current system, prefer trying recovery/conversion approaches first before generating a fresh key; only regenerate as a last resort after recovery is proven impossible. Confidence: 0.55
+
+# secrets
+- When configuring identity keys for secret management, use native SSH keys directly rather than converting them to age pubkeys via ssh-to-age; agenix supports encryption with SSH keys natively. Confidence: 0.80
+- When creating SSH keys for a specific host, use a comment matching the hostname (e.g., `krzysiek@soyo` for the soyo host), not a different host (e.g., not `krzysiek@workstation`). Confidence: 0.80

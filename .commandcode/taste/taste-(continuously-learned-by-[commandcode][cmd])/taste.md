@@ -12,7 +12,7 @@
 - Enable `nixpkgs.config.allowUnfree = true` globally for all hosts rather than using per-package allowlists or `NIXPKGS_ALLOW_UNFREE` env var workarounds. Confidence: 0.70
 
 # secrets
-- Use agenix-rekey (invariant 5 from AGENTS.md) to manage secrets; never commit plaintext secrets or tokens to the repo. Confidence: 0.75
+- Use agenix-rekey (invariant 5 from AGENTS.md) to manage secrets; never commit plaintext secrets or tokens to the repo. Confidence: 0.80
 - When referencing a secret source file from the filesystem, use files prefixed with `.dont_commit_` as the convention for sensitive local files that should not be committed. Confidence: 0.70
 
 # git
