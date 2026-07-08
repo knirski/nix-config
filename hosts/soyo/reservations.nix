@@ -52,6 +52,13 @@
     ip = "10.0.0.11";
   }
 
+  # HP ZBook Studio 16 G10 (desktop/gaming workstation)
+  {
+    name = "zbook";
+    mac = "00:e0:4c:1d:4c:b8";
+    ip = "10.0.0.14";
+  }
+
   # czworaczki is multihomed: two ethernet interfaces, both active on the LAN
   # at once, each with its own reservation. The name resolves to both IPs
   # (multi-A); each IP has its own PTR back to `czworaczki`.

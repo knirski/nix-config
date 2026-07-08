@@ -149,7 +149,8 @@ let
       };
     }
   ]
-  ++ lib.filter (nv: nv.name != "soyo") deviceNodes;
+  # Exclude hosts that are NixOS-managed (auto-discovered by the module above)
+  ++ lib.filter (nv: !builtins.hasAttr nv.name self.nixosConfigurations) deviceNodes;
 in
 {
   perSystem =
