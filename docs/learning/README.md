@@ -33,6 +33,8 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 25 | `modules/parts/zbook.nix`, `hosts/zbook/` | M4 | zbook host assembler — toggles laptop, workstation, desktop, nvidia, and gaming aspects onto the same base modules used by Soyo |
 | 26 | Nvidia bug (this section) | M4 | The read-only `hardware.nvidia.enabled` trap; udev over systemd services for suspend wake |
 | 27 | `modules/nixos/laptop.nix` — udev wake rules | M4 | Udev rules for USB/Thunderbolt ACPI wake, following nixos-hardware PR #1394 (udev over systemd oneshot) |
+| 28 | `modules/nixos/laptop.nix` — `usbcore.quirks` | M4 | Kernel-level USB autosuspend disable for Logitech receivers — immutable, immune to powertop |
+| 29 | `modules/nixos/cosmic.nix` — SIGSTOP/SIGCONT | M4 | Freeze cosmic-comp before suspend and unfreeze after resume to avoid DRM master race with nvidia-suspend |
 
 ## What is this repo?
 
@@ -166,6 +168,97 @@ services.udev.extraRules = lib.mkAfter ''
 - **`thunderbolt` driver** — USB4/Thunderbolt controllers
 - **Specific device IDs** — PCIe root ports that can't be matched by driver
   name alone (e.g. non-Thunderbolt PCIe ports should preserve wake)
+
+### `usbcore.quirks`: kernel-level USB autosuspend disable for Logitech receivers
+
+The Logitech Unifying and Bolt receivers (mouse + keyboard) would disconnect
+and reconnect every few seconds, making them unusable. The first attempt used
+udev rules to set `power/control=on` on the USB device — but `powertop
+--auto-tune` runs later and overrides this back to `auto`, re-enabling
+autosuspend.
+
+The proper fix is a kernel parameter:
+
+```nix
+boot.kernelParams = [ "usbcore.quirks=046d:c52b:b,046d:c532:b" ];
+```
+
+The `usbcore.quirks=` parameter is parsed by the USB core at boot, *before*
+any userspace (udev, powertop) runs. The `b` flag calls
+`usb_disable_autosuspend()` during the device probe sequence — the USB core
+will never autosuspend those devices, regardless of what powertop or udev
+does later.
+
+This is the cleanest approach because:
+- **Immutable** — once set, no userspace can re-enable autosuspend for these
+  devices (powertop writes `power/control` but the USB core ignores it).
+- **Zero runtime cost** — no services, no polling, no race conditions.
+- **Kernel-native** — the quirk mechanism is part of the USB core, not a
+  workaround.
+
+The udev rules were removed once the quirk was confirmed working — they only
+raced with powertop and provided no value with the quirk in place.
+
+### SIGSTOP/SIGCONT for cosmic-comp on suspend/resume
+
+With dual Intel+NVIDIA PRIME offload, `cosmic-comp` (the COSMIC compositor)
+would lose DRM master after suspend. The log told the story:
+
+```
+nvidia-suspend.service starts
+cosmic-comp hits DRM EACCES on card1 → blocks
+systemd-sleep's user.slice freeze times out after 60s
+suspend proceeds anyway → broken state after resume
+```
+
+The `nvidia-suspend.service` needs to take over the DRM device to save GPU
+state, but cosmic-comp still holds DRM master. The freeze timeout is
+systemd-sleep trying to freeze all processes in `user.slice` — including
+cosmic-comp — which takes 60s because the compositor is stuck in a DRM
+ioctl.
+
+The fix is the standard Wayland compositor suspend pattern: **SIGSTOP before
+suspend, SIGCONT after resume**.
+
+In `powerManagement.powerDownCommands` (runs before sleep.target):
+
+```nix
+PID=$(pidof cosmic-comp 2>/dev/null || true)
+if [ -n "$PID" ]; then
+  kill -STOP "$PID" 2>/dev/null || true
+fi
+```
+
+This freezes the compositor instantly. It stops processing DRM ioctls,
+implicitly releasing DRM master so `nvidia-suspend.service` can proceed
+without contention.
+
+In `powerManagement.resumeCommands` (runs after resume), the SIGCONT comes
+*before* the existing display re-probe logic:
+
+```nix
+PID=$(pidof cosmic-comp 2>/dev/null || true)
+if [ -n "$PID" ]; then
+  kill -CONT "$PID" 2>/dev/null || true
+fi
+```
+
+The ordering matters — the SIGCONT must run before the `udevadm trigger
+--action=change` loop so the compositor is alive to receive the hotplug
+uevents.
+
+The full execution sequence during suspend/resume:
+
+| Step | What happens | Who |
+|------|-------------|-----|
+| 1 | SIGSTOP cosmic-comp | `powerDownCommands` |
+| 2 | systemd-sleep freezes user.slice (instant now — cosmic-comp already stopped) | NixOS built-in |
+| 3 | `nvidia-suspend.service` — saves GPU state (no DRM contention) | NVIDIA module |
+| 4 | System suspends (deep S3) | Kernel |
+| 5 | System resumes | Kernel |
+| 6 | `nvidia-resume.service` — restores GPU state | NVIDIA module |
+| 7 | systemd-sleep thaws user.slice | NixOS built-in |
+| 8 | SIGCONT cosmic-comp, then re-probe displays | `resumeCommands` |
 
 ## Canonical sources
 

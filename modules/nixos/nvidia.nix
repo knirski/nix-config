@@ -43,24 +43,6 @@
         # nouveau loads instead of the proprietary driver, killing GPU perf.
         services.xserver.videoDrivers = [ "nvidia" ];
 
-        # Systemd resume hook to work around COSMIC compositor losing DRM
-        # master on resume with dual Intel+NVIDIA GPUs in PRIME offload mode
-        # (https://github.com/pop-os/cosmic-epoch/issues/3012). Switching VTs
-        # forces logind to reassign DRM master so the compositor can render.
-        systemd.services.force-drm-master-on-resume = {
-          description = "Force DRM master reacquisition after resume (COSMIC dual-GPU workaround)";
-          after = [ "post-resume.target" ];
-          wants = [ "post-resume.target" ];
-          wantedBy = [ "post-resume.target" ];
-          serviceConfig.Type = "oneshot";
-          script = ''
-            TTY=$(cat /sys/class/tty/tty0/active)
-            # Switch to a spare VT (tty8) and back to force DRM master handoff
-            chvt 8 2>/dev/null
-            sleep 0.5
-            chvt "$TTY" 2>/dev/null
-          '';
-        };
         hardware = {
           # Latest NVIDIA driver (from nixpkgs-unstable)
           nvidia = {
@@ -87,6 +69,15 @@
             enable32Bit = true;
           };
         };
+
+        # systemd v256+ freezes cgroups before suspend by default. On NVIDIA
+        # Optimus systems, the 60s user.slice freeze timeout races with
+        # nvidia-suspend — if certain processes (Docker, libvirtd, Electron
+        # apps) refuse to freeze, the delay corrupts GPU state and leaves
+        # cosmic-comp SIGSTOP'd after resume, requiring a cold reboot.
+        # Skip the freeze and let NVIDIA's own suspend handle sequencing.
+        # https://github.com/NixOS/nixpkgs/issues/371058
+        systemd.services.systemd-suspend.environment.SYSTEMD_SLEEP_FREEZE_USER_SESSIONS = "false";
       };
     };
 }

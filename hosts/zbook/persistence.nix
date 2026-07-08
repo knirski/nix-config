@@ -25,6 +25,10 @@
           mode = "0700";
         }
         ".local/share/direnv"
+        ".config"
+        ".commandcode"
+        "tmp"
+        "github"
         "Downloads"
         "Documents"
         "Pictures"

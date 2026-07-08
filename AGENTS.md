@@ -184,3 +184,12 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
 - **Suspend: USB-C dock immediate wake.** Udev rules in `modules/nixos/laptop.nix`
   disable ACPI wake for USB/Thunderbolt controllers. If wake still happens,
   reboot to ensure udev rules fire at device-probe time.
+- **DRM master loss with COSMIC + NVIDIA.** `cosmic-comp` races with
+  `nvidia-suspend.service` for DRM master on `/dev/dri/card1`, freezing
+  `user.slice` for 60s and leaving a black screen after resume. Fixed by
+  SIGSTOP/SIGCONT in `modules/nixos/cosmic.nix`
+  (`powerManagement.powerDownCommands` / `resumeCommands`).
+- **Logitech receiver stutter.** powertop's `--auto-tune` suspends the
+  Unifying/Bolt receiver, causing keyboard/mouse disconnects. Fixed by
+  `usbcore.quirks` kernel parameter in `modules/nixos/laptop.nix`
+  (`boot.kernelParams`). Requires a reboot after parameter change.

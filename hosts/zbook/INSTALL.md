@@ -130,6 +130,35 @@ sudo reboot
 
 A full reboot ensures the udev rules are processed at device-probe time.
 
+### Logitech Unifying/Bolt receiver: keyboard/mouse stutter
+
+The Logitech wireless receiver (keyboard + mouse) may disconnect and
+reconnect every few seconds after boot. This is caused by powertop's
+`--auto-tune` suspending the USB device. The fix uses `usbcore.quirks`
+kernel parameter to disable USB autosuspend at the USB core level — see
+`modules/nixos/laptop.nix` for the `boot.kernelParams` entry.
+
+A reboot is required after changing kernel parameters for the fix to take
+effect.
+
+### Suspend: black screen after resume (DRM master loss)
+
+On dual Intel+NVIDIA PRIME offload, the COSMIC compositor (cosmic-comp) can
+lose DRM master on `/dev/dri/card1` during suspend. The log shows:
+
+```
+nvidia-suspend.service starts
+cosmic-comp hits DRM EACCES on card1 → blocks
+user.slice freeze times out → suspend proceeds → broken display after resume
+```
+
+Fixed by `SIGSTOP`/`SIGCONT` hooks in `modules/nixos/cosmic.nix`:
+`powerManagement.powerDownCommands` freezes cosmic-comp before the NVIDIA
+suspend service runs, and `powerManagement.resumeCommands` unfreezes it
+after resume. If the screen stays black for more than 10s after resume, the
+udev `change` event loop should have re-probed the display — if not, check
+the journal for errors.
+
 ## Post-install manual checks
 
 - COSMIC desktop boots and renders correctly (after NVIDIA driver activates)

@@ -13,7 +13,15 @@
     powerManagement.powertop.enable = true;
 
     # Intel P-State driver (better power management on 12th/13th gen)
-    boot.kernelParams = [ "intel_pstate=active" ];
+    boot.kernelParams = [
+      "intel_pstate=active"
+      # Disable USB autosuspend for Logitech Unifying (c52b) and Bolt (c532)
+      # receivers at the USB core level, before powertop or udev can touch
+      # it. The "b" flag prevents the USB core from ever autosuspending the
+      # device — immutable, immune to powertop --auto-tune.
+      # https://docs.kernel.org/admin-guide/kernel-parameters.html
+      "usbcore.quirks=046d:c52b:b,046d:c532:b"
+    ];
 
     # Laptop lid switch handling
     services.logind.settings.Login = {
@@ -37,12 +45,7 @@
       ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa76e", ATTR{power/wakeup}="disabled"
       ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa72f", ATTR{power/wakeup}="disabled"
       ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x51bb", ATTR{power/wakeup}="disabled"
-      # Logitech Unifying Receiver — disable USB autosuspend so powertop
-      # doesn't make the keyboard/mouse stutter by suspending the receiver
-      # every few seconds (common with 046d:c52b, c532, c539).
-      ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c52b", ATTR{power/control}="on"
-      ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c532", ATTR{power/control}="on"
-      ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c539", ATTR{power/control}="on"
+
     '';
   };
 }
