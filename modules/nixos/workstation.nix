@@ -151,9 +151,8 @@
           serviceConfig = {
             Type = "oneshot";
             ExecStart = pkgs.writeShellScript "tailscale-auth" ''
-              if tailscale status 2>/dev/null | grep -q stopped; then
-                AUTH_KEY=$(cat ${tsCfg.authKeyFile})
-                tailscale up --auth-key "$AUTH_KEY"
+              if ! ${pkgs.tailscale}/bin/tailscale status 2>/dev/null | grep -qE '^\d+\.\d+\.\d+\.\d+\s'; then
+                ${pkgs.tailscale}/bin/tailscale up --auth-key "$(cat ${tsCfg.authKeyFile})"
               fi
             '';
             MemoryMax = "32M";

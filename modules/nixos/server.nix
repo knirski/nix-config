@@ -47,11 +47,11 @@
             serviceConfig = {
               Type = "oneshot";
               ExecStart = pkgs.writeShellScript "tailscale-auth" ''
-                if tailscale status 2>/dev/null | grep -q stopped; then
+                if ! ${pkgs.tailscale}/bin/tailscale status 2>/dev/null | grep -qE '^\d+\.\d+\.\d+\.\d+\s'; then
                   AUTH_KEY=$(cat ${cfg.authKeyFile})
                   EXTRA=""
                   ${if cfg.isSubnetRouter then ''EXTRA="--advertise-routes=10.0.0.0/24"'' else ""}
-                  tailscale up --auth-key "$AUTH_KEY" $EXTRA
+                  ${pkgs.tailscale}/bin/tailscale up --auth-key "$AUTH_KEY" $EXTRA
                 fi
               '';
               MemoryMax = "32M";
