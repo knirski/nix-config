@@ -9,7 +9,9 @@
     modules =
       (with config.aspects.nixos; [
         base
+        ssh
         server
+        tailscale
         users
         persistence
         remote-unlock

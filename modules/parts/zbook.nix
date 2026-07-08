@@ -7,6 +7,8 @@
     modules =
       (with config.aspects.nixos; [
         base
+        ssh
+        tailscale
         desktop
         cosmic
         nvidia
@@ -16,7 +18,7 @@
         users
         persistence
         maintenance
-        commandCode
+        backup
       ])
       ++ [
         # Overlay cosmic-ext packages from stable (not available in nixpkgs-unstable).

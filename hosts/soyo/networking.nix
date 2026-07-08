@@ -18,9 +18,11 @@
   networking.firewall.enable = true;
 
   # Tailscale: secure mesh VPN for remote admin. Authenticates automatically
-  # using the agenix-encrypted auth key.
-  lanAppliance.services.tailscale = {
+  # using the agenix-encrypted auth key. Advertises routes so the whole
+  # 10.0.0.0/24 LAN is reachable via Tailscale.
+  services.tailscaleAutoconnect = {
     enable = true;
     authKeyFile = config.age.secrets.tailscale-auth-key.path;
+    extraArgs = [ "--advertise-routes=10.0.0.0/24" ];
   };
 }

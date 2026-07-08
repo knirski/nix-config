@@ -1,7 +1,9 @@
 { ... }: {
   imports = [
     ./nixos/base.nix
+    ./nixos/ssh.nix
     ./nixos/server.nix
+    ./nixos/tailscale.nix
     ./nixos/users.nix
     ./nixos/persistence.nix
     ./nixos/blocky.nix
@@ -16,7 +18,6 @@
     ./nixos/laptop.nix
     ./nixos/gaming.nix
     ./nixos/workstation.nix
-    ./nixos/command-code.nix
     ./home/base.nix
     ./home/desktop.nix
     ./parts/perSystem.nix

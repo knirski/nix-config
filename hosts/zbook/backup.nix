@@ -1,7 +1,8 @@
 { config, ... }:
 {
-  workstation.services.backup = {
+  services.backup = {
     enable = true;
+    # No explicit hostName — defaults to config.networking.hostName = "zbook"
 
     restic = {
       repository = "sftp:zbook-backup@czworaczki:/backup/zbook";

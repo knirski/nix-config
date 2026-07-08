@@ -5,7 +5,7 @@
 
   networking.firewall.enable = true;
 
-  workstation.services.tailscale = {
+  services.tailscaleAutoconnect = {
     enable = true;
     authKeyFile = config.age.secrets.tailscale-auth-key.path;
   };
