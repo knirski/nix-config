@@ -13,7 +13,7 @@
 
 # secrets
 - Use agenix-rekey (invariant 5 from AGENTS.md) to manage secrets; never commit plaintext secrets or tokens to the repo. Confidence: 0.80
-- Prefer separate per-host secrets (e.g., one Tailscale auth key per host) over sharing a single secret across multiple hosts. Confidence: 0.50
+- Prefer separate per-host secrets (e.g., one Tailscale auth key per host, name secrets like `{host}-{secret}.age`, e.g., `soyo-restic-password.age`, `zbook-restic-password.age`) over sharing a single secret across multiple hosts. Confidence: 0.75
 - When referencing a secret source file from the filesystem, use files prefixed with `.dont_commit_` as the convention for sensitive local files that should not be committed. Confidence: 0.70
 - Name SSH private key files `{hostname}_ed25519` (e.g., `zbook_ed25519`, `soyo_ed25519`) rather than generic `id_ed25519` to clearly identify which host each key belongs to. Confidence: 0.60
 

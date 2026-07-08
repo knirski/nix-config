@@ -220,7 +220,7 @@ If the BIOS shows "Secure Boot → Audit Mode" instead of "Enabled" after enroll
 
    ```sh
    sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo \
-     -p /run/agenix/restic-password restore latest --target /
+     -p $(cat /run/agenix/restic-password) restore latest --target /
    ```
 
 5. Re-enroll agenix: new host has a new SSH host key. Generate it, save the pubkey to `secrets/soyo.pub`, run `agenix rekey`, commit the rekeyed files, deploy.

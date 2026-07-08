@@ -6,7 +6,7 @@
 
     restic = {
       repository = "sftp:zbook-backup@czworaczki:/backup/zbook";
-      passwordFile = config.age.secrets.restic-password.path;
+      passwordFile = config.age.secrets.zbook-restic-password.path;
       paths = [
         "/persist"
       ];

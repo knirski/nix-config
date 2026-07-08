@@ -45,9 +45,12 @@ Older snapshots are pruned automatically. Local snapshots live on the same encry
 
 ## Off-host backups (restic to Synology DS423+)
 
-Restic backs up `/persist` daily (with a 1h randomized delay) to the Synology over SFTP. Data is encrypted and deduplicated at rest — safe on a shared NAS.
+Restic backs up `/persist` daily to the Synology over SFTP. Each host has its own repo and agenix-encrypted password:
 
-The repo password is an agenix secret (`restic-password`). Transport is SFTP to the NAS user `soyo-backup`.
+- **Soyo**: `sftp:soyo-backup@czworaczki:/backup/soyo` — password in `secrets/soyo-restic-password.age`
+- **zbook**: `sftp:zbook-backup@czworaczki:/backup/zbook` — password in `secrets/zbook-restic-password.age`
+
+Data is encrypted and deduplicated at rest — safe on a shared NAS.
 
 DNS resolution uses **systemd-resolved** with split DNS:
 
@@ -60,56 +63,67 @@ Because `/persist` is what gets backed up, the Secure Boot signing keys under `/
 
 ### Prerequisites on the Synology
 
-1. Create a dedicated user `soyo-backup` on the Synology DSM.
-2. Enable the SFTP service in DSM Control Panel → File Services → FTP → SFTP.
-3. Set the user's home directory to the backup volume (e.g. `/volume1/homes/soyo-backup`).
-4. Create the repo directory: `ssh soyo-backup@czworaczki.home.arpa mkdir -p /backup/soyo` (or use File Station).
+Create a dedicated SFTP user per host:
+
+1. On the Synology DSM, create users **`soyo-backup`** and **`zbook-backup`**.
+2. Enable SFTP in DSM → Control Panel → File Services → FTP → SFTP.
+3. Set each user's home directory to the backup volume.
+4. Create the repo directories:
+
+   ```sh
+   ssh soyo-backup@czworaczki.home.arpa mkdir -p /backup/soyo
+   ssh zbook-backup@czworaczki.home.arpa mkdir -p /backup/zbook
+   ```
 
 ### SSH key setup (required for unattended backups)
 
-Generate a keypair on Soyo after the first deploy. The key must go under `/persist/etc/restic/` so it survives reboots (this path is declared in `hosts/soyo/persistence.nix`):
+Generate a keypair on each host after first deploy. The key must go under `/persist/etc/restic/` so it survives reboots:
 
 ```sh
 sudo mkdir -p /persist/etc/restic
-sudo ssh-keygen -t ed25519 -f /persist/etc/restic/ssh-key -N "" -C "soyo-backup@soyo"
+sudo ssh-keygen -t ed25519 -f /persist/etc/restic/ssh-key -N "" -C "<hostname>-backup@<hostname>"
 sudo cat /persist/etc/restic/ssh-key.pub
 ```
 
-Copy the public key output and add it to the Synology user's authorized keys:
+Copy the public key output and add it to the corresponding Synology user's authorized keys:
 
-1. SSH into the Synology: `ssh soyo-backup@czworaczki`
+1. SSH into the Synology: `ssh <hostname>-backup@czworaczki`
 2. Add the public key to `~/.ssh/authorized_keys`
-3. Confirm: `ssh -i /persist/etc/restic/ssh-key soyo-backup@czworaczki.home.arpa echo "works"`
+3. Confirm: `ssh -i /persist/etc/restic/ssh-key <hostname>-backup@czworaczki.home.arpa echo "works"`
 
-The `ssh-key` file is persisted under `/persist/etc/restic/` (declared in `hosts/soyo/persistence.nix`) and survives reboots. The host key fingerprint is also persisted (`/persist/etc/restic/known_hosts`) so unattended SSH works after reboot. The generated config in `hosts/soyo/backup.nix` references it as `sshKeyFile`. No password prompts during scheduled backups.
+The `ssh-key` file and host key fingerprint are persisted under `/persist/etc/restic/` and survive reboots.
 
 ### List restic snapshots
 
+The password file at runtime depends on the host:
+- **Soyo**: `config.age.secrets.restic-password.path` → `/run/agenix/restic-password`
+- **zbook**: `config.age.secrets.zbook-restic-password.path` → `/run/agenix/zbook-restic-password`
+
+Replace `<password-file>` and `<repo>` in the commands below with the host-specific values.
+
 ```sh
-sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo \
-  -p /run/agenix/restic-password snapshots
+sudo restic -r <repo> -p /run/agenix/<password-file> snapshots
 ```
 
 ### Manual backup
 
 ```sh
-sudo systemctl start restic-backups-soyo
-sudo journalctl -u restic-backups-soyo -f
+sudo systemctl start restic-backups-<hostname>
+sudo journalctl -u restic-backups-<hostname> -f
 ```
 
 ### Check repository integrity
 
 ```sh
-sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo \
-  -p /run/agenix/restic-password check
+sudo restic -r <repo> -p /run/agenix/<password-file> check
 ```
 
 ### Prune old snapshots
 
 ```sh
-sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo \
-  -p /run/agenix/restic-password forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --keep-yearly 2 --prune
+sudo restic -r <repo> -p /run/agenix/<password-file> forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
 ```
+Soyo also keeps yearly snapshots: add `--keep-yearly 2`.
 
 ## Restore drill (do this periodically)
 
@@ -117,12 +131,10 @@ A backup never restored is not a backup.
 
 ```sh
 # Check what's in the latest snapshot
-sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo \
-  -p /run/agenix/restic-password ls latest
+sudo restic -r <repo> -p /run/agenix/<password-file> ls latest
 
 # Restore a known test path to a scratch directory
-sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo \
-  -p /run/agenix/restic-password restore latest --target /tmp/restic-restore-test --include /persist/var/lib/dnsmasq
+sudo restic -r <repo> -p /run/agenix/<password-file> restore latest --target /tmp/restic-restore-test --include /persist/var/lib/dnsmasq
 
 # Verify content matches
 sudo diff -r /tmp/restic-restore-test/persist/var/lib/dnsmasq /var/lib/dnsmasq
@@ -134,8 +146,7 @@ Add `/persist/var/lib/sbctl` to an occasional restore drill as well. Those keys 
 ## Full disaster restore
 
 ```sh
-sudo restic -r sftp:soyo-backup@nas.home.arpa:/backup/soyo \
-  -p /run/agenix/restic-password restore latest --target /
+sudo restic -r <repo> -p /run/agenix/<password-file> restore latest --target /
 ```
 
 Run this after provisioning a fresh install (see [recovery.md](./recovery.md)). On a Secure Boot host, confirm that `/var/lib/sbctl/keys` is present after the restore; if not, return firmware to Setup Mode and regenerate + re-enroll the keys before the next Limine update.
@@ -145,12 +156,12 @@ Run this after provisioning a fresh install (see [recovery.md](./recovery.md)). 
 If a restic backup or prune operation fails, ntfy sends an alert. Check:
 
 ```sh
-sudo journalctl -u restic-backups-soyo --since "1 day ago"
+sudo journalctl -u restic-backups-<hostname> --since "1 day ago"
 ```
 
 Common failure causes:
 
 - Synology unreachable (network, power) — restic retries next run
 - Disk full on Synology — prune older snapshots or expand volume
-- Password changed on Synology user — update the `soyo-backup` user's password
+- Password changed — update the backup user's password on the Synology
 - SSH key expired or removed — regenerate and re-add to Synology authorized_keys

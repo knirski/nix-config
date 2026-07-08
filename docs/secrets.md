@@ -225,7 +225,8 @@ secrets/
 │                           #   during first install)
 ├── root-password.age       # Master-encrypted (krzysiek's key)
 ├── krzysiek-password.age   # Master-encrypted
-├── restic-password.age     # Master-encrypted
+├── soyo-restic-password.age  # Master-encrypted (Soyo restic repo)
+├── zbook-restic-password.age # Master-encrypted (zbook restic repo)
 ├── ntfy-token.age          # Master-encrypted (ntfy.sh access token)
 ├── ntfy-topic.age          # Master-encrypted (ntfy.sh topic URL)
 ├── grafana-admin-password.age # Master-encrypted (Grafana admin password)
@@ -236,7 +237,7 @@ secrets/
     └── soyo/               # Host-specific rekeyed files (soyo's key)
         ├── root-password.age
         ├── krzysiek-password.age
-        ├── restic-password.age
+        ├── soyo-restic-password.age
         ├── ntfy-token.age
         ├── ntfy-topic.age
         ├── grafana-admin-password.age
@@ -254,7 +255,8 @@ for a specific host's SSH key instead of your master key.
 | ---- | -------- | -------------- |
 | `secrets/root-password.age` | root's SHA-512 password hash | master identity |
 | `secrets/krzysiek-password.age` | krzysiek's SHA-512 password hash | master identity |
-| `secrets/restic-password.age` | Restic repo passphrase | master identity |
+| `secrets/soyo-restic-password.age` | Soyo restic repo passphrase | master identity |
+| `secrets/zbook-restic-password.age` | zbook restic repo passphrase | master identity |
 | `secrets/ntfy-token.age` | ntfy.sh access token | master identity |
 | `secrets/ntfy-topic.age` | ntfy.sh topic URL | master identity |
 | `secrets/grafana-admin-password.age` | Grafana admin password | master identity |

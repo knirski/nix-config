@@ -5,3 +5,4 @@ result
 .direnv/
 # Python bytecode
 **/__pycache__/
+.dont-commit-zbook-backup-password

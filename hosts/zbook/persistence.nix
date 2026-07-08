@@ -16,6 +16,9 @@
         mode = "0700";
       }
       "/var/lib/tailscale"
+      # /etc/restic stores the SSH key and known_hosts for restic remote backups.
+      # Without this, the key vanishes on reboot and unattended backups fail.
+      "/etc/restic"
       "/var/log"
     ];
     files = [
