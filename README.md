@@ -22,11 +22,14 @@ and the [dendritic](https://flake.parts) pattern.
 ## Quick start
 
 ```bash
+# Enter dev shell with all tooling
+nix develop
+
 # Soyo (DNS/DHCP appliance)
-./scripts/deploy-soyo.sh
+deploy .#soyo
 
 # zbook (desktop/gaming workstation)
-./scripts/deploy-zbook.sh
+deploy .#zbook
 ```
 
 For first install from a NixOS live ISO, see [docs/install-soyo.md](docs/install-soyo.md)

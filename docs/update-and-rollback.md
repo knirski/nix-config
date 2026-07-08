@@ -4,26 +4,36 @@ How to update Soyo to the latest `nixos-unstable` and roll back when an update g
 
 ## Routine update
 
-The day-2 remote deploy uses native `nixos-rebuild --target-host` — your workstation builds, Soyo activates. There are two useful paths:
+The day-2 remote deploy uses deploy-rs with magic rollback. Run from your workstation inside the dev shell (`nix develop`):
 
 ### Config-only deploy (fast path, no secret changes)
 
 ```sh
-nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
+nix develop '.#' -c deploy .#soyo
 ```
 
-Use this when you are changing NixOS config, dashboards, alerts, services, or docs and **none of the master-encrypted secret files changed**. It builds the full closure locally, copies it to Soyo over SSH, and activates it remotely. Soyo's N150 never compiles. If DNS isn't working, use `krzysiek@10.0.0.9`.
+deploy-rs runs `nix flake check` first (validates the deploy schema and activation scripts), builds the closure, copies it to the target over SSH, activates with magic rollback. If the activation fails or you don't confirm, it rolls back automatically.
 
 ### Secret-changing deploy (rekey + deploy)
 
 ```sh
-./scripts/deploy-soyo.sh
+nix develop '.#' -c bash -c 'agenix rekey && deploy .#soyo'
 ```
 
 This runs:
 
 1. `agenix rekey` — re-encrypts every master `.age` secret for Soyo's host key. Run this on your workstation with your SSH private key available (the `masterIdentities` in `modules/parts/soyo.nix` must point to it). Failure here means Soyo gets stale secrets.
-2. `nixos-rebuild switch --target-host krzysiek@soyo --sudo` — builds the full closure locally, copies it to Soyo over SSH, and activates it remotely.
+2. `deploy .#soyo` — builds, copies, and activates with magic rollback.
+
+## Fallback: native nixos-rebuild
+
+If deploy-rs is unavailable, the native build + remote activation still works:
+
+```sh
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
+```
+
+Use this when you are changing NixOS config, dashboards, alerts, services, or docs and **none of the master-encrypted secret files changed**. It builds the full closure locally, copies it to Soyo over SSH, and activates it remotely. Soyo's N150 never compiles. If DNS isn't working, use `krzysiek@10.0.0.9`.
 
 ## Updating nixpkgs
 
@@ -72,7 +82,7 @@ sudo nixos-rebuild switch --rollback
 # Revert the flake lock to the known-good nixpkgs revision
 git checkout flake.lock
 # Or: nix flake lock --override-input nixpkgs github:NixOS/nixpkgs/<known-good-rev>
-./scripts/deploy-soyo.sh
+nix develop '.#' -c bash -c 'agenix rekey && deploy .#soyo'
 ```
 
 ## Testing before committing
@@ -95,8 +105,8 @@ git add secrets/rekeyed/soyo/
 git commit
 ```
 
-Secrets are rekeyed automatically by `deploy-soyo` as the first step. If you need a faster iteration without rekeying, run:
+Secrets are rekeyed automatically by `deploy .#soyo` as part of the workflow. If you need a faster iteration without rekeying, run:
 
 ```sh
-nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
+nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ```

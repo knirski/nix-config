@@ -16,6 +16,9 @@
 - When deploying to a flake host (e.g., `nixos-rebuild switch --flake .#zbook`), first verify whether the user is currently on that machine; if they are physically at the target host, perform a local deployment (no `--target-host` SSH flag) instead of a remote SSH deployment. Confidence: 0.65
 - On first deploy of a host with Limine + Secure Boot, create sbctl keys (`sudo sbctl create-keys`) before the NixOS rebuild, then use `sudo nixos-rebuild boot` (not `switch`) to sign the bootloader on first build; after that the keys must be persisted to `/persist/var/lib/sbctl/` to survive ephemeral root resets. Confidence: 0.70
 
+# deployment
+- Use `deploy-rs` as the sole deployment tool for NixOS hosts; remove all old deployment scripts and references. Native `nixos-rebuild switch --flake .#hostname` should only be used as a one-time fallback if deploy-rs is unavailable. Confidence: 0.82
+
 # general
 - When an SSH key or other critical credential is broken/incompatible with the current system, prefer trying recovery/conversion approaches first before generating a fresh key; only regenerate as a last resort after recovery is proven impossible. Confidence: 0.55
 

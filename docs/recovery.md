@@ -127,7 +127,7 @@ sudo sbctl enroll-keys -m
 # 4. From your workstation, deploy once more before the next reboot.
 #    This signs Limine with the newly-created keys and persists /var/lib/sbctl
 #    on the impermanent root so future bootloader installs keep working.
-./scripts/deploy-soyo.sh
+nix develop '.#' -c deploy .#soyo
 
 # 5. Enable Secure Boot in firmware.
 #    BIOS → Secure Boot → Enabled. If "Reset to Setup Mode" is still active,
@@ -181,7 +181,7 @@ sudo sbctl enroll-keys -m
 
 # 4. From your workstation, deploy once more before the next reboot.
 #    This signs Limine with the newly-created keys and persists /var/lib/sbctl.
-./scripts/deploy-zbook.sh
+nix develop '.#' -c deploy .#zbook
 
 # 5. Enable Secure Boot in firmware.
 #    ZBook BIOS → Security → Secure Boot Configuration → Enable Secure Boot.

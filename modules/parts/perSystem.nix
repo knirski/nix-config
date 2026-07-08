@@ -29,25 +29,29 @@
           treefmt.enable = true;
           deadnix.enable = true;
           statix.enable = true;
-          typos.enable = true;
+          typos = {
+            enable = true;
+            excludes = [ ".*\\.age$" ];
+            settings.config = {
+              default = {
+                "extend-words" = {
+                  crypted = "crypted";
+                  facter = "facter";
+                  HDA = "HDA";
+                  Hed = "Hed";
+                  FACTER = "FACTER";
+                  sxl = "sxl";
+                };
+              };
+            };
+          };
           check-merge-conflicts.enable = true;
           end-of-file-fixer.enable = true;
           end-of-file-fixer.excludes = [
             "facter\\.json$"
             "\\.svg$"
+            "\\.age$"
           ];
-          typos.settings.config = {
-            default = {
-              "extend-words" = {
-                crypted = "crypted";
-                facter = "facter";
-                HDA = "HDA";
-                Hed = "Hed";
-                FACTER = "FACTER";
-                sxl = "sxl";
-              };
-            };
-          };
           actionlint.enable = true;
           shellcheck.enable = true;
           markdownlint = {

@@ -351,13 +351,11 @@ nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@s
 
 If DNS is not working yet, replace `krzysiek@soyo` with `krzysiek@10.0.0.9`.
 
-Use the wrapper script when secrets changed and you want rekey + deploy in one step:
+Use deploy-rs when secrets changed and you want rekey + deploy in one step:
 
 ```bash
-./scripts/deploy-soyo.sh
-```
-
-Manual equivalent for secret changes:
+nix develop '.#' -c agenix rekey
+deploy .#soyo
 
 ```bash
 nix develop '.#' -c agenix rekey

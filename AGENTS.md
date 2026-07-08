@@ -152,7 +152,7 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   ruff (Python).
   Before committing: `nix flake check` and also run `gitleaks` locally
   (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml`).
-- Everyday deploy: `./scripts/deploy-soyo.sh` (Soyo) or `./scripts/deploy-zbook.sh` (zbook; or `nixos-rebuild switch --flake .#zbook --target-host krzysiek@zbook --sudo`).
+- Everyday deploy: `nix develop '.#' -c deploy .#soyo` (Soyo) or `deploy .#zbook` (zbook; or `nixos-rebuild switch --flake .#zbook --target-host krzysiek@zbook --sudo` as fallback).
 - After deploy or after changes that touch boot, unlock, networking, or
   services, run the automated healthcheck:
 
