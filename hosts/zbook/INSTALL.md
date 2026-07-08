@@ -113,22 +113,40 @@ sudo reboot
 
 After reboot, verify with `nvidia-smi`. The desktop should be smooth.
 
-### Suspend: USB-C dock causes immediate wake
+### Suspend: black screen after resume (DRM master loss)
 
-When connected to a USB-C dock (ethernet, monitor, Logitech receiver), the
-laptop may wake immediately after suspend. This is fixed by udev rules that
-disable ACPI wake for USB and Thunderbolt controllers — see
-`modules/nixos/laptop.nix`. The rules target the specific Intel Raptor Lake
-PCI IDs for this hardware, following the pattern from
-[nixos-hardware PR #1394](https://github.com/NixOS/nixos-hardware/pull/1394).
+On dual Intel+NVIDIA PRIME offload, the COSMIC compositor (cosmic-comp) can
+lose DRM master on `/dev/dri/card1` during suspend. The log shows:
 
-If you still see immediate wake after deploy:
-
-```bash
-sudo reboot
+```text
+nvidia-suspend.service starts → nvidia-sleep.sh does chvt 63
+cosmic-comp gets udev event → hits DRM EACCES on card1
 ```
 
-A full reboot ensures the udev rules are processed at device-probe time.
+Fixed by `SIGSTOP`/`SIGCONT` hooks in `modules/nixos/cosmic.nix`:
+`ExecStartPre` on `nvidia-suspend.service` freezes cosmic-comp before the
+NVIDIA VT switch (`chvt 63`), and `ExecStartPost` on `nvidia-resume.service`
+unfreezes it and re-probes external displays after resume. The resume script
+waits 2s for the USB-C dock to re-enumerate (required for s2idle), then
+polls connectors for up to 10s and triggers a udev `change` event on each.
+
+Note: this host uses **s2idle** (S0ix), not deep S3 — the HP firmware
+advertises S3 but cannot route wake events back from it. See
+`docs/learning/README.md` for the full investigation.
+
+### Suspend: USB-C dock causes immediate wake
+
+When connected to a USB-C dock, the Realtek RTL8153 Ethernet adapter may
+wake the system immediately after suspend entry. A udev rule in
+`modules/nixos/laptop.nix` disables USB wake for that specific device
+(vendor 0bda, product 8153). If you still see immediate wake after deploy,
+run:
+
+```bash
+echo disabled | sudo tee /sys/bus/usb/devices/2-3/power/wakeup 2>/dev/null || \
+echo disabled | sudo tee /sys/bus/usb/devices/*/power/wakeup 2>/dev/null
+sudo reboot
+```
 
 ### Logitech Unifying/Bolt receiver: keyboard/mouse stutter
 
@@ -140,24 +158,6 @@ kernel parameter to disable USB autosuspend at the USB core level — see
 
 A reboot is required after changing kernel parameters for the fix to take
 effect.
-
-### Suspend: black screen after resume (DRM master loss)
-
-On dual Intel+NVIDIA PRIME offload, the COSMIC compositor (cosmic-comp) can
-lose DRM master on `/dev/dri/card1` during suspend. The log shows:
-
-```text
-nvidia-suspend.service starts
-cosmic-comp hits DRM EACCES on card1 → blocks
-user.slice freeze times out → suspend proceeds → broken display after resume
-```
-
-Fixed by `SIGSTOP`/`SIGCONT` hooks in `modules/nixos/cosmic.nix`:
-`powerManagement.powerDownCommands` freezes cosmic-comp before the NVIDIA
-suspend service runs, and `powerManagement.resumeCommands` unfreezes it
-after resume. If the screen stays black for more than 10s after resume, the
-udev `change` event loop should have re-probed the display — if not, check
-the journal for errors.
 
 ## Post-install manual checks
 

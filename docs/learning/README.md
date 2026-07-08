@@ -31,10 +31,10 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 23 | `modules/nixos/nvidia.nix` | M4 | NVIDIA proprietary driver (RTX 4000 Ada), prime sync, offload modes |
 | 24 | `modules/nixos/gaming.nix` | M4 | Steam, gamemode, MangoHud, game-specific tweaks |
 | 25 | `modules/parts/zbook.nix`, `hosts/zbook/` | M4 | zbook host assembler — toggles laptop, workstation, desktop, nvidia, and gaming aspects onto the same base modules used by Soyo |
-| 26 | Nvidia bug (this section) | M4 | The read-only `hardware.nvidia.enabled` trap; udev over systemd services for suspend wake |
-| 27 | `modules/nixos/laptop.nix` — udev wake rules | M4 | Udev rules for USB/Thunderbolt ACPI wake, following nixos-hardware PR #1394 (udev over systemd oneshot) |
+| 26 | Nvidia bug (this section) | M4 | The read-only `hardware.nvidia.enabled` trap |
+| 27 | s2idle over deep S3 (this section) | M4 | HP firmware wake routing: S3 enters but never resumes; s2idle is the native suspend mode |
 | 28 | `modules/nixos/laptop.nix` — `usbcore.quirks` | M4 | Kernel-level USB autosuspend disable for Logitech receivers — immutable, immune to powertop |
-| 29 | `modules/nixos/cosmic.nix` — SIGSTOP/SIGCONT | M4 | Freeze cosmic-comp before suspend and unfreeze after resume to avoid DRM master race with nvidia-suspend |
+| 29 | `modules/nixos/cosmic.nix` — SIGSTOP/SIGCONT | M4 | Freeze cosmic-comp via `ExecStartPre` on `nvidia-suspend.service` (not `powerDownCommands`) to avoid VT switch race; unfreeze via `ExecStartPost` on `nvidia-resume.service` with 2s dock delay and display re-probe |
 | 30 | deploy-rs | M4 | `deploy .#hostname` for remote deploys with magic rollback; `deployChecks` wired into `nix flake check`; deploy script auto-detects local vs remote |
 | 31 | SSH key rotation | M4 | When the master SSH key becomes incompatible (old OpenSSH format + OpenSSL 3.6.2), generate a fresh one, re-encrypt all `.age` files, update `krzysiek-authorized-key.pub`, and rekey for all hosts |
 | 32 | Secrets recovery from git history | M4 | If master `.age` files get corrupted (empty decryption), recover plaintext from pre-corruption rekeyed files using the host's own SSH key via `rage -d -i /persist/etc/ssh/ssh_host_ed25519_key`, then re-encrypt with the new master key |
@@ -143,39 +143,47 @@ config = lib.mkIf cfg.enable {
 After this change, a **reboot** is required (nouveau already has the GPU
 claimed; the NVIDIA module can't hot-swap).
 
-### Udev rules over systemd services for suspend wake
+### s2idle (S0ix) over deep S3: the HP firmware wake routing problem
 
-The zbook immediately woke from suspend when a USB-C dock (ethernet, monitor,
-Logitech receiver) was connected. The first attempt used systemd oneshot
-services to write to `/proc/acpi/wakeup` — but these had three problems:
+The first attempt forced deep S3 sleep on zbook with `mem_sleep_default=deep`
+in `hosts/zbook/boot.nix`. The system *entered* S3 fine — `PM: suspend entry
+(deep)` in the logs — but **never woke up**. Zero `PM: Low-level resume`
+events, zero `suspend exit`. The power button, lid, and keyboard all had no
+effect; only holding the power button for a cold reboot worked.
 
-1. **Race with powertop** — powertop's `--auto-tune` re-enables ACPI wake
-   for some controllers after the service runs.
-2. **Race with udev events** — hotplug events during boot can re-arm the
-   ACPI wake state after the service has already disabled it.
-3. **Needs resume hooks** — a separate service is needed after
-   `suspend.target` in case the controller gets re-armed during resume.
+The root cause: this HP ZBook Studio G10 firmware is designed for **Windows
+Modern Standby (S0ix)**. The PCH (Platform Controller Hub) wake routing is
+configured for S0ix-native interrupt paths, not S3 GPIO/SMI wake paths. The
+firmware advertises S3 in ACPI FADT (so Linux doesn't refuse to boot), but
+the wake event controller never re-sequences the power rails after S3 entry.
 
-The canonical approach (from [nixos-hardware PR #1394](https://github.com/NixOS/nixos-hardware/pull/1394)
-and the [NixOS Wiki](https://wiki.nixos.org/wiki/Power_Management)) is
-**udev rules targeting PCI subsystem IDs**. Udev rules fire at device-probe
-time, survive device re-enumeration, and are automatically re-applied on
-resume:
+This is confirmed by [HP Support Community
+threads](https://h30434.www3.hp.com/t5/Business-Notebooks/HP-Zbook-G10-sleep-and-modern-standby-issues/td-p/8888712)
+and the [Arch Wiki](https://wiki.archlinux.org/title/Power_management/Suspend_and_hibernate):
+> Manufacturers have stopped fixing bugs with the ACPI S3 state since systems
+> shipping with Windows are encouraged to use "Modern standby" by default; if
+> they have voluntarily not advertised it, it is probably broken in some way.
+
+The fix: use s2idle (the firmware-native suspend mode) and add a 2-second
+delay before re-probing external displays on resume, giving the USB-C dock
+time to re-enumerate. See `modules/nixos/cosmic.nix`.
+
+### Udev rules for targeted dock Ethernet wake suppression
+
+On s2idle, the dock's Realtek RTL8153 Ethernet adapter generates link-state
+changes that immediately wake the system after suspend entry. The fix is a
+single udev rule targeting the USB vendor/product ID:
 
 ```nix
 services.udev.extraRules = lib.mkAfter ''
-  ACTION=="add", SUBSYSTEM=="pci", DRIVER=="xhci_hcd", ATTR{power/wakeup}="disabled"
-  ACTION=="add", SUBSYSTEM=="pci", DRIVER=="thunderbolt", ATTR{power/wakeup}="disabled"
-  ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa76e", ATTR{power/wakeup}="disabled"
+  ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", ATTR{power/wakeup}="disabled"
 '';
 ```
 
-`lib.mkAfter` is used so nixos-hardware's own udev rules take precedence
-(seen on the Framework 16 wiki). The three rule categories target:
-- **`xhci_hcd` driver** — USB xHCI controllers (both internal USB and USB4 host)
-- **`thunderbolt` driver** — USB4/Thunderbolt controllers
-- **Specific device IDs** — PCIe root ports that can't be matched by driver
-  name alone (e.g. non-Thunderbolt PCIe ports should preserve wake)
+Earlier iterations used blanket `xhci_hcd` and `thunderbolt` driver-class
+rules, but those were too broad — they disabled wake for all USB devices
+(including the Logitech keyboard receiver), making the machine unreachable
+after lid-close suspend.
 
 ### `usbcore.quirks`: kernel-level USB autosuspend disable for Logitech receivers
 
@@ -213,60 +221,42 @@ With dual Intel+NVIDIA PRIME offload, `cosmic-comp` (the COSMIC compositor)
 would lose DRM master after suspend. The log told the story:
 
 ```text
-nvidia-suspend.service starts
-cosmic-comp hits DRM EACCES on card1 → blocks
-systemd-sleep's user.slice freeze times out after 60s
-suspend proceeds anyway → broken state after resume
+nvidia-suspend.service starts → nvidia-sleep.sh does chvt 63
+cosmic-comp gets udev event → tries to clear state on card1
+→ hits DRM EACCES (Permission denied) because VT switched away
 ```
 
-The `nvidia-suspend.service` needs to take over the DRM device to save GPU
-state, but cosmic-comp still holds DRM master. The freeze timeout is
-systemd-sleep trying to freeze all processes in `user.slice` — including
-cosmic-comp — which takes 60s because the compositor is stuck in a DRM
-ioctl.
+The `nvidia-suspend.service` needs to save GPU state, which requires taking
+over the DRM device. But cosmic-comp still holds DRM master. The VT switch
+(`chvt 63`) inside `nvidia-sleep.sh suspend` triggers a udev event that
+cosmic-comp tries to handle — but it's already lost DRM master permissions.
 
 The fix is the standard Wayland compositor suspend pattern: **SIGSTOP before
-suspend, SIGCONT after resume**.
+the VT switch, SIGCONT after the GPU resumes**.
 
-In `powerManagement.powerDownCommands` (runs before sleep.target):
+The SIGSTOP must be `ExecStartPre` on `nvidia-suspend.service` — not
+`powerManagement.powerDownCommands` (which goes into `sleep-actions.service
+ExecStart`). They run in parallel and `nvidia-sleep.sh`'s `chvt 63` races
+ahead of SIGSTOP. With `ExecStartPre`, the freeze is guaranteed to fire
+before `ExecStart`.
 
-```nix
-PID=$(pidof cosmic-comp 2>/dev/null || true)
-if [ -n "$PID" ]; then
-  kill -STOP "$PID" 2>/dev/null || true
-fi
-```
-
-This freezes the compositor instantly. It stops processing DRM ioctls,
-implicitly releasing DRM master so `nvidia-suspend.service` can proceed
-without contention.
-
-In `powerManagement.resumeCommands` (runs after resume), the SIGCONT comes
-*before* the existing display re-probe logic:
-
-```nix
-PID=$(pidof cosmic-comp 2>/dev/null || true)
-if [ -n "$PID" ]; then
-  kill -CONT "$PID" 2>/dev/null || true
-fi
-```
-
-The ordering matters — the SIGCONT must run before the `udevadm trigger
---action=change` loop so the compositor is alive to receive the hotplug
-uevents.
+The SIGCONT + display re-probe goes in `nvidia-resume.service
+ExecStartPost`. The script waits 2s for the USB-C dock to re-enumerate
+(critical on s2idle), then polls NVIDIA external connectors for up to 10s,
+then triggers `udevadm change` on each to simulate a hotplug uevent.
 
 The full execution sequence during suspend/resume:
 
 | Step | What happens | Who |
 |------|-------------|-----|
-| 1 | SIGSTOP cosmic-comp | `powerDownCommands` |
-| 2 | systemd-sleep freezes user.slice (instant now — cosmic-comp already stopped) | NixOS built-in |
-| 3 | `nvidia-suspend.service` — saves GPU state (no DRM contention) | NVIDIA module |
-| 4 | System suspends (deep S3) | Kernel |
-| 5 | System resumes | Kernel |
-| 6 | `nvidia-resume.service` — restores GPU state | NVIDIA module |
-| 7 | systemd-sleep thaws user.slice | NixOS built-in |
-| 8 | SIGCONT cosmic-comp, then re-probe displays | `resumeCommands` |
+| 1 | SIGSTOP cosmic-comp | `nvidia-suspend.service ExecStartPre` |
+| 2 | `nvidia-sleep.sh suspend` (chvt 63, save GPU BARs/VRAM) | `nvidia-suspend.service ExecStart` |
+| 3 | System suspends (s2idle) | Kernel |
+| 4 | System resumes | Kernel |
+| 5 | `nvidia-sleep.sh resume` (restore GPU state) | `nvidia-resume.service ExecStart` |
+| 6 | Sleep 2s for dock re-enumeration | `nvidia-resume.service ExecStartPost` |
+| 7 | SIGCONT cosmic-comp | `nvidia-resume.service ExecStartPost` |
+| 8 | Poll NVIDIA connectors for up to 10s, then udevadm trigger | `nvidia-resume.service ExecStartPost` |
 
 ## Canonical sources
 

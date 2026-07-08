@@ -181,14 +181,20 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   which makes `hardware.nvidia.enabled = true`, but this requires a reboot
   (nouveau claims the GPU first; kernel modules can't hot-swap). Run
   `nixos-rebuild switch --flake .#zbook` then `sudo reboot` after first install.
-- **Suspend: USB-C dock immediate wake.** Udev rules in `modules/nixos/laptop.nix`
-  disable ACPI wake for USB/Thunderbolt controllers. If wake still happens,
-  reboot to ensure udev rules fire at device-probe time.
+- **Suspend: no deep S3 on this firmware.** The HP firmware can enter S3
+  but wake events aren't routed (PCH configured for S0ix-native wake).
+  `mem_sleep_default=deep` was removed from `hosts/zbook/boot.nix`; s2idle
+  is used instead. See `modules/nixos/cosmic.nix` for the 2s dock
+  re-enumeration delay added for s2idle. If immediate wake happens after
+  suspend, the dock's Realtek RTL8153 Ethernet may be the cause — a udev
+  rule in `modules/nixos/laptop.nix` disables wake on that specific device.
 - **DRM master loss with COSMIC + NVIDIA.** `cosmic-comp` races with
-  `nvidia-suspend.service` for DRM master on `/dev/dri/card1`, freezing
-  `user.slice` for 60s and leaving a black screen after resume. Fixed by
-  SIGSTOP/SIGCONT in `modules/nixos/cosmic.nix`
-  (`powerManagement.powerDownCommands` / `resumeCommands`).
+  `nvidia-suspend.service` for DRM master on `/dev/dri/card1`. Fixed by
+  SIGSTOP as `ExecStartPre` on `nvidia-suspend.service` (before `chvt 63`)
+  and SIGCONT + display re-probe as `ExecStartPost` on
+  `nvidia-resume.service` in `modules/nixos/cosmic.nix`.
+  `powerDownCommands`/`resumeCommands` are not used — they race with the
+  NVIDIA VT switch and `sleep-actions` ordering is unreliable.
 - **Logitech receiver stutter.** powertop's `--auto-tune` suspends the
   Unifying/Bolt receiver, causing keyboard/mouse disconnects. Fixed by
   `usbcore.quirks` kernel parameter in `modules/nixos/laptop.nix`
