@@ -35,6 +35,14 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 27 | `modules/nixos/laptop.nix` — udev wake rules | M4 | Udev rules for USB/Thunderbolt ACPI wake, following nixos-hardware PR #1394 (udev over systemd oneshot) |
 | 28 | `modules/nixos/laptop.nix` — `usbcore.quirks` | M4 | Kernel-level USB autosuspend disable for Logitech receivers — immutable, immune to powertop |
 | 29 | `modules/nixos/cosmic.nix` — SIGSTOP/SIGCONT | M4 | Freeze cosmic-comp before suspend and unfreeze after resume to avoid DRM master race with nvidia-suspend |
+| 30 | deploy-rs | M4 | `deploy .#hostname` for remote deploys with magic rollback; `deployChecks` wired into `nix flake check`; deploy script auto-detects local vs remote |
+| 31 | SSH key rotation | M4 | When the master SSH key becomes incompatible (old OpenSSH format + OpenSSL 3.6.2), generate a fresh one, re-encrypt all `.age` files, update `krzysiek-authorized-key.pub`, and rekey for all hosts |
+| 32 | Secrets recovery from git history | M4 | If master `.age` files get corrupted (empty decryption), recover plaintext from pre-corruption rekeyed files using the host's own SSH key via `rage -d -i /persist/etc/ssh/ssh_host_ed25519_key`, then re-encrypt with the new master key |
+| 33 | agenix native SSH recipients | M4 | Master `.age` files must use `rage -e -R <SSH pubkey>` (native SSH recipient), *not* `rage -e -r age1...` (X25519 age recipient) — agenix-rekey with `masterIdentities` pointing to an SSH key only works with `-> ssh-ed25519` recipients |
+| 34 | Per-host Tailscale auth keys | M4 | Shared auth keys don't work well once you have multiple hosts. Split into `tailscale-auth-key-soyo.age` and `tailscale-auth-key-zbook.age`, declared in the host assembler rather than the shared `users.nix` |
+| 35 | sbctl persistence on impermanent root | M3/M4 | On an erase-your-darlings root, `/var/lib/sbctl` must be persisted (preservation module, mode 0700) or Secure Boot keys disappear on reboot. If lost, return to BIOS Setup Mode, run `sbctl create-keys && sbctl enroll-keys -m`, deploy once, re-enable Secure Boot |
+| 36 | Limine config checksum mismatch panic recovery | M3 | If `panicOnChecksumMismatch` is `true` and the config file hash doesn't match, Limine panics before the kernel loads. Recovery: boot from live USB, mount ESP, edit `/limine/limine.conf` — set `panic_on_checksum_mismatch: false` or delete `config_file_checksum:` line, then reboot and redeploy |
+| 37 | deploy-rs magic rollback and DNS | M4 | deploy-rs's confirmation hook connects back to the target host by hostname. If DNS doesn't resolve (e.g. zbook can't resolve `soyo` because it's on a different network), the confirmation fails and the deployment gets rolled back. Workaround: ensure DNS works or use `nixos-rebuild --target-host <IP> --sudo` as fallback |
 
 ## What is this repo?
 
