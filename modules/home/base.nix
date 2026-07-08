@@ -18,7 +18,15 @@
 
       programs = {
         bash.enable = true;
-        git.enable = true;
+        git = {
+          enable = true;
+          userName = "Krzysztof Nirski";
+          userEmail = "krzysztof.nirski+github@gmail.com";
+          # HTTPS → SSH rewrite so git uses the SSH remote automatically.
+          extraConfig = {
+            url."git@github.com:".insteadOf = "https://github.com/";
+          };
+        };
         home-manager.enable = true;
         direnv = {
           enable = true;
