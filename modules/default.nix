@@ -11,10 +11,12 @@
     ./nixos/backup.nix
     ./nixos/observability.nix
     ./nixos/desktop.nix
+    ./nixos/cosmic.nix
     ./nixos/nvidia.nix
     ./nixos/laptop.nix
     ./nixos/gaming.nix
     ./nixos/workstation.nix
+    ./nixos/command-code.nix
     ./home/base.nix
     ./home/desktop.nix
     ./parts/perSystem.nix

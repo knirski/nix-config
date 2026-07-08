@@ -8,6 +8,7 @@
       (with config.aspects.nixos; [
         base
         desktop
+        cosmic
         nvidia
         laptop
         gaming
@@ -15,15 +16,18 @@
         users
         persistence
         maintenance
+        commandCode
       ])
       ++ [
-        # Overlay cosmic-ext packages from stable (not available in nixpkgs-unstable)
+        # Overlay cosmic-ext packages from stable (not available in nixpkgs-unstable).
+        # Required by the `cosmic` aspect.
         {
           nixpkgs.overlays = [
-            (_final: _prev: {
+            (final: _prev: {
               cosmic-ext-applet-external-monitor-brightness =
                 inputs.nixpkgs.legacyPackages.x86_64-linux.cosmic-ext-applet-external-monitor-brightness;
               cosmic-ext-tweaks = inputs.nixpkgs.legacyPackages.x86_64-linux.cosmic-ext-tweaks;
+              command-code = final.callPackage ../../modules/pkgs/command-code.nix { };
             })
           ];
         }

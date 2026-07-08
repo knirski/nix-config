@@ -65,6 +65,7 @@
       formatter = config.treefmt.build.wrapper;
       checks.formatting = config.treefmt.build.check inputs.self;
       packages.deadnix = pkgs.deadnix;
+      packages.command-code = pkgs.callPackage ../../modules/pkgs/command-code.nix { };
       packages.healthcheck = pkgs.writeShellApplication {
         name = "healthcheck";
         runtimeInputs = with pkgs; [
@@ -100,6 +101,7 @@
           pkgs.nixos-anywhere
           pkgs.nixos-facter
           pkgs.nixos-rebuild
+          pkgs.nodejs
           pkgs.sbctl
           inputs.agenix-rekey.packages.${system}.default
         ];

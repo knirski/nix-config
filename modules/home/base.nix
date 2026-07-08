@@ -9,6 +9,8 @@
           fd
           ripgrep
           tmux
+          gh
+          command-code
         ];
       };
 
