@@ -22,6 +22,9 @@
 # general
 - When an SSH key or other critical credential is broken/incompatible with the current system, prefer trying recovery/conversion approaches first before generating a fresh key; only regenerate as a last resort after recovery is proven impossible. Confidence: 0.55
 
+# nixos
+- When Home Manager deprecation warnings appear during evaluation (e.g., `programs.git.userEmail` → `programs.git.settings.user.email`), migrate to the new option paths to silence the warnings rather than leaving deprecated options in place. Confidence: 0.65
+
 # secrets
 - When configuring identity keys for secret management, use native SSH keys directly rather than converting them to age pubkeys via ssh-to-age; agenix supports encryption with SSH keys natively. Confidence: 0.80
 - When creating SSH keys for a specific host, use a comment matching the hostname (e.g., `krzysiek@soyo` for the soyo host), not a different host (e.g., not `krzysiek@workstation`). Confidence: 0.80

@@ -28,10 +28,9 @@
         };
         git = {
           enable = true;
-          userName = "Krzysztof Nirski";
-          userEmail = "krzysztof.nirski+github@gmail.com";
-          # HTTPS → SSH rewrite so git uses the SSH remote automatically.
-          extraConfig = {
+          settings = {
+            user.name = "Krzysztof Nirski";
+            user.email = "krzysztof.nirski+github@gmail.com";
             url."git@github.com:".insteadOf = "https://github.com/";
           };
         };
