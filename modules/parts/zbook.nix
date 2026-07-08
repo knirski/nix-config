@@ -23,11 +23,10 @@
         # Required by the `cosmic` aspect.
         {
           nixpkgs.overlays = [
-            (final: _prev: {
+            (_final: _prev: {
               cosmic-ext-applet-external-monitor-brightness =
                 inputs.nixpkgs.legacyPackages.x86_64-linux.cosmic-ext-applet-external-monitor-brightness;
               cosmic-ext-tweaks = inputs.nixpkgs.legacyPackages.x86_64-linux.cosmic-ext-tweaks;
-              command-code = final.callPackage ../../modules/pkgs/command-code.nix { };
             })
           ];
         }

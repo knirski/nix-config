@@ -158,13 +158,13 @@ Zbook uses the same Secure Boot mechanism (Limine + `sbctl`), but the operator s
 
 The same caveats about `/var/lib/sbctl` persistence and `fwupd` apply.
 
-#### Prerequisites
+#### Zbook prerequisites
 
 - Zbook has `boot.loader.limine.secureBoot.enable = true` in the deployed config.
 - HP firmware Secure Boot can be toggled in BIOS → Security → Secure Boot Configuration.
 - `sbctl` is available on zbook (same as on Soyo).
 
-#### Steps
+#### Zbook steps
 
 ```sh
 # 1. Reboot into BIOS and put firmware into Setup Mode.

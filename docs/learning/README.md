@@ -204,7 +204,7 @@ raced with powertop and provided no value with the quirk in place.
 With dual Intel+NVIDIA PRIME offload, `cosmic-comp` (the COSMIC compositor)
 would lose DRM master after suspend. The log told the story:
 
-```
+```text
 nvidia-suspend.service starts
 cosmic-comp hits DRM EACCES on card1 → blocks
 systemd-sleep's user.slice freeze times out after 60s

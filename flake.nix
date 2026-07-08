@@ -32,11 +32,14 @@
 
     nix-topology.url = "github:oddlama/nix-topology";
     nix-topology.inputs.nixpkgs.follows = "nixpkgs";
+
+    deploy-rs.url = "github:serokell/deploy-rs";
+    deploy-rs.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   # The whole flake is built by importing `modules/default.nix`, which lists
   # every module file explicitly (the dendritic pattern).
-  # `deploy-rs` is intentionally absent until M4.
+  # `deploy-rs` is now integrated (M4).
   outputs =
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } { imports = [ ./modules ]; };

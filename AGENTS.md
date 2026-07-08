@@ -57,9 +57,9 @@ and its docs must teach (see "Learning docs" below).
    direct-link rescue). The agenix host key is read from `/persist` before
    decryption (`age.identityPaths`); `/persist` is `neededForBoot`.
 10. **Backups via `restic`** (`services.restic.backups` — the first-class module;
-    not rustic/kopia) plus local `btrbk` snapshots. Day-2 remote deploy is native
-    `nixos-rebuild --target-host` (local build, remote activation); `deploy-rs` is
-    deferred to M4.
+    not rustic/kopia) plus local `btrbk` snapshots. Day-2 remote deploy uses
+    `deploy .#hostname` via deploy-rs (deploy checks, magic rollback); native
+    `nixos-rebuild --target-host` also works as a fallback.
 
 ## Anti-goals (keep off Soyo)
 

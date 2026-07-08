@@ -24,5 +24,6 @@
     ./parts/zbook.nix
     ./parts/aspect-options.nix
     ./parts/topology.nix
+    ./parts/deploy.nix
   ];
 }

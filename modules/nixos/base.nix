@@ -11,6 +11,13 @@
       # are unfree by license — declared so by the authors, not by us.
       nixpkgs.config.allowUnfree = true;
 
+      # Make command-code available everywhere (used in home.base).
+      nixpkgs.overlays = [
+        (final: _: {
+          command-code = final.callPackage ../../modules/pkgs/command-code.nix { };
+        })
+      ];
+
       nix.settings = {
         experimental-features = [
           "nix-command"

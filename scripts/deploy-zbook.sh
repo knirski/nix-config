@@ -9,7 +9,7 @@ echo "==> Rekeying agenix secrets..."
 agenix rekey
 
 echo "==> Deploying to zbook..."
-nixos-rebuild switch --flake .#zbook --target-host "krzysiek@zbook" --sudo
+deploy .#zbook
 
 echo "==> Done"
 SCRIPT

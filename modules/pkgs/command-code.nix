@@ -24,13 +24,14 @@
 #        npm install --package-lock-only --ignore-scripts && \
 #        cp package-lock.json modules/pkgs/command-code-lock/
 #   6. Rebuild with `nix build .#command-code` to confirm.
-{ lib
-, fetchurl
-, buildNpmPackage
-, nodejs
-, makeWrapper
-, pkg-config
-, vips
+{
+  lib,
+  fetchurl,
+  buildNpmPackage,
+  nodejs,
+  makeWrapper,
+  pkg-config,
+  vips,
 }:
 
 buildNpmPackage rec {
@@ -51,7 +52,10 @@ buildNpmPackage rec {
 
   npmDepsHash = "sha256-oG6c3Fl927C58fmGYL3ZcTeItAeO7NYnJGKhiFPluBQ=";
 
-  nativeBuildInputs = [ makeWrapper pkg-config ];
+  nativeBuildInputs = [
+    makeWrapper
+    pkg-config
+  ];
   buildInputs = [ vips ];
 
   installPhase = ''

@@ -146,7 +146,7 @@ effect.
 On dual Intel+NVIDIA PRIME offload, the COSMIC compositor (cosmic-comp) can
 lose DRM master on `/dev/dri/card1` during suspend. The log shows:
 
-```
+```text
 nvidia-suspend.service starts
 cosmic-comp hits DRM EACCES on card1 → blocks
 user.slice freeze times out → suspend proceeds → broken display after resume

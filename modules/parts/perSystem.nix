@@ -16,6 +16,13 @@
       system,
       ...
     }:
+    let
+      # PerSystem pkgs with unfree allowed (needed for packages.command-code).
+      pkgs' = import inputs.nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
+    in
     {
       pre-commit.settings = {
         hooks = {
@@ -64,20 +71,22 @@
       };
       formatter = config.treefmt.build.wrapper;
       checks.formatting = config.treefmt.build.check inputs.self;
-      packages.deadnix = pkgs.deadnix;
-      packages.command-code = pkgs.callPackage ../../modules/pkgs/command-code.nix { };
-      packages.healthcheck = pkgs.writeShellApplication {
-        name = "healthcheck";
-        runtimeInputs = with pkgs; [
-          curl
-          dnsutils
-          gnugrep
-          gnused
-          iputils
-          jq
-          openssh
-        ];
-        text = ''exec ${../../scripts/healthcheck.sh} "$@"'';
+      packages = {
+        inherit (pkgs) deadnix;
+        command-code = pkgs'.callPackage ../../modules/pkgs/command-code.nix { };
+        healthcheck = pkgs.writeShellApplication {
+          name = "healthcheck";
+          runtimeInputs = with pkgs; [
+            curl
+            dnsutils
+            gnugrep
+            gnused
+            iputils
+            jq
+            openssh
+          ];
+          text = ''exec ${../../scripts/healthcheck.sh} "$@"'';
+        };
       };
       checks.lan-inventory =
         pkgs.runCommand "lan-inventory-test"
@@ -104,6 +113,7 @@
           pkgs.nodejs
           pkgs.sbctl
           inputs.agenix-rekey.packages.${system}.default
+          inputs.deploy-rs.packages.${system}.default
         ];
       };
     };

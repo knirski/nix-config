@@ -29,23 +29,25 @@
       # powerDownCommands (sleep-actions ExecStart), because they run
       # in parallel and nvidia-sleep.sh's chvt 63 races ahead of SIGSTOP.
       systemd.services.nvidia-suspend = lib.mkIf config.workstation.nvidiaConfig.enable {
-        serviceConfig.ExecStartPre = [ "" (
-          pkgs.writeShellScript "freeze-cosmic-comp" ''
+        serviceConfig.ExecStartPre = [
+          ""
+          (pkgs.writeShellScript "freeze-cosmic-comp" ''
             set -e
             PID=$(pidof cosmic-comp 2>/dev/null || true)
             if [ -n "$PID" ]; then
               kill -STOP "$PID" 2>/dev/null || true
             fi
-          ''
-        ) ];
+          '')
+        ];
       };
 
       # Unfreeze cosmic-comp and re-probe displays after resume.
       # The udev trigger runs after SIGCONT so cosmic-comp is awake
       # to process the hotplug uevents.
       systemd.services.nvidia-resume = lib.mkIf config.workstation.nvidiaConfig.enable {
-        serviceConfig.ExecStartPost = [ "" (
-          pkgs.writeShellScript "resume-cosmic-comp" ''
+        serviceConfig.ExecStartPost = [
+          ""
+          (pkgs.writeShellScript "resume-cosmic-comp" ''
             set -e
 
             # Wait for USB-C dock re-enumeration. On s2idle (S0ix), the
@@ -90,8 +92,8 @@
             for dir in $CONNECTORS; do
               ${pkgs.systemd}/bin/udevadm trigger --action=change "$dir" 2>/dev/null || true
             done
-          ''
-        ) ];
+          '')
+        ];
       };
 
     };
