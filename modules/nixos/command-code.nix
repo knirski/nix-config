@@ -16,6 +16,7 @@
     environment.extraInit = ''
         if [ -r "${config.age.secrets.github-token.path}" ]; then
           export GITHUB_TOKEN="$(cat "${config.age.secrets.github-token.path}")"
+          export GH_TOKEN="$GITHUB_TOKEN"
         fi
       '';
   };
