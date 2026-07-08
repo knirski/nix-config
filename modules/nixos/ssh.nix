@@ -11,7 +11,9 @@
     in
     {
       options.services.sshLockdown = {
-        enable = lib.mkEnableOption "SSH server with key-only auth";
+        enable = lib.mkEnableOption "SSH server with key-only auth" // {
+          default = true;
+        };
 
         permitRootLogin = lib.mkOption {
           type = lib.types.enum [

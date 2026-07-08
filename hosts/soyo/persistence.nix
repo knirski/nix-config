@@ -67,6 +67,7 @@
           mode = "0700";
         }
         ".local/share/direnv"
+        ".local/state/home-manager"
       ];
       files = [ ".bash_history" ];
     };

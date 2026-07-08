@@ -34,6 +34,8 @@
           mode = "0700";
         }
         ".local/share/direnv"
+        ".local/state/home-manager"
+        ".local/share/applications"
         ".config"
         ".commandcode"
         "tmp"
