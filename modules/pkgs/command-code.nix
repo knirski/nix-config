@@ -10,6 +10,20 @@
 # modules/pkgs/command-code-lock/.
 #
 # Ref: https://nixos.org/manual/nixpkgs/stable/#buildNpmPackage
+#
+# Updating to a newer version:
+#   1. Bump `version` and the `fetchurl` hash (get it from the npm registry
+#      via `nix store prefetch-file --hash-type sha512 https://...`).
+#   2. Delete `npmDepsHash` and set it to `lib.fakeHash`.
+#   3. Run:  nix build .#command-code 2>&1 | grep "got:"
+#   4. Copy the printed hash back into `npmDepsHash`.
+#   5. The lockfile in `command-code-lock/` was generated from the original
+#      upstream tarball after stripping devDeps. To regenerate:
+#        tar xzf <tarball> -C /tmp/cc && cd /tmp/cc/package && \
+#        sed -i '/"devDependencies": {/,/^  }/d' package.json && \
+#        npm install --package-lock-only --ignore-scripts && \
+#        cp package-lock.json modules/pkgs/command-code-lock/
+#   6. Rebuild with `nix build .#command-code` to confirm.
 { lib
 , fetchurl
 , buildNpmPackage

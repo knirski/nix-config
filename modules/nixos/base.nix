@@ -6,6 +6,11 @@
       i18n.defaultLocale = "en_US.UTF-8";
       environment.variables.EDITOR = "nvim";
 
+      # Allow unfree packages globally. Some packages in the nixpkgs
+      # catalogue (e.g. NVIDIA driver, Steam, VS Code, command-code CLI)
+      # are unfree by license — declared so by the authors, not by us.
+      nixpkgs.config.allowUnfree = true;
+
       nix.settings = {
         experimental-features = [
           "nix-command"
