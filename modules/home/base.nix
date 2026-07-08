@@ -17,7 +17,15 @@
       };
 
       programs = {
-        bash.enable = true;
+        bash = {
+          enable = true;
+          initExtra = ''
+            if [ -r /run/agenix/github-token ]; then
+              export GITHUB_TOKEN="$(cat /run/agenix/github-token)"
+              export GH_TOKEN="$GITHUB_TOKEN"
+            fi
+          '';
+        };
         git = {
           enable = true;
           userName = "Krzysztof Nirski";
