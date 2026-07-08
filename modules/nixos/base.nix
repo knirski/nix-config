@@ -9,7 +9,12 @@
       # Allow unfree packages globally. Some packages in the nixpkgs
       # catalogue (e.g. NVIDIA driver, Steam, VS Code, command-code CLI)
       # are unfree by license — declared so by the authors, not by us.
-      nixpkgs.config.allowUnfree = true;
+      nixpkgs.config = {
+        allowUnfree = true;
+        permittedInsecurePackages = [
+          "electron-39.8.10"
+        ];
+      };
 
       # Make command-code available everywhere (used in home.base).
       nixpkgs.overlays = [

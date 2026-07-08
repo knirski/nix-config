@@ -2,7 +2,7 @@
   description = "Multi-host NixOS flake; first host is the Soyo DNS/DHCP appliance";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/714a5f8c4ead";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     flake-parts.url = "github:hercules-ci/flake-parts";

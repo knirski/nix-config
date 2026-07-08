@@ -8,6 +8,8 @@
         wl-clipboard
         imv
         mpv
+        bitwarden-desktop
+        zed-editor
       ];
 
       # Catppuccin COSMIC theme — clone as config files (they're just RON)
