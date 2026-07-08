@@ -86,6 +86,10 @@
             storageMode = "local";
             localStorageDir = ../../. + "/secrets/rekeyed/zbook";
           };
+
+          age.secrets.tailscale-auth-key = {
+            rekeyFile = ../../secrets/tailscale-auth-key-zbook.age;
+          };
         }
       ];
   };

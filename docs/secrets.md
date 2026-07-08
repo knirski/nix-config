@@ -230,7 +230,8 @@ secrets/
 ├── ntfy-topic.age          # Master-encrypted (ntfy.sh topic URL)
 ├── grafana-admin-password.age # Master-encrypted (Grafana admin password)
 ├── grafana-secret-key.age     # Master-encrypted (Grafana session signing key)
-├── tailscale-auth-key.age  # Master-encrypted (Tailscale pre-auth key)
+├── tailscale-auth-key-soyo.age  # Master-encrypted (Tailscale pre-auth key for soyo)
+├── tailscale-auth-key-zbook.age # Master-encrypted (Tailscale pre-auth key for zbook)
 └── rekeyed/
     └── soyo/               # Host-specific rekeyed files (soyo's key)
         ├── root-password.age
@@ -240,7 +241,7 @@ secrets/
         ├── ntfy-topic.age
         ├── grafana-admin-password.age
         ├── grafana-secret-key.age
-        └── tailscale-auth-key.age
+        └── tailscale-auth-key-soyo.age  # (rekeyed for soyo; zbook's in rekeyed/zbook/)
 ```
 
 Files under `secrets/rekeyed/` are produced by `agenix rekey` and tracked in
@@ -258,7 +259,8 @@ for a specific host's SSH key instead of your master key.
 | `secrets/ntfy-topic.age` | ntfy.sh topic URL | master identity |
 | `secrets/grafana-admin-password.age` | Grafana admin password | master identity |
 | `secrets/grafana-secret-key.age` | Grafana session signing key | master identity |
-| `secrets/tailscale-auth-key.age` | Tailscale pre-auth key | master identity |
+| `secrets/tailscale-auth-key-soyo.age` | Tailscale pre-auth key for soyo | master identity |
+| `secrets/tailscale-auth-key-zbook.age` | Tailscale pre-auth key for zbook | master identity |
 | `secrets/krzysiek-authorized-key.pub` | krzysiek's SSH public key (plaintext) | n/a — configured via `users.users.krzysiek.openssh.authorizedKeys.keyFiles` |
 | `secrets/rekeyed/soyo/...` | same content as above | Soyo's SSH host key |
 

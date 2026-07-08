@@ -71,6 +71,10 @@
             storageMode = "local";
             localStorageDir = ../../. + "/secrets/rekeyed/soyo";
           };
+
+          age.secrets.tailscale-auth-key = {
+            rekeyFile = ../../secrets/tailscale-auth-key-soyo.age;
+          };
         }
       ];
   };
