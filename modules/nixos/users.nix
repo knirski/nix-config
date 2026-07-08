@@ -23,6 +23,12 @@
       ntfy-token.rekeyFile = ../../secrets/ntfy-token.age;
       ntfy-topic.rekeyFile = ../../secrets/ntfy-topic.age;
       tailscale-auth-key.rekeyFile = ../../secrets/tailscale-auth-key.age;
+      github-token = {
+        rekeyFile = ../../secrets/github-token.age;
+        owner = "krzysiek";
+        group = "users";
+        mode = "0400";
+      };
     };
   };
 }

@@ -4,7 +4,9 @@
     {
       home = {
         stateVersion = "26.05";
-        sessionVariables.EDITOR = "nvim";
+        sessionVariables = {
+          EDITOR = "nvim";
+        };
         packages = with pkgs; [
           fd
           ripgrep
