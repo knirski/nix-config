@@ -1,4 +1,5 @@
 # nixos
+- Use ArchWiki as a reference for Linux configuration and usage; it is a reliable source of knowledge. Confidence: 0.80
 - When persisting user home directories via preservation module, use broad directory paths (e.g., `.config` for the entire directory) rather than specifying individual subpaths like `.config/gh`, `.config/git`. Confidence: 0.65
 - When fixing display/compositor issues (e.g., suspend/resume with NVIDIA + COSMIC), prefer wayland-native or wayland-idiomatic approaches (e.g., triggering udev `change` events) over killing the compositor or VT switching hacks. Confidence: 0.78
 - When powertop's `--auto-tune` re-enables USB autosuspend and overrides udev `power/control=on` rules, prefer `usbcore.quirks` kernel parameters (e.g., `046d:c52b:b` flag) to disable USB autosuspend at the kernel level before any userspace runs, rather than relying on udev rules or powertop exclusion lists — the kernel quirk is immutable and immune to powertop re-enabling autosuspend. Remove any redundant udev rules once the quirk is confirmed working. Confidence: 0.85

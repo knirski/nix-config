@@ -29,5 +29,13 @@
       HandleLidSwitchExternalPower = "lock";
       HandleLidSwitchDocked = "ignore";
     };
+
+    # Disable USB wake for the dock's Realtek RTL8153 Ethernet adapter.
+    # On s2idle (S0ix), link-state changes from the >1Gbps LAN chip
+    # trigger an immediate re-wake after suspend entry, even when the
+    # cable is idle. Only the dock LAN is targeted, not internal USB.
+    services.udev.extraRules = lib.mkAfter ''
+      ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", ATTR{power/wakeup}="disabled"
+    '';
   };
 }
