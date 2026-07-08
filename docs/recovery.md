@@ -152,6 +152,59 @@ If Secure Boot prevents booting during setup (wrong keys, unsigned image):
 2. Boot normally — the passphrase keyslot is an independent fallback throughout.
 3. If the failed deploy complained that there were no `sbctl` Secure Boot keys, return firmware to Setup Mode, recreate the keys, deploy once before rebooting again, then re-enable Secure Boot.
 
+### Zbook
+
+Zbook uses the same Secure Boot mechanism (Limine + `sbctl`), but the operator steps differ slightly because it is a laptop with HP firmware.
+
+The same caveats about `/var/lib/sbctl` persistence and `fwupd` apply.
+
+#### Prerequisites
+
+- Zbook has `boot.loader.limine.secureBoot.enable = true` in the deployed config.
+- HP firmware Secure Boot can be toggled in BIOS → Security → Secure Boot Configuration.
+- `sbctl` is available on zbook (same as on Soyo).
+
+#### Steps
+
+```sh
+# 1. Reboot into BIOS and put firmware into Setup Mode.
+#    HP ZBook BIOS → Security → Secure Boot Configuration → Advanced.
+#    Set Secure Boot to "Disabled" under Advanced, then select "Clear All
+#    Secure Boot Keys" under Key Management to erase factory keys.
+#    Apply, reboot.
+
+# 2. Generate custom Secure Boot keys on zbook.
+sudo sbctl create-keys
+
+# 3. Enroll keys, keeping Microsoft keys so option ROMs still load.
+sudo sbctl enroll-keys -m
+
+# 4. From your workstation, deploy once more before the next reboot.
+#    This signs Limine with the newly-created keys and persists /var/lib/sbctl.
+./scripts/deploy-zbook.sh
+
+# 5. Enable Secure Boot in firmware.
+#    ZBook BIOS → Security → Secure Boot Configuration → Enable Secure Boot.
+#    Set to "Enabled" (not "Legacy" or "Audit").
+
+# 6. Re-enroll the TPM keyslot against PCR 0+2+7.
+sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partlabel/luks
+
+# 7. Verify.
+sudo sbctl status
+# Expected: Setup Mode: User, Secure Boot: enabled.
+```
+
+If HP firmware does not expose a "Setup Mode" toggle (some ZBook BIOS revisions hide it), you can trigger Setup Mode from Linux with `mokutil` or by enrolling `sbctl` platform-owner keys. If the above fails:
+
+```sh
+# Alternative: trigger Setup Mode from Linux with sbctl
+sudo sbctl enroll-keys -m --force
+```
+
+If the BIOS shows "Secure Boot → Audit Mode" instead of "Enabled" after enrollment, the keys were accepted but the BIOS is not enforcing. Check with `sudo sbctl status` — if Secure Boot shows `enabled`, it is enforced regardless of the BIOS label.
+
 ### Caveats
 
 - `fwupd` is currently broken under Limine Secure Boot ([nixpkgs #534574](https://github.com/NixOS/nixpkgs/issues/534574)). LVFS firmware updates may need Secure Boot temporarily off.

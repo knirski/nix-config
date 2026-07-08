@@ -1,4 +1,5 @@
 # nixos
+- Enable Secure Boot (with Limine + shim chain, PCR 0+2+7 binding) on every host, not just the server — the same Secure Boot setup used on soyo should be ported to all machines. Confidence: 0.70
 - Use ArchWiki as a reference for Linux configuration and usage; it is a reliable source of knowledge. Confidence: 0.80
 - When persisting user home directories via preservation module, use broad directory paths (e.g., `.config` for the entire directory) rather than specifying individual subpaths like `.config/gh`, `.config/git`. Confidence: 0.65
 - When fixing display/compositor issues (e.g., suspend/resume with NVIDIA + COSMIC), prefer wayland-native or wayland-idiomatic approaches (e.g., triggering udev `change` events) over killing the compositor or VT switching hacks. Confidence: 0.78
@@ -12,3 +13,4 @@
 - When disabling USB/Thunderbolt wake sources on a laptop, avoid blanket `xhci_hcd` wake disable rules — they prevent wake from any USB device (including keyboards). Instead, target specific PCIe root ports (Thunderbolt) and specific USB device IDs (dock Ethernet) using vendor/product ID matches. Confidence: 0.82
 - When deep S3 (suspend-to-RAM) is configured but the system never resumes from it (no `PM: Low-level resume` events), prefer solving the root cause (e.g., PCH wake routing, firmware ACPI issues) over switching to s2idle — preserve the `mem_sleep_default=deep` kernel parameter and do extensive research on S3 wake path fixes for the specific hardware platform rather than giving up on S3. Confidence: 0.65
 - If the user expresses indifference about USB wake (e.g., "I don't care about waking up from USB"), remove all USB/Thunderbolt related udev wake suppression rules entirely rather than trying to selectively disable wake for specific dock devices. Confidence: 0.70
+- When deploying to a flake host (e.g., `nixos-rebuild switch --flake .#zbook`), first verify whether the user is currently on that machine; if they are physically at the target host, perform a local deployment (no `--target-host` SSH flag) instead of a remote SSH deployment. Confidence: 0.65

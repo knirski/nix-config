@@ -9,6 +9,12 @@
         directory = "/etc/ssh";
         inInitrd = true;
       }
+      # sbctl stores the Secure Boot private keys here. If this directory is
+      # wiped with the ephemeral root, future Limine updates cannot be signed.
+      {
+        directory = "/var/lib/sbctl";
+        mode = "0700";
+      }
       "/var/lib/tailscale"
       "/var/log"
     ];

@@ -6,7 +6,10 @@
       "nvidia_drm.modeset=1"
     ];
     loader = {
-      limine.enable = true;
+      limine = {
+        enable = true;
+        secureBoot.enable = true;
+      };
       efi.canTouchEfiVariables = false;
     };
     initrd = {
