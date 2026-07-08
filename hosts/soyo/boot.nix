@@ -5,7 +5,9 @@
     loader = {
       limine = {
         enable = true;
-        secureBoot.enable = true;
+        # Temporarily disabled: sbctl keys were lost from /persist/var/lib/sbctl.
+        # Re-enable after recreating keys (see docs/recovery.md).
+        secureBoot.enable = false;
       };
       efi.canTouchEfiVariables = false;
     };
