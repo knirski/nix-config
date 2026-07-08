@@ -29,23 +29,5 @@
       HandleLidSwitchExternalPower = "lock";
       HandleLidSwitchDocked = "ignore";
     };
-
-    # udev rules to disable USB/Thunderbolt controller wake — prevents the
-    # laptop from immediately resuming after suspend when a USB-C dock
-    # (ethernet, monitor, receiver) is connected.
-    # Udev rules survive device re-enumeration and resume, unlike a one-shot
-    # systemd service that can race with powertop or hotplug events.
-    services.udev.extraRules = lib.mkAfter ''
-      # USB xHCI controllers (both internal USB and USB4 host)
-      ACTION=="add", SUBSYSTEM=="pci", DRIVER=="xhci_hcd", ATTR{power/wakeup}="disabled"
-      # USB4/Thunderbolt controllers
-      ACTION=="add", SUBSYSTEM=="pci", DRIVER=="thunderbolt", ATTR{power/wakeup}="disabled"
-      # PCIe root ports for Thunderbolt (TRP0, TRP2) and card reader (RP04)
-      # on this Intel Raptor Lake host — identified by device ID.
-      ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa76e", ATTR{power/wakeup}="disabled"
-      ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0xa72f", ATTR{power/wakeup}="disabled"
-      ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x51bb", ATTR{power/wakeup}="disabled"
-
-    '';
   };
 }
