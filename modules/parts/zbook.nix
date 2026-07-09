@@ -63,7 +63,7 @@
           system.stateVersion = "26.11";
 
           # Maintenance: enable for this host, set disk to zbook's NVMe
-          maintenance = {
+          lanAppliance.services.maintenance = {
             enable = true;
             smartdDevices = [
               "/dev/disk/by-id/nvme-XPG_GAMMIX_S70_BLADE_2N11292JQEJC"
@@ -71,7 +71,7 @@
           };
 
           # NVIDIA Optimus: Intel for desktop, NVIDIA on-demand for games
-          workstation.nvidiaConfig = {
+          lanAppliance.services.nvidia = {
             enable = true;
             prime = {
               intelBusId = "PCI:0:2:0";

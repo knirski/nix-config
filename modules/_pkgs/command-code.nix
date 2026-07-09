@@ -36,11 +36,11 @@
 
 buildNpmPackage rec {
   pname = "command-code";
-  version = "0.41.2";
+  version = "0.43.1";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/command-code/-/command-code-${version}.tgz";
-    hash = "sha512-HQnzmD0ZF91ImrK8TpIxz/xKVarzHc3CriKRL3mUOCvNeDIQJe3hJZQ5NA0I+v1Q8zZ/k4ooVrNT+bxexN+PUQ==";
+    hash = "sha512-Fb26TRkqTFGDbihqU8GvxRqWU16f9YtFlDExzh3a/8ikcd8p+g2vyAzuhu9K5Ncihe67H2eKevq5HYV/KA9DZw==";
   };
 
   dontNpmBuild = true;
@@ -50,7 +50,7 @@ buildNpmPackage rec {
     sed -i '/^  "devDependencies": {/,/^  }/d' package.json
   '';
 
-  npmDepsHash = "sha256-oG6c3Fl927C58fmGYL3ZcTeItAeO7NYnJGKhiFPluBQ=";
+  npmDepsHash = "sha256-foaJ+Ag6bVvzcTtBWdQZ9zUhTA5axTCG9x9a/OLc8Fg=";
 
   nativeBuildInputs = [
     makeWrapper

@@ -307,7 +307,7 @@ The original script read secrets via `$(cat /run/agenix/...)` inline. This leaks
 
 The `modules/nixos/observability.nix` file grew from ~400 lines to ~2357 as features accumulated (dashboards, Loki, Alloy, Tempo, boot traces, alert provisioning). Breaking it into smaller files meant choosing where to put them.
 
-**Fork: modules/ vs lib/.** Putting helpers under `modules/observability/` would let them live next to the module they serve. But `modules/default.nix` lists every `.nix` file under `modules/` as a flake-parts module — those helpers would be treated as independent aspects with their own `aspects.nixos.*` entries, which they aren't. Putting them under `lib/observability/` keeps them invisible to the module registry while still colocated by feature domain.
+**Fork: modules/ vs lib/.** Putting helpers under `modules/observability/` would let them live next to the module they serve. But `import-tree` auto-imports every `.nix` under `modules/` as a flake-parts module — those helpers would be treated as independent aspects with their own `aspects.nixos.*` entries, which they aren't. Putting them under `lib/observability/` keeps them invisible to the module importer while still colocated by feature domain.
 
 **Pattern:** `lib/observability/` holds plain Nix functions that return config fragments (dashboard JSON, systemd service definitions, Alloy River config). The main module imports them in its `let` block and splices them into the `mkMerge`:
 

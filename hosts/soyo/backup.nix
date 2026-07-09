@@ -1,6 +1,6 @@
 { config, ... }:
 {
-  services.backup = {
+  lanAppliance.services.backup = {
     enable = true;
     hostName = "soyo";
     enableTracing = true;

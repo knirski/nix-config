@@ -7,10 +7,10 @@
   aspects.nixos.ssh =
     { lib, config, ... }:
     let
-      cfg = config.services.sshLockdown;
+      cfg = config.lanAppliance.services.ssh;
     in
     {
-      options.services.sshLockdown = {
+      options.lanAppliance.services.ssh = {
         enable = lib.mkEnableOption "SSH server with key-only auth" // {
           default = true;
         };

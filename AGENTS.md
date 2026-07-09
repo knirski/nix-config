@@ -4,8 +4,8 @@ A multi-host NixOS flake.
 
 | Host | Role | Status |
 | ---- | ---- | ------ |
-| **Soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | M1/M2 complete, M3 pending |
-| **zbook** (HP ZBook Studio 16" G10) | Desktop/gaming workstation, 32 GB, NVIDIA RTX 4000 Ada | M4 in progress |
+| **Soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | M1/M2 complete, M3 complete (Secure Boot on), M4 deferred |
+| **zbook** (HP ZBook Studio 16" G10) | Desktop/gaming workstation, 32 GB, NVIDIA RTX 4000 Ada | M4 complete |
 
 **Read first:** [`docs/superpowers/specs/soyo-dns-dhcp-appliance.md`](docs/superpowers/specs/soyo-dns-dhcp-appliance.md)
 is the canonical design — decisions, hardware facts, the M1–M4 roadmap, and an
@@ -199,3 +199,9 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   Unifying/Bolt receiver, causing keyboard/mouse disconnects. Fixed by
   `usbcore.quirks` kernel parameter in `modules/nixos/laptop.nix`
   (`boot.kernelParams`). Requires a reboot after parameter change.
+- **NVIDIA GSP firmware crash (Xid 120) on s2idle resume.** The GSP RISC-V
+  firmware shipped across 570–610+ panics on the first s2idle resume,
+  permanently wedging `/proc/driver/nvidia/suspend` and blocking all future
+  suspend attempts with "Input/output error". Fixed by
+  `NVreg_EnableGpuFirmware=0` in `modules/nixos/nvidia.nix`. Requires a reboot
+  (the crashed module state is stuck until cold boot).

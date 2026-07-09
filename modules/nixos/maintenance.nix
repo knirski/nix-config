@@ -7,10 +7,10 @@
       ...
     }:
     let
-      cfg = config.maintenance;
+      cfg = config.lanAppliance.services.maintenance;
     in
     {
-      options.maintenance = {
+      options.lanAppliance.services.maintenance = {
         enable = lib.mkEnableOption "scheduled maintenance (gc, scrub, smartd, timesyncd, free-space alerts, ntfy OnFailure)";
         ntpServers = lib.mkOption {
           type = lib.types.listOf lib.types.str;

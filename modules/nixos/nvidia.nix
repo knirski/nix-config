@@ -6,10 +6,10 @@
       ...
     }:
     let
-      cfg = config.workstation.nvidiaConfig;
+      cfg = config.lanAppliance.services.nvidia;
     in
     {
-      options.workstation.nvidiaConfig = {
+      options.lanAppliance.services.nvidia = {
         enable = lib.mkEnableOption "NVIDIA GPU support with Optimus PRIME";
         prime = {
           intelBusId = lib.mkOption {
@@ -69,6 +69,15 @@
             enable32Bit = true;
           };
         };
+
+        # Disable NVIDIA's GSP (GPU System Processor) firmware. The proprietary
+        # RISC-V firmware blobs shipped across 570→610+ have a known bug where
+        # the GSP crashes (Xid 120) during s2idle resume, permanently wedging
+        # /proc/driver/nvidia/suspend and preventing any future suspend.
+        # The kernel module handles GPU init and power management fine without
+        # it — negligible perf impact on RTX 4000 Ada.
+        # Ref: https://wiki.archlinux.org/title/NVIDIA/Troubleshooting#Disable_the_GSP_firmware
+        boot.extraModprobeConfig = "options nvidia NVreg_EnableGpuFirmware=0";
 
         # systemd v256+ freezes cgroups before suspend by default. On NVIDIA
         # Optimus systems, the 60s user.slice freeze timeout races with

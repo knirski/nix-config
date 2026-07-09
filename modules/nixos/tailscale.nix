@@ -12,10 +12,10 @@
       ...
     }:
     let
-      cfg = config.services.tailscaleAutoconnect;
+      cfg = config.lanAppliance.services.tailscale;
     in
     {
-      options.services.tailscaleAutoconnect = {
+      options.lanAppliance.services.tailscale = {
         enable = lib.mkEnableOption "Tailscale mesh VPN with automatic auth-key connection";
 
         authKeyFile = lib.mkOption {

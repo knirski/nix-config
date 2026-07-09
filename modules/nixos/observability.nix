@@ -181,8 +181,8 @@
       inherit (builder) mkStaticLabelTarget;
 
       # Reusable fragments live under lib/observability/ (not modules/) because
-      # modules/default.nix lists every .nix under modules/ as flake-parts modules.
-      # lib/ is outside modules/ scope, so these are plain Nix functions
+      # import-tree auto-imports every .nix under modules/ as a flake-parts
+      # module. lib/ is outside modules/ scope, so these are plain Nix functions
       # called here and spliced into config via mkMerge.
       #
       # networkData is supplied by the host (hosts/soyo/network.nix) and carries

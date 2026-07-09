@@ -1,4 +1,8 @@
 # nixos
+- Use `vic/import-tree` to auto-import every `.nix` file under `modules/` as a flake-parts module, replacing the manual registry in `modules/default.nix`. Adding a new aspect module should require zero registry edits. Exclude callPackage files by prefixing their directory with `_` (import-tree skips `/_` paths by default). Confidence: 0.70
+- Use `lanAppliance.services.<name>` as the unified option namespace for all host-data-carrying aspect modules (ssh, tailscale, backup, maintenance, nvidia, blocky, dhcp, remoteUnlock, observability), not ad-hoc names like `services.sshLockdown`, `services.backup`, `maintenance`, or `workstation.nvidiaConfig`. Confidence: 0.70
+- Use a `justfile` as the task runner for common operations (lint, check, build, deploy, healthcheck, rekey, topology, test). Confidence: 0.70
+- Use Renovate with a weekly schedule for automated flake.lock input updates, replacing ad-hoc update-flake-lock GitHub Actions workflows. Confidence: 0.65
 - Enable Secure Boot (with Limine + shim chain, PCR 0+2+7 binding) on every host, not just the server — the same Secure Boot setup used on soyo should be ported to all machines. Confidence: 0.70
 - Use ArchWiki as a reference for Linux configuration and usage; it is a reliable source of knowledge. Confidence: 0.80
 - When persisting user home directories via preservation module, use broad directory paths (e.g., `.config` for the entire directory) rather than specifying individual subpaths like `.config/gh`, `.config/git`. Confidence: 0.65
@@ -26,6 +30,9 @@
 
 # nixos
 - When Home Manager deprecation warnings appear during evaluation (e.g., `programs.git.userEmail` → `programs.git.settings.user.email`), migrate to the new option paths to silence the warnings rather than leaving deprecated options in place. Confidence: 0.65
+
+# deployment
+- When a `github:owner/repo` flake URL returns a 404 error, check whether the repo is private — Nix's built-in GitHub fetcher cannot authenticate to private repos without extra configuration. Fall back to a local clone with SSH auth or configure `netrc`/access-token-based authentication for the fetcher. Confidence: 0.60
 
 # secrets
 - When configuring identity keys for secret management, use native SSH keys directly rather than converting them to age pubkeys via ssh-to-age; agenix supports encryption with SSH keys natively. Confidence: 0.80

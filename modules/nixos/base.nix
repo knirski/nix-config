@@ -19,7 +19,7 @@
       # Make command-code available everywhere (used in home.base).
       nixpkgs.overlays = [
         (final: _: {
-          command-code = final.callPackage ../../modules/pkgs/command-code.nix { };
+          command-code = final.callPackage ../../modules/_pkgs/command-code.nix { };
         })
       ];
 

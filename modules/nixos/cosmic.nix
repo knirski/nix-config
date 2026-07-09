@@ -28,7 +28,7 @@
       # This must be ExecStartPre on nvidia-suspend.service, not
       # powerDownCommands (sleep-actions ExecStart), because they run
       # in parallel and nvidia-sleep.sh's chvt 63 races ahead of SIGSTOP.
-      systemd.services.nvidia-suspend = lib.mkIf config.workstation.nvidiaConfig.enable {
+      systemd.services.nvidia-suspend = lib.mkIf config.lanAppliance.services.nvidia.enable {
         serviceConfig.ExecStartPre = [
           ""
           (pkgs.writeShellScript "freeze-cosmic-comp" ''
@@ -44,7 +44,7 @@
       # Unfreeze cosmic-comp and re-probe displays after resume.
       # The udev trigger runs after SIGCONT so cosmic-comp is awake
       # to process the hotplug uevents.
-      systemd.services.nvidia-resume = lib.mkIf config.workstation.nvidiaConfig.enable {
+      systemd.services.nvidia-resume = lib.mkIf config.lanAppliance.services.nvidia.enable {
         serviceConfig.ExecStartPost = [
           ""
           (pkgs.writeShellScript "resume-cosmic-comp" ''

@@ -311,7 +311,7 @@ agenix, not sops-nix.
 
 ### Secret Model
 
-- `secrets/secrets.nix` maps secrets to recipients
+- `agenix-rekey` `rekeyFile` flow (see [docs/secrets.md](../secrets.md)); per-host recipient mapping is implicit in each host assembler's `age.rekey` block (no separate `secrets/secrets.nix`)
 - encrypted password hashes: `secrets/root-password.age`, `secrets/krzysiek-password.age`
 - recipients: the operator key (management machine) and the Soyo host key (after install)
 

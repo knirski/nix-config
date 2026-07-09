@@ -13,11 +13,11 @@
       ...
     }:
     let
-      cfg = config.services.backup;
+      cfg = config.lanAppliance.services.backup;
       hostName = if cfg.hostName != null then cfg.hostName else config.networking.hostName;
     in
     {
-      options.services.backup = {
+      options.lanAppliance.services.backup = {
         enable = lib.mkEnableOption "restic off-host backups + btrbk local snapshots";
 
         hostName = lib.mkOption {

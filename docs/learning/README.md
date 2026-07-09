@@ -11,7 +11,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 3 | [Flakes](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-flake) (Nix manual) | — | What a flake is, inputs/outputs |
 | 4 | [flake-parts](https://flake.parts) | M1 | Modular flake outputs, perSystem |
 | 5 | [Design doc](../superpowers/specs/soyo-dns-dhcp-appliance.md) | All | Every architectural decision and why |
-| 6 | `flake.nix` → `modules/default.nix` | M1 | The entry point — thin, delegates to flake-parts; `modules/default.nix` explicitly lists every module |
+| 6 | `flake.nix` | M1 | The entry point — thin, delegates to flake-parts; `vic/import-tree` auto-imports every module under `modules/` |
 | 7 | `modules/parts/soyo.nix` | M1 | How a host is assembled by toggling aspects |
 | 8 | `modules/nixos/base.nix` → `server.nix` → `users.nix` | M1 | The role-neutral base, server-only defaults, user policy |
 | 9 | `modules/nixos/persistence.nix`, `hosts/soyo/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + the concrete persisted-path inventory, including why boot signing state like `/var/lib/sbctl` belongs in it |
@@ -26,7 +26,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, pre-commit hooks (treefmt, deadnix, statix, typos, end-of-file-fixer, check-merge-conflicts, actionlint, shellcheck, markdownlint, ruff), CI pipeline |
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
 | 20 | [CI design doc](../superpowers/specs/2026-07-05-ci-pipeline-design.md), [CI plan](../superpowers/plans/2026-07-05-ci-pipeline-plan.md), `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline (lint: deadnix + statix + typos + gitleaks + actionlint + shellcheck + markdownlint + ruff → eval: `nix flake check` → build + closure diff → topology artifact), Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
-| 21 | `modules/nixos/laptop.nix`, `modules/nixos/workstation.nix` | M4 | Laptop power management (tlp, battery thresholds) and workstation defaults (docker, ssh agent) |
+| 21 | `modules/nixos/laptop.nix`, `modules/nixos/workstation.nix` | M4 | Laptop power management (power-profiles-daemon, thermald, battery thresholds) and workstation defaults (docker, ssh agent) |
 | 22 | `modules/nixos/desktop.nix`, `modules/home/desktop.nix` | M4 | COSMIC desktop environment session, NixOS display-manager + HM user-config |
 | 23 | `modules/nixos/nvidia.nix` | M4 | NVIDIA proprietary driver (RTX 4000 Ada), prime sync, offload modes |
 | 24 | `modules/nixos/gaming.nix` | M4 | Steam, gamemode, MangoHud, game-specific tweaks |
@@ -95,7 +95,7 @@ modules = (with config.aspects.nixos; [
 ]) ++ [ ... host data files ... ]
 ```
 
-Each name in that list is an aspect contributed by a file under `modules/nixos/`. `modules/default.nix` lists every file explicitly. To add a new aspect, create a file under `modules/nixos/` that sets `aspects.nixos.<name>`, add it to `modules/default.nix`, then toggle it in the host assembler.
+Each name in that list is an aspect contributed by a file under `modules/nixos/`. Because `vic/import-tree` auto-imports every `.nix` under `modules/`, adding a new aspect needs no registry edit — just create a file under `modules/nixos/` that sets `aspects.nixos.<name>` and toggle it in the host assembler.
 
 ## M4 learnings: NVIDIA and laptop suspend fixes
 

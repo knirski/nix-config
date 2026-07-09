@@ -1,0 +1,41 @@
+# Renovate configuration for automated flake input updates.
+# Replaces the ad-hoc update-flake-lock workflow: Renovate updates
+# flake.lock inputs on a schedule and opens versioned PRs.
+#
+# Renovate is the de-facto standard for keeping Nix flake inputs current
+# (used by fbosch/nixos and many dendritic configs). It understands
+# flake.lock natively via the `flakebot` ecosystem and groups updates
+# sensibly (e.g. one PR per input, pinned by the flake input name).
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "packageRules": [
+    {
+      "description": "Group all flake-input updates into a single weekly PR.",
+      "matchManagers": [
+        "flake"
+      ],
+      "addLabels": [
+        "flake-inputs"
+      ],
+      "groupName": "flake inputs",
+      "schedule": [
+        "before 6am on monday"
+      ]
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 6am on monday"
+    ]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true
+  }
+}

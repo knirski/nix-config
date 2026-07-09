@@ -1,6 +1,6 @@
 { config, ... }:
 {
-  services.backup = {
+  lanAppliance.services.backup = {
     enable = true;
     # No explicit hostName — defaults to config.networking.hostName = "zbook"
 

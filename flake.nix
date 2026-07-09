@@ -6,6 +6,7 @@
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     flake-parts.url = "github:hercules-ci/flake-parts";
+    import-tree.url = "github:vic/import-tree";
     nixos-facter-modules.url = "github:nix-community/nixos-facter-modules";
 
     disko.url = "github:nix-community/disko";
@@ -37,10 +38,13 @@
     deploy-rs.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  # The whole flake is built by importing `modules/default.nix`, which lists
-  # every module file explicitly (the dendritic pattern).
+  # The whole flake is built by auto-importing every flake-parts module
+  # under ./modules via import-tree (the dendritic pattern). Adding a new
+  # aspect no longer requires editing a registry — every .nix file is a
+  # top-level flake-parts module automatically. Paths containing /_ are
+  # skipped by default, so modules/_pkgs/ (callPackage file) is excluded.
   # `deploy-rs` is now integrated (M4).
   outputs =
     inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } { imports = [ ./modules ]; };
+    flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 }
