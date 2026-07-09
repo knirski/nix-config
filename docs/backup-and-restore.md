@@ -96,6 +96,7 @@ The `ssh-key` file and host key fingerprint are persisted under `/persist/etc/re
 ### List restic snapshots
 
 The password file at runtime depends on the host:
+
 - **Soyo**: `config.age.secrets.restic-password.path` → `/run/agenix/restic-password`
 - **zbook**: `config.age.secrets.zbook-restic-password.path` → `/run/agenix/zbook-restic-password`
 
@@ -123,6 +124,7 @@ sudo restic -r <repo> -p /run/agenix/<password-file> check
 ```sh
 sudo restic -r <repo> -p /run/agenix/<password-file> forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
 ```
+
 Soyo also keeps yearly snapshots: add `--keep-yearly 2`.
 
 ## Restore drill (do this periodically)

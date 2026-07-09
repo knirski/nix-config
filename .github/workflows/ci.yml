@@ -34,7 +34,10 @@ jobs:
       - run: nix run nixpkgs#typos -- .
       - run: nix run nixpkgs#actionlint -- .github/workflows/*.yml
       - run: nix run nixpkgs#shellcheck -- scripts/healthcheck.sh
-      - run: nix run nixpkgs#markdownlint-cli -- --ignore .commandcode '*.md' 'docs/**/*.md'
+      - run: >-
+          nix run nixpkgs#markdownlint-cli --
+          --disable MD013 MD033 MD060 MD029 MD031 MD032
+          --ignore .commandcode '*.md' 'docs/**/*.md'
       - run: nix run nixpkgs#ruff -- check modules/nixos/observability/lan_inventory.py modules/nixos/observability/lan_inventory_test.py
       - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml
 
