@@ -15,10 +15,10 @@ This is also a **learning project**: the code and its docs intentionally teach m
 
 ## Hosts
 
-| Host     | Hardware                                                                                | Role                                                                                                                      | State            |
-|----------|-----------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|------------------|
-| **Soyo** | Intel N150, 16 GB, 512 GB NVMe, Gigabit NIC                                            | LAN DNS (Blocky) + DHCP (dnsmasq), on-box observability (Grafana/Prometheus/Loki/Tempo/Alloy), TPM auto-unlock            | M1/M2/M3 complete |
-| **zbook**| HP ZBook Studio 16" G10, 32 GB, NVIDIA RTX 4000 Ada, 1 TB NVMe                        | COSMIC desktop, Steam/Gamescope gaming, NVIDIA Optimus PRIME offload, TPM auto-unlock                                    | M4 complete      |
+| Host     | Hardware                                                                                | Role                     |
+|----------|-----------------------------------------------------------------------------------------|--------------------------|
+| **Soyo** | Intel N150, 16 GB, 512 GB NVMe, Gigabit NIC                                            | LAN DNS + DHCP appliance |
+| **zbook**| HP ZBook Studio 16" G10, 32 GB, NVIDIA RTX 4000 Ada, 2 TB NVMe                        | COSMIC workstation       |
 
 ## Architecture — the dendritic pattern
 

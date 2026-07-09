@@ -79,6 +79,7 @@
         git
         htop
         jq
+        just
         nix-index # nix-locate: find which package provides a missing command
         nix-output-monitor # nom: real-time nixos-rebuild progress with ETA
         sbctl

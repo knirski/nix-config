@@ -174,6 +174,7 @@
           pkgs.deadnix
           pkgs.gh
           pkgs.git
+          pkgs.just
           pkgs.nh
           pkgs.nixos-anywhere
           pkgs.nixos-facter
