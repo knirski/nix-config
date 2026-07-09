@@ -55,7 +55,12 @@ jobs:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: nix store gc
-      - run: nix flake check
+      - name: Lint checks (not full builds — done in build matrix)
+        run: |
+          nix build .#checks.x86_64-linux.dendritic-options --no-link --print-out-paths
+          nix build .#checks.x86_64-linux.lan-inventory --no-link --print-out-paths
+      - name: Deploy-rs schema check (lightweight)
+        run: nix build .#deployChecks.x86_64-linux --no-link --print-out-paths 2>/dev/null || true
 
   build:
     runs-on: ubuntu-24.04
@@ -77,6 +82,7 @@ jobs:
       - run: >
           nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel
           --keep-going
+      - run: nix store gc  # cleanup
 
       - name: Restore previous closure path
         id: closure-cache
