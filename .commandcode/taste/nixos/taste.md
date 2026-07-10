@@ -38,6 +38,9 @@
 # deployment
 - Use `deploy-rs` as the sole deployment tool for NixOS hosts; remove all old deployment scripts and references. Native `nixos-rebuild switch --flake .#hostname` should only be used as a one-time fallback if deploy-rs is unavailable. Confidence: 0.82
 
+# nixos
+- On zbook (nixpkgs-unstable), set Home Manager `stateVersion` to `26.11` to match the host's nixpkgs channel, even though HM's valid stateVersions only officially go up to `26.05` — the user wants it to track the nixpkgs unstable version. Confidence: 0.65
+
 # hyprland
 - When checking Hyprland logs for errors after a config change, do not filter with a restrictive grep — instead read from the end of the log (e.g., `tail -50`) to catch all recent output, since errors may not match keywords like "error" or "lua". The user wants the full recent output, not a filtered subset. Confidence: 0.75
 
@@ -56,6 +59,8 @@
 - When creating SSH keys for a specific host, use a comment matching the hostname (e.g., `krzysiek@soyo` for the soyo host), not a different host (e.g., not `krzysiek@workstation`). Confidence: 0.80
 
 # sway/dms
+- When configuring Sway via Home Manager, prefer `config = null` + `extraConfig` to inherit Sway's built-in default keybinds rather than re-declaring all standard binds in the `config` attrset. Only DMS IPC binds, media keys, and bar disabling need explicit overrides. Confidence: 0.75
+
 - In DMS configuration (both settings and plugins), prefer minimal config that only overrides what's truly necessary; rely on DMS defaults for everything else. The user wants idiomatic, minimal DMS config, not a verbose full-spec config. Confidence: 0.60
 - For this project, use Sway as the sole Wayland compositor (removed Niri). The user switched from Niri+Noctalia to Sway+DankMaterialShell (DMS). Confidence: 0.85
 - Use DankMaterialShell (DMS) to replace the entire desktop shell stack: bar, app launcher, notifications, OSD, lock screen, wallpaper, night light, clipboard, emoji picker, network/BT/audio tray widgets, polkit agent. DMS replaces the prior Noctalia setup. Confidence: 0.80
