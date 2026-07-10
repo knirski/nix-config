@@ -276,29 +276,17 @@
 
         hyprsunset = {
           enable = true;
-          extraArgs = [
-            "--temperature"
-            "5500"
-          ];
-          transitions = {
-            sunrise = {
-              calendar = "*-*-* 06:00:00";
-              requests = [
-                [
-                  "temperature"
-                  "6500"
-                ]
-              ];
-            };
-            sunset = {
-              calendar = "*-*-* 19:00:00";
-              requests = [
-                [
-                  "temperature"
-                  "3500"
-                ]
-              ];
-            };
+          settings = {
+            profile = [
+              {
+                time = "06:00";
+                temperature = 6500;
+              }
+              {
+                time = "19:00";
+                temperature = 3500;
+              }
+            ];
           };
         };
 
@@ -329,7 +317,7 @@
 
       qt = {
         enable = true;
-        platformTheme = "gtk3";
+        platformTheme.name = "gtk3";
         style = {
           name = "kvantum";
           package = pkgs.catppuccin-kvantum;

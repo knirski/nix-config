@@ -46,7 +46,7 @@
 
       # Qt theming needs these to find Qt plugins
       qt = {
-        platformTheme = "qtct";
+        platformTheme.name = "qtct";
         style = "adwaita";
       };
     };
