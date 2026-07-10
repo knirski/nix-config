@@ -39,7 +39,7 @@ jobs:
           --disable MD013 MD033 MD060 MD029 MD031 MD032
           --ignore .commandcode '*.md' 'docs/**/*.md'
       - run: nix run nixpkgs#ruff -- check modules/nixos/observability/lan_inventory.py modules/nixos/observability/lan_inventory_test.py
-      - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml
+      - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose
 
   eval:
     runs-on: ubuntu-24.04

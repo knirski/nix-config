@@ -67,6 +67,24 @@
             excludes = [ "\.commandcode" ];
           };
           ruff.enable = true;
+          gitleaks = {
+            enable = true;
+            # git-hooks.nix has no built-in gitleaks hook in this revision, so
+            # define it manually. We use `protect --staged` which is the
+            # canonical pre-commit method: it inspects only the staged diff
+            # (what would be committed), not the entire working tree.
+            #
+            # We intentionally do NOT pass --config: gitleaks 8.30.1 does not
+            # honor `useDefault`/`extendDefault` in a custom config, so any
+            # custom .gitleaks.toml silently disables ALL built-in rules.
+            # The built-in rule set scans this repo cleanly; false positives
+            # can be suppressed via .gitleaksignore.
+            package = pkgs.gitleaks;
+            entry = "${pkgs.gitleaks}/bin/gitleaks protect --no-banner --staged";
+            # gitleaks runs its own git diff to find staged content; don't let
+            # pre-commit append file names which it would treat as arguments.
+            pass_filenames = false;
+          };
         };
       };
       treefmt.config = {

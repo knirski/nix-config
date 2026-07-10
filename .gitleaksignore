@@ -1,0 +1,4 @@
+# Documented curl examples that match the `curl-auth-user` heuristic but are
+# not actual credentials (they reference runtime paths and metrics endpoints).
+docs/superpowers/plans/2026-07-04-lan-observability.md:curl-auth-user:859
+docs/superpowers/plans/2026-07-04-lan-observability.md:curl-auth-user:881

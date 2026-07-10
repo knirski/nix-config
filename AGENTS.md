@@ -151,7 +151,9 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   actionlint (GitHub Actions), shellcheck (shell scripts), markdownlint (docs),
   ruff (Python).
   Before committing: `nix flake check` and also run `gitleaks` locally
-  (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose --config .gitleaks.toml`).
+  (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose`).
+  A `gitleaks` pre-commit hook (git-hooks.nix, default rule set) also blocks
+  plaintext secrets on every commit.
 - Everyday deploy: `nix develop '.#' -c deploy .#soyo` (Soyo) or `deploy .#zbook` (zbook; or `nixos-rebuild switch --flake .#zbook --target-host krzysiek@zbook --sudo` as fallback).
 - After deploy or after changes that touch boot, unlock, networking, or
   services, run the automated healthcheck:
