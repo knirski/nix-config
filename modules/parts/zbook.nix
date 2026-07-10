@@ -10,7 +10,7 @@
         ssh
         tailscale
         desktop
-        cosmic
+        hyprland
         nvidia
         laptop
         gaming
@@ -21,17 +21,6 @@
         backup
       ])
       ++ [
-        # Overlay cosmic-ext packages from stable (not available in nixpkgs-unstable).
-        # Required by the `cosmic` aspect.
-        {
-          nixpkgs.overlays = [
-            (_final: _prev: {
-              cosmic-ext-applet-external-monitor-brightness =
-                inputs.nixpkgs.legacyPackages.x86_64-linux.cosmic-ext-applet-external-monitor-brightness;
-              cosmic-ext-tweaks = inputs.nixpkgs.legacyPackages.x86_64-linux.cosmic-ext-tweaks;
-            })
-          ];
-        }
         inputs.disko.nixosModules.disko
         inputs.agenix.nixosModules.default
         inputs.agenix-rekey.nixosModules.default
@@ -43,6 +32,7 @@
             users.krzysiek.imports = [
               config.aspects.homeManager.base
               config.aspects.homeManager.desktop
+              config.aspects.homeManager.hyprland
             ];
             users.krzysiek.home.enableNixpkgsReleaseCheck = false;
           };

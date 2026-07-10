@@ -39,6 +39,8 @@
         ".config"
         ".commandcode"
         ".codex"
+        ".local/share/hyprland"
+        ".local/state/wireplumber"
         "tmp"
         "github"
         "Downloads"
