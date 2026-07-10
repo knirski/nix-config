@@ -13,6 +13,7 @@
           tmux
           gh
           command-code
+          codex
         ];
       };
 

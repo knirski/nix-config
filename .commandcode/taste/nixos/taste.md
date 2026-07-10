@@ -1,4 +1,5 @@
 # nixos
+- Persist AI coding agent state directories (`.commandcode`, `.codex`, etc.) only on workstation hosts (e.g., zbook), not on server hosts (e.g., soyo); agent state is workstation-specific and unnecessary on headless server machines. Confidence: 0.65
 - Use `vic/import-tree` to auto-import every `.nix` file under `modules/` as a flake-parts module, replacing the manual registry in `modules/default.nix`. Adding a new aspect module should require zero registry edits. Exclude callPackage files by prefixing their directory with `_` (import-tree skips `/_` paths by default). Confidence: 0.70
 - Use `lanAppliance.services.<name>` as the unified option namespace for all host-data-carrying aspect modules (ssh, tailscale, backup, maintenance, nvidia, blocky, dhcp, remoteUnlock, observability), not ad-hoc names like `services.sshLockdown`, `services.backup`, `maintenance`, or `workstation.nvidiaConfig`. Confidence: 0.70
 - Use a `justfile` as the task runner for common operations (lint, check, build, deploy, healthcheck, rekey, topology, test). Confidence: 0.70

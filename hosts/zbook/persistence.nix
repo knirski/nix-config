@@ -38,6 +38,7 @@
         ".local/share/applications"
         ".config"
         ".commandcode"
+        ".codex"
         "tmp"
         "github"
         "Downloads"
