@@ -37,9 +37,26 @@
     deploy-rs.url = "github:serokell/deploy-rs";
     deploy-rs.inputs.nixpkgs.follows = "nixpkgs";
 
-    noctalia.url = "github:noctalia-dev/noctalia";
-    nirimod.url = "github:srinivasr/nirimod";
-    niri-flake.url = "github:sodiboo/niri-flake";
+    dms = {
+      url = "github:AvengeMedia/DankMaterialShell";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+    dgop = {
+      url = "github:AvengeMedia/dgop";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+    dsearch = {
+      url = "github:AvengeMedia/danksearch";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+    dcal = {
+      url = "github:AvengeMedia/dankcalendar";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+    dms-plugins = {
+      url = "github:AvengeMedia/dms-plugin-registry";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   # The whole flake is built by auto-importing every flake-parts module

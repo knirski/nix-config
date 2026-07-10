@@ -21,7 +21,7 @@
       pkgs' = import inputs.nixpkgs {
         inherit system;
         config.allowUnfree = true;
-        overlays = [ inputs.nirimod.overlays.default ];
+        overlays = [ ];
       };
     in
     {

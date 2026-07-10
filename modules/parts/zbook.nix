@@ -10,7 +10,7 @@
         ssh
         tailscale
         desktop
-        niri
+        sway
         nvidia
         laptop
         gaming
@@ -24,6 +24,8 @@
         inputs.disko.nixosModules.disko
         inputs.agenix.nixosModules.default
         inputs.agenix-rekey.nixosModules.default
+        inputs.dms.nixosModules.dank-material-shell
+        inputs.dms.nixosModules.greeter
         inputs.home-manager.nixosModules.home-manager
         {
           home-manager = {
@@ -32,10 +34,10 @@
             users.krzysiek.imports = [
               config.aspects.homeManager.base
               config.aspects.homeManager.desktop
-              config.aspects.homeManager.niri
               config.aspects.homeManager.sway
-              inputs.noctalia.homeModules.default
-              inputs.niri-flake.homeModules.niri
+              inputs.dms.homeModules.dank-material-shell
+              inputs.dsearch.homeModules.default
+              inputs.dms-plugins.homeModules.dms-plugin-registry
             ];
             users.krzysiek.home.enableNixpkgsReleaseCheck = false;
           };
@@ -54,7 +56,11 @@
           networking.hostName = "zbook";
           nixpkgs.hostPlatform = "x86_64-linux";
           system.stateVersion = "26.11";
-          nixpkgs.overlays = [ inputs.nirimod.overlays.default ];
+          nixpkgs.overlays = [
+            (_: prev: {
+              dgop = inputs.dgop.packages.${prev.system}.default;
+            })
+          ];
 
           # Maintenance: enable for this host, set disk to zbook's NVMe
           lanAppliance.services.maintenance = {

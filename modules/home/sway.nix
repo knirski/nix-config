@@ -1,20 +1,16 @@
 {
-  aspects.homeManager.sway = _: {
+  aspects.homeManager.sway = { pkgs, ... }: {
+    # ── Sway Window Manager ────────────────────────────────────────
     wayland.windowManager.sway = {
       enable = true;
       xwayland = true;
       config = rec {
         modifier = "Mod4";
         terminal = "kitty";
-        startup = [
-          { command = "nm-applet --indicator"; }
-          { command = "blueman-applet"; }
-          { command = "wl-paste --watch cliphist store"; }
-        ];
+        startup = [ ];
         keybindings = {
           "${modifier}+Return" = "exec ${terminal}";
           "${modifier}+Q" = "kill";
-          "${modifier}+d" = "exec fuzzel";
           "${modifier}+h" = "focus left";
           "${modifier}+j" = "focus down";
           "${modifier}+k" = "focus up";
@@ -45,8 +41,65 @@
           "${modifier}+space" = "focus mode_toggle";
           "${modifier}+Shift+minus" = "move scratchpad";
           "${modifier}+minus" = "scratchpad show";
+          # ── DMS keybinds ─────────────────────────────────────
+          "${modifier}+d" = "exec dms ipc call spotlight toggle";
+          "${modifier}+Shift+d" = "exec dms ipc call lock lock";
+          "${modifier}+x" = "exec dms ipc call powermenu toggle";
+          "${modifier}+n" = "exec dms ipc call notifications toggle";
+          "${modifier}+v" = "exec dms ipc call clipboard toggle";
+          "${modifier}+comma" = "exec dms ipc call settings toggle";
+          # ── Media keys ──────────────────────────────────────────
+          "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
+          "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
+          "XF86AudioMute" = "exec dms ipc call audio mute";
+          "XF86AudioMicMute" = "exec dms ipc call audio micmute";
+          "XF86MonBrightnessUp" = "exec dms ipc call brightness increment 5";
+          "XF86MonBrightnessDown" = "exec dms ipc call brightness decrement 5";
         };
       };
     };
+
+    # ── Kitty terminal ─────────────────────────────────────────────
+    programs.kitty = {
+      enable = true;
+      settings = {
+        font_family = "JetBrainsMono Nerd Font";
+        font_size = 13.0;
+        background_opacity = "0.95";
+        confirm_os_window_close = 0;
+        shell = "/run/current-system/sw/bin/bash";
+      };
+    };
+
+    # ── DMS: bar, launcher, notifications, OSD, lock, wallpaper, night light ──
+    programs.dank-material-shell = {
+      enable = true;
+      systemd.enable = true;
+      enableSystemMonitoring = true; # uses dgop
+      enableVPN = false;
+      enableDynamicTheming = true;
+      enableAudioWavelength = true;
+      enableCalendarEvents = false; # we use dcal instead
+
+      settings = {
+        # TODO: configure DMS settings per preference
+        # See: https://danklinux.com/docs/dankmaterialshell/settings
+      };
+    };
+
+    # ── Dark theme via dconf ───────────────────────────────────────
+    dconf.settings = {
+      "org/gnome/desktop/interface" = {
+        color-scheme = "prefer-dark";
+      };
+    };
+
+    # ── Packages ───────────────────────────────────────────────────
+    home.packages = with pkgs; [
+      kitty
+      # DMS replaces: wofi, cliphist, wl-clipboard, emote, libnotify,
+      # playerctl, brightnessctl, networkmanagerapplet, pavucontrol,
+      # grimblast (niri had built-in screenshots), wf-recorder/toggle-recording
+    ];
   };
 }
