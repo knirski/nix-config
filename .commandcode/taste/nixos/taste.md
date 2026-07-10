@@ -56,6 +56,7 @@
 - When creating SSH keys for a specific host, use a comment matching the hostname (e.g., `krzysiek@soyo` for the soyo host), not a different host (e.g., not `krzysiek@workstation`). Confidence: 0.80
 
 # sway/dms
+- In DMS configuration (both settings and plugins), prefer minimal config that only overrides what's truly necessary; rely on DMS defaults for everything else. The user wants idiomatic, minimal DMS config, not a verbose full-spec config. Confidence: 0.60
 - For this project, use Sway as the sole Wayland compositor (removed Niri). The user switched from Niri+Noctalia to Sway+DankMaterialShell (DMS). Confidence: 0.85
 - Use DankMaterialShell (DMS) to replace the entire desktop shell stack: bar, app launcher, notifications, OSD, lock screen, wallpaper, night light, clipboard, emoji picker, network/BT/audio tray widgets, polkit agent. DMS replaces the prior Noctalia setup. Confidence: 0.80
 - Use DMS greetd-based greeter (`nixosModules.greeter`) instead of Ly as the display manager. Confidence: 0.65

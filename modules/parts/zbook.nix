@@ -36,6 +36,7 @@
               config.aspects.homeManager.desktop
               config.aspects.homeManager.sway
               inputs.dms.homeModules.dank-material-shell
+              inputs.dcal.homeModules.dank-calendar
               inputs.dsearch.homeModules.default
               inputs.dms-plugins.homeModules.dms-plugin-registry
             ];

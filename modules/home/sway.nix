@@ -1,6 +1,5 @@
 {
-  aspects.homeManager.sway = { pkgs, ... }: {
-    # ── Sway Window Manager ────────────────────────────────────────
+  aspects.homeManager.sway = _: {
     wayland.windowManager.sway = {
       enable = true;
       xwayland = true;
@@ -41,14 +40,11 @@
           "${modifier}+space" = "focus mode_toggle";
           "${modifier}+Shift+minus" = "move scratchpad";
           "${modifier}+minus" = "scratchpad show";
-          # ── DMS keybinds ─────────────────────────────────────
           "${modifier}+d" = "exec dms ipc call spotlight toggle";
           "${modifier}+Shift+d" = "exec dms ipc call lock lock";
           "${modifier}+x" = "exec dms ipc call powermenu toggle";
           "${modifier}+n" = "exec dms ipc call notifications toggle";
           "${modifier}+v" = "exec dms ipc call clipboard toggle";
-          "${modifier}+comma" = "exec dms ipc call settings toggle";
-          # ── Media keys ──────────────────────────────────────────
           "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
           "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
           "XF86AudioMute" = "exec dms ipc call audio mute";
@@ -59,47 +55,46 @@
       };
     };
 
-    # ── Kitty terminal ─────────────────────────────────────────────
-    programs.kitty = {
-      enable = true;
-      settings = {
-        font_family = "JetBrainsMono Nerd Font";
-        font_size = 13.0;
-        background_opacity = "0.95";
-        confirm_os_window_close = 0;
-        shell = "/run/current-system/sw/bin/bash";
+    programs = {
+      kitty = {
+        enable = true;
+        settings = {
+          font_family = "JetBrainsMono Nerd Font";
+          font_size = 13.0;
+          background_opacity = "0.95";
+          confirm_os_window_close = 0;
+          shell = "/run/current-system/sw/bin/bash";
+        };
+      };
+
+      dank-material-shell = {
+        enable = true;
+        systemd.enable = true;
+        # Must-haves: dgop for system monitoring, matugen for theming
+        enableSystemMonitoring = true;
+        enableDynamicTheming = true;
+        # Replace unwanted defaults
+        enableVPN = false;
+        enableCalendarEvents = false; # use dcal
+        # User preferences over DMS defaults
+        settings = {
+          color.predefinedScheme = "catppuccin-mocha";
+          bar.position = "bottom";
+        };
+        plugins = {
+          dankActions.enable = true;
+          dankBatteryAlerts.enable = true;
+          calculator.enable = true;
+          emojiLauncher.enable = true;
+        };
+      };
+
+      dank-calendar = {
+        enable = true;
+        systemd.enable = true;
       };
     };
 
-    # ── DMS: bar, launcher, notifications, OSD, lock, wallpaper, night light ──
-    programs.dank-material-shell = {
-      enable = true;
-      systemd.enable = true;
-      enableSystemMonitoring = true; # uses dgop
-      enableVPN = false;
-      enableDynamicTheming = true;
-      enableAudioWavelength = true;
-      enableCalendarEvents = false; # we use dcal instead
-
-      settings = {
-        # TODO: configure DMS settings per preference
-        # See: https://danklinux.com/docs/dankmaterialshell/settings
-      };
-    };
-
-    # ── Dark theme via dconf ───────────────────────────────────────
-    dconf.settings = {
-      "org/gnome/desktop/interface" = {
-        color-scheme = "prefer-dark";
-      };
-    };
-
-    # ── Packages ───────────────────────────────────────────────────
-    home.packages = with pkgs; [
-      kitty
-      # DMS replaces: wofi, cliphist, wl-clipboard, emote, libnotify,
-      # playerctl, brightnessctl, networkmanagerapplet, pavucontrol,
-      # grimblast (niri had built-in screenshots), wf-recorder/toggle-recording
-    ];
+    dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
   };
 }
