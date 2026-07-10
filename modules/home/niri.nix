@@ -16,15 +16,10 @@
     in
     {
       # ── Niri compositor KDL config ─────────────────────────────────
-      # Based on the official default-config.kdl from upstream.
-      # https://github.com/YaLTeR/niri/blob/main/resources/default-config.kdl
       xdg.configFile."niri/config.kdl".text = ''
-        // ── Input ────────────────────────────────────────────────────
         input {
             keyboard {
-                xkb {
-                    layout "us"
-                }
+                xkb { layout "us"; }
                 repeat-delay 600
                 repeat-rate 25
             }
@@ -38,57 +33,37 @@
             focus-follows-mouse
         }
 
-        // ── Layout ────────────────────────────────────────────────────
         layout {
             gaps 12
-
-            focus-ring {
-                width 3
-                active-color "#cba6f7"
-            }
-
-            border {
-                off
-            }
-
-            default-column-width {
-                proportion 0.5
-            }
+            focus-ring { width 3; active-color "#cba6f7"; }
+            border { off; }
+            default-column-width { proportion 0.5; }
             center-focused-column "always"
-
-            // Dark backdrop (Catppuccin mocha base)
             background-color "#1e1e2e"
         }
 
-        // ── Cursor ───────────────────────────────────────────────────
         cursor {
             xcursor-theme "catppuccin-mocha-mauve-cursors"
             xcursor-size 24
             hide-when-typing
         }
 
-        // ── Screenshots ──────────────────────────────────────────────
         screenshot-path "~/Pictures/Screenshots/%Y-%m-%d %H-%M-%S.png"
-
-        // Prefer server-side decorations (eliminates double borders)
         prefer-no-csd
 
-        // ── Environment ──────────────────────────────────────────────
         environment {
             QT_QPA_PLATFORM "wayland;xcb"
             QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
         }
 
-        // ── Binds (niri standard layout, see niri --help for full list) ──
+        // ── Binds ────────────────────────────────────────────────────
+        // Audio, brightness, notification, session keys handled by Noctalia.
         binds {
-            Mod+Return hotkey-overlay-title="Open a Terminal: kitty" { spawn "kitty"; }
-            Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
-            Mod+Escape { spawn "swaylock"; }
+            Mod+Return { spawn "kitty"; }
             Mod+Q { close-window; }
             Mod+Space { toggle-window-floating; }
             Mod+Shift+V { switch-focus-between-floating-and-tiling; }
 
-            // Focus
             Mod+H { focus-column-left; }
             Mod+J { focus-window-down; }
             Mod+K { focus-window-up; }
@@ -96,7 +71,6 @@
             Mod+Home { focus-column-first; }
             Mod+End  { focus-column-last; }
 
-            // Move columns / windows
             Mod+Ctrl+H { move-column-left; }
             Mod+Ctrl+J { move-window-down; }
             Mod+Ctrl+K { move-window-up; }
@@ -104,19 +78,21 @@
             Mod+Ctrl+Home { move-column-to-first; }
             Mod+Ctrl+End  { move-column-to-last; }
 
-            // Focus monitor (multi-monitor)
             Mod+Shift+H { focus-monitor-left; }
             Mod+Shift+J { focus-monitor-down; }
             Mod+Shift+K { focus-monitor-up; }
             Mod+Shift+L { focus-monitor-right; }
 
-            // Move column to monitor
             Mod+Shift+Ctrl+H { move-column-to-monitor-left; }
             Mod+Shift+Ctrl+J { move-column-to-monitor-down; }
             Mod+Shift+Ctrl+K { move-column-to-monitor-up; }
             Mod+Shift+Ctrl+L { move-column-to-monitor-right; }
 
-            // Workspaces: focus by index
+            Mod+Alt+H { move-workspace-to-monitor-left; }
+            Mod+Alt+J { move-workspace-to-monitor-down; }
+            Mod+Alt+K { move-workspace-to-monitor-up; }
+            Mod+Alt+L { move-workspace-to-monitor-right; }
+
             Mod+1 { focus-workspace 1; }
             Mod+2 { focus-workspace 2; }
             Mod+3 { focus-workspace 3; }
@@ -128,7 +104,6 @@
             Mod+9 { focus-workspace 9; }
             Mod+0 { focus-workspace 10; }
 
-            // Workspaces: move column
             Mod+Ctrl+1 { move-column-to-workspace 1; }
             Mod+Ctrl+2 { move-column-to-workspace 2; }
             Mod+Ctrl+3 { move-column-to-workspace 3; }
@@ -139,7 +114,6 @@
             Mod+Ctrl+8 { move-column-to-workspace 8; }
             Mod+Ctrl+9 { move-column-to-workspace 9; }
 
-            // Workspace cycling
             Mod+Page_Down { focus-workspace-down; }
             Mod+Page_Up   { focus-workspace-up; }
             Mod+U { focus-workspace-down; }
@@ -152,13 +126,11 @@
             Mod+Shift+I { move-workspace-up; }
             Mod+Tab { focus-workspace-previous; }
 
-            // Window consumption / expulsion
             Mod+Comma  { consume-window-into-column; }
             Mod+Period { expel-window-from-column; }
             Mod+BracketLeft  { consume-or-expel-window-left; }
             Mod+BracketRight { consume-or-expel-window-right; }
 
-            // Column / window sizing
             Mod+R { switch-preset-column-width; }
             Mod+Shift+R { switch-preset-column-width-back; }
             Mod+Alt+R { reset-window-height; }
@@ -167,264 +139,256 @@
             Mod+Shift+Minus { set-window-height "-10%"; }
             Mod+Shift+Equal { set-window-height "+10%"; }
 
-            // Fullscreen / maximize / expand
             Mod+F { maximize-column; }
             Mod+Shift+F { fullscreen-window; }
             Mod+M { maximize-window-to-edges; }
             Mod+Ctrl+F { expand-column-to-available-width; }
 
-            // Center column(s)
             Mod+C { center-column; }
             Mod+Ctrl+C { center-visible-columns; }
-
-            // Tabbed display
             Mod+W { toggle-column-tabbed-display; }
-
-            // Overview
             Mod+O { toggle-overview; }
 
-            // Mouse wheel
             Mod+WheelScrollDown      cooldown-ms=150 { focus-workspace-down; }
             Mod+WheelScrollUp        cooldown-ms=150 { focus-workspace-up; }
             Mod+Ctrl+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
             Mod+Ctrl+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
-            Mod+WheelScrollRight      { focus-column-right; }
-            Mod+WheelScrollLeft       { focus-column-left; }
-            Mod+Ctrl+WheelScrollRight { move-column-right; }
-            Mod+Ctrl+WheelScrollLeft  { move-column-left; }
 
-            // Screenshots (built-in)
             Print { screenshot; }
             Ctrl+Print { screenshot-screen; }
 
-            // Hotkey overlay
             Mod+Shift+Slash { show-hotkey-overlay; }
-
-            // Quit / power off
             Mod+Shift+E { quit; }
             Mod+Shift+P { power-off-monitors; }
 
-            // Audio
-            XF86AudioRaiseVolume allow-when-locked=true { spawn "swayosd-client" "--output-volume" "+5"; }
-            XF86AudioLowerVolume allow-when-locked=true { spawn "swayosd-client" "--output-volume" "-5"; }
-            XF86AudioMute allow-when-locked=true { spawn "swayosd-client" "--output-volume" "mute-toggle"; }
-
-            // Media keys
-            XF86AudioPlay { spawn "playerctl" "play-pause"; }
-            XF86AudioNext { spawn "playerctl" "next"; }
-            XF86AudioPrev { spawn "playerctl" "previous"; }
-
-            // Brightness
-            XF86MonBrightnessUp { spawn "brightnessctl" "s" "+5%"; }
-            XF86MonBrightnessDown { spawn "brightnessctl" "s" "5%-"; }
-
-            // Utilities
+            // Clipboard / recording
             Mod+V { spawn-sh "cliphist list | wofi --dmenu -p 'Clipboard' | cliphist decode | wl-copy"; }
             Mod+E { spawn "emote"; }
             Mod+Shift+Ctrl+R { spawn "toggle-recording"; }
-            Mod+Shift+Ctrl+C { spawn "wl-color-picker"; }
         }
 
         // ── Spawn at startup ─────────────────────────────────────────
-        spawn-at-startup "waybar"
-        spawn-at-startup "swaybg" "-c" "#1e1e2e"
+        // Noctalia handles bar, notifications, OSD, polkit, idle, lock.
+        // Only non-Noctalia services are spawned here.
         spawn-at-startup "nm-applet" "--indicator"
         spawn-at-startup "blueman-applet"
         spawn-at-startup "wl-paste" "--watch" "cliphist" "store"
-        spawn-at-startup "swayosd-server"
-        spawn-at-startup "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1"
 
         // ── Window rules ─────────────────────────────────────────────
-        window-rule {
-            match app-id="nm-connection-editor"
-            open-floating true
-        }
-        window-rule {
-            match app-id="blueman-manager"
-            open-floating true
-        }
-        window-rule {
-            match title="Authentication Required"
-            open-floating true
-        }
-        window-rule {
-            match title="Picture-in-Picture"
-            open-floating true
-        }
+        window-rule { match app-id="nm-connection-editor"; open-floating true; }
+        window-rule { match app-id="blueman-manager";     open-floating true; }
+        window-rule { match title="Authentication Required"; open-floating true; }
+        window-rule { match title="Picture-in-Picture";   open-floating true; }
       '';
 
-      # ── Tooling via HM modules ────────────────────────────────────
+      # ── Noctalia settings ──────────────────────────────────────────
+      programs.noctalia = {
+        enable = true;
+        systemd.enable = true;
+        settings = {
+          settingsVersion = 0;
 
-      programs = {
-        swaylock = {
-          enable = true;
-          settings = {
-            font-size = 24;
-            show-failed-attempts = true;
-            line-uses-ring = false;
-            ring-color = "cba6f7";
-            inside-clear-color = "a6e3a1";
-            inside-ver-color = "89b4fa";
-            inside-wrong-color = "f38ba8";
-            key-hl-color = "cba6f7";
-            bs-hl-color = "f38ba8";
-            separator-color = "00000000";
-            grace = 5;
-            ignore-empty-password = false;
+          general = {
+            avatarImage = "~/.face";
+            dimmerOpacity = 0.2;
+            showScreenCorners = false;
+            compactLockScreen = true;
+            lockOnSuspend = true;
+            showSessionButtonsOnLockScreen = true;
+            showChangelogOnStartup = false;
+            telemetryEnabled = false;
+            enableLockScreenCountdown = true;
+            lockScreenCountdownDuration = 10000;
           };
-        };
 
-        waybar = {
-          enable = true;
-          settings = {
-            mainBar = {
-              layer = "top";
-              position = "top";
-              height = 30;
-              modules-left = [ "niri/workspaces" ];
-              modules-center = [ "clock" ];
-              modules-right = [
-                "pulseaudio"
-                "network"
-                "battery"
-                "tray"
+          bar = {
+            barType = "floating";
+            position = "top";
+            density = "default";
+            showOutline = false;
+            showCapsule = true;
+            floating = true;
+            marginVertical = 4;
+            marginHorizontal = 8;
+            frameThickness = 8;
+            frameRadius = 12;
+            displayMode = "always_visible";
+            widgets = {
+              left = [
+                { id = "ActiveWindow"; }
+                { id = "Clock"; }
               ];
-
-              "niri/workspaces" = { };
-              clock = {
-                format = "{:%H:%M}";
-                tooltip-format = "{:%Y-%m-%d}";
-              };
-              pulseaudio = {
-                format = "{icon} {volume}%";
-                format-icons = [
-                  "🔇"
-                  "🔈"
-                  "🔉"
-                  "🔊"
-                ];
-                on-click = "pavucontrol";
-              };
-              network = {
-                format-wifi = "{essid} ({signalStrength}%)";
-                format-ethernet = "🖧";
-                format-disconnected = "⚠ Disconnected";
-                tooltip-format = "{ifname} via {gwaddr}";
-              };
-              battery = {
-                format = "{icon} {capacity}%";
-                format-icons = [
-                  "🔋"
-                  "🔋"
-                  "🔋"
-                  "🔋"
-                  "🔋"
-                ];
-                format-charging = "⚡{capacity}%";
-              };
-              tray = { };
+              center = [
+                {
+                  id = "Workspace";
+                  labelMode = "index";
+                  showApplications = true;
+                  showBadge = true;
+                  showLabelsOnlyWhenOccupied = true;
+                  iconScale = 0.8;
+                  pillSize = 0.6;
+                }
+              ];
+              right = [
+                { id = "Tray"; }
+                { id = "Battery"; }
+                { id = "Volume"; }
+                { id = "ControlCenter"; }
+              ];
             };
           };
-          style = ''
-            * {
-              font-family: "JetBrainsMono Nerd Font";
-              font-size: 13px;
-              min-height: 0;
-            }
-            window#waybar {
-              background: rgba(30, 30, 46, 0.85);
-              color: #cdd6f4;
-            }
-            #workspaces button {
-              padding: 0 6px;
-              color: #585b70;
-            }
-            #workspaces button.active {
-              color: #cba6f7;
-            }
-            #clock, #pulseaudio, #network, #battery, #tray {
-              padding: 0 10px;
-              color: #cdd6f4;
-            }
-          '';
-        };
 
-        fuzzel = {
-          enable = true;
-          settings = {
-            main = {
-              terminal = "kitty";
-              font = "JetBrainsMono Nerd Font:size=13";
-              dpi-aware = "no";
-              icons-enabled = "yes";
+          appLauncher = {
+            enableClipboardHistory = true;
+            enableClipPreview = true;
+            position = "center";
+            terminalCommand = "kitty";
+            viewMode = "list";
+            showCategories = true;
+          };
+
+          controlCenter = {
+            position = "close_to_bar_button";
+            diskPath = "/";
+            shortcuts = {
+              left = [
+                { id = "Network"; }
+                { id = "Bluetooth"; }
+                { id = "WallpaperSelector"; }
+              ];
+              right = [
+                { id = "Notifications"; }
+                { id = "PowerProfile"; }
+                { id = "NightLight"; }
+              ];
             };
-            colors = {
-              background = "1e1e2edd";
-              text = "cdd6f4";
-              match = "cba6f7";
-              selection = "313244";
-              selection-text = "cdd6f4";
-              border = "cba6f7";
-            };
-            border = {
-              radius = 8;
-            };
+            cards = [
+              {
+                enabled = true;
+                id = "profile-card";
+              }
+              {
+                enabled = true;
+                id = "shortcuts-card";
+              }
+              {
+                enabled = true;
+                id = "audio-card";
+              }
+              {
+                enabled = false;
+                id = "brightness-card";
+              }
+              {
+                enabled = true;
+                id = "media-sysmon-card";
+              }
+            ];
+          };
+
+          notifications = {
+            enabled = true;
+            location = "top_right";
+            backgroundOpacity = 1;
+            lowUrgencyDuration = 3;
+            normalUrgencyDuration = 8;
+            criticalUrgencyDuration = 15;
+          };
+
+          osd = {
+            enabled = true;
+            location = "top_right";
+            autoHideMs = 2000;
+          };
+
+          audio = {
+            volumeStep = 5;
+            volumeOverdrive = false;
+          };
+
+          brightness = {
+            brightnessStep = 5;
+            enforceMinimum = true;
+            enableDdcSupport = false;
+          };
+
+          nightLight = {
+            enabled = true;
+            autoSchedule = true;
+            nightTemp = "3500";
+            dayTemp = "6500";
+          };
+
+          wallpaper = {
+            enabled = true;
+            directory = "~/Pictures/Wallpapers";
+            fillMode = "crop";
+            useSolidColor = true;
+            solidColor = "#1e1e2e";
+          };
+
+          sessionMenu = {
+            enableCountdown = true;
+            countdownDuration = 10000;
+            largeButtonsStyle = true;
+            powerOptions = [
+              {
+                action = "lock";
+                enabled = true;
+              }
+              {
+                action = "suspend";
+                enabled = true;
+              }
+              {
+                action = "reboot";
+                enabled = true;
+              }
+              {
+                action = "logout";
+                enabled = true;
+              }
+              {
+                action = "shutdown";
+                enabled = true;
+              }
+            ];
+          };
+
+          colorSchemes = {
+            useWallpaperColors = false;
+            predefinedScheme = "catppuccin-mocha";
+            darkMode = true;
+          };
+
+          ui = {
+            fontDefault = "JetBrainsMono Nerd Font";
+            fontFixed = "JetBrainsMono Nerd Font Mono";
+            fontDefaultScale = 1;
+            fontFixedScale = 1;
           };
         };
       };
 
-      services = {
-        swayidle = {
-          enable = true;
-          timeouts = [
-            {
-              timeout = 300;
-              command = "${pkgs.swaylock}/bin/swaylock -f";
-            }
-            {
-              timeout = 600;
-              command = "systemctl suspend";
-            }
-          ];
-          events = {
-            before-sleep = "${pkgs.swaylock}/bin/swaylock -f";
-            lock = "${pkgs.swaylock}/bin/swaylock -f";
-          };
-        };
-
-        wlsunset = {
-          enable = true;
-          latitude = 52.0;
-          longitude = 21.0;
-          temperature = {
-            day = 6500;
-            night = 3500;
-          };
-        };
-
-        mako = {
-          enable = true;
-          settings = {
-            anchor = "top-right";
-            border-size = 2;
-            border-color = "#cba6f7";
-            background-color = "#1e1e2e";
-            text-color = "#cdd6f4";
-            width = 350;
-            height = 200;
-            padding = "12";
-            default-timeout = 5000;
-            font = "JetBrainsMono Nerd Font 12";
-          };
+      # ── HM-managed programs ──────────────────────────────────────
+      programs.kitty = {
+        enable = true;
+        settings = {
+          font_family = "JetBrainsMono Nerd Font";
+          font_size = 13.0;
+          background_opacity = "0.95";
+          confirm_os_window_close = 0;
+          shell = "/run/current-system/sw/bin/bash";
         };
       };
 
+      # ── Packages not covered by Noctalia ──────────────────────────
       home.packages = with pkgs; [
-        # Image / script tools kept from Hyprland
+        kitty
         wl-clipboard
         cliphist
-        swayosd
         wofi
+        grimblast
         emote
         wf-recorder
         toggle-recording
@@ -432,13 +396,8 @@
         playerctl
         brightnessctl
         networkmanagerapplet
-
-        # Niri-specific replacements
-        grimblast
-        wl-color-picker
-        swaybg # wallpaper (spawned in KDL config)
-        polkit_gnome
         pavucontrol
+        nirimod
       ];
     };
 }

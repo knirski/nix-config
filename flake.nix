@@ -36,6 +36,9 @@
 
     deploy-rs.url = "github:serokell/deploy-rs";
     deploy-rs.inputs.nixpkgs.follows = "nixpkgs";
+
+    noctalia.url = "github:noctalia-dev/noctalia";
+    nirimod.url = "github:srinivasr/nirimod";
   };
 
   # The whole flake is built by auto-importing every flake-parts module

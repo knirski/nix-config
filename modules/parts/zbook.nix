@@ -33,6 +33,7 @@
               config.aspects.homeManager.base
               config.aspects.homeManager.desktop
               config.aspects.homeManager.niri
+              inputs.noctalia.homeModules.default
             ];
             users.krzysiek.home.enableNixpkgsReleaseCheck = false;
           };
@@ -51,6 +52,7 @@
           networking.hostName = "zbook";
           nixpkgs.hostPlatform = "x86_64-linux";
           system.stateVersion = "26.11";
+          nixpkgs.overlays = [ inputs.nirimod.overlays.default ];
 
           # Maintenance: enable for this host, set disk to zbook's NVMe
           lanAppliance.services.maintenance = {
