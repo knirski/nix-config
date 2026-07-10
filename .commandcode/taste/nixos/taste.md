@@ -56,9 +56,15 @@
 - When creating SSH keys for a specific host, use a comment matching the hostname (e.g., `krzysiek@soyo` for the soyo host), not a different host (e.g., not `krzysiek@workstation`). Confidence: 0.80
 
 # niri
+- For Niri compositor configuration, prefer the niri-flake Home Manager module (`inputs.niri-flake.homeModules.niri`) over writing a manual `wayland.windowManager.niri` config — the user explicitly prefers the niri-flake approach. Confidence: 0.85
 - For Niri compositor configuration, prefer the Home Manager module (`programs.niri`) over raw NixOS module setup or manual config files — the user explicitly wants HM-scoped Niri setup. Confidence: 0.65
 - In Niri compositor configurations, avoid `hypr*` tools (hyprpicker, hyprpaper, etc.) — they are Hyprland-specific and should not be used when running Niri; use generic Wayland alternatives instead. Confidence: 0.65
 - Prefer Noctalia Shell to replace as many additional desktop utilities as possible (waybar, mako, fuzzel, swaylock, swaybg, swayosd, wlsunset, swayidle, wl-color-picker, and session management) in the Niri compositor stack — Noctalia provides a unified desktop shell layer. Confidence: 0.65
 - For Niri compositor KDL config, prefer a minimal viable configuration with only the essentials (binds, window rules, layout settings) rather than an elaborate feature-rich config; the user values simplicity and idiomatic usage. Confidence: 0.60
+- Prefer the niri-flake flake input (`github:sodiboo/niri-flake`) as the first option for Niri-related modules and overlays rather than alternatives like niri-nix. Confidence: 0.60
+- Install Sway alongside Niri as a second compositor option, making both available for the user to choose at the Ly login manager. Confidence: 0.70
+- Sway should be configured via Home Manager (`programs.sway`) rather than NixOS system modules; the ideal source for Sway config is the HM module. Confidence: 0.65
+- In Noctalia Shell configuration, set the bar position to the bottom (default is top). Confidence: 0.70
+- Noctalia bar should be used not only in Niri but also in Sway when Sway is installed alongside Niri. Confidence: 0.65
 - Before deploying Niri config changes, validate the KDL config with `niri validate -c <config>` to catch syntax errors early — the KDL format is strict about semicolons, property syntax (`=` for named args like `app-id=\"...\"`), and node structure; don't assume the config is valid without checking. Confidence: 0.70
 - For Niri config, the user expects comprehensive standard shortcuts (Mod+Return for terminal, Mod+D for launcher, Mod+Q close, Mod+{H,J,K,L} focus, Mod+Ctrl+{H,J,K,L} move, Mod+{1-9} workspaces, Mod+O overview, XF86 audio/brightness keys, Print/Ctrl+Print screenshots, Mod+Tab workspace previous, Mod+V toggle float, Mod+Space toggle floating, Mod+Escape lock/swaylock) — do not trim down to an absolute minimum when the user asks for "all standard shortcuts." Confidence: 0.65

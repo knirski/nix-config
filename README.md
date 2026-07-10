@@ -189,6 +189,7 @@ No registry edits — import-tree auto-discovers every new `.nix` file.
 | [nix-topology](https://github.com/oddlama/nix-topology) | Infrastructure diagrams |
 | [Renovate](https://docs.renovatebot.com) | Automated flake.lock updates |
 | [just](https://github.com/casey/just) | Command runner |
+| [awesome-niri](https://github.com/niri-wm/awesome-niri) | Curated list of niri ecosystem tools, shells, and configs |
 
 ## Key docs
 

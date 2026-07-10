@@ -33,7 +33,9 @@
               config.aspects.homeManager.base
               config.aspects.homeManager.desktop
               config.aspects.homeManager.niri
+              config.aspects.homeManager.sway
               inputs.noctalia.homeModules.default
+              inputs.niri-flake.homeModules.niri
             ];
             users.krzysiek.home.enableNixpkgsReleaseCheck = false;
           };

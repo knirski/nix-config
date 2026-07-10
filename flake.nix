@@ -39,6 +39,7 @@
 
     noctalia.url = "github:noctalia-dev/noctalia";
     nirimod.url = "github:srinivasr/nirimod";
+    niri-flake.url = "github:sodiboo/niri-flake";
   };
 
   # The whole flake is built by auto-importing every flake-parts module

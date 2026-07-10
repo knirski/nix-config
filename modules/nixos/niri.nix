@@ -5,18 +5,21 @@
       programs = {
         niri = {
           enable = true;
-          # xwayland-satellite replaces XWayland for better isolation, but
-          # requires unstable niri. Stick with xwayland for now.
-          # useNautilus defaults to true (needed for xdg-desktop-portal-gnome).
         };
       };
 
-      # Ly TUI greeter — auto-detects niri.desktop from sessionPackages.
+      # Sway alongside niri — user picks at Ly login.
+      programs.sway = {
+        enable = true;
+        wrapperFeatures.gtk = true;
+      };
+
+      # Ly TUI greeter — auto-detects desktop files from sessionPackages.
       services.displayManager.ly.enable = true;
 
-      # niri uses GNOME portals for screencast/screenshot (not wlr).
-      # programs.niri already sets up xdg.portal.config.niri and installs
-      # xdg-desktop-portal-gnome.
+      # Portals: niri uses xdg-desktop-portal-gnome (handled by programs.niri).
+      # Force dark theme for GNOME portal layer.
+      programs.dconf.enable = true;
 
       environment.sessionVariables = {
         NIXOS_OZONE_WL = "1";
