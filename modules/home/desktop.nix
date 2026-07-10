@@ -3,6 +3,7 @@
     { pkgs, ... }:
     {
       home.packages = with pkgs; [
+        wl-clipboard
         imv
         mpv
         bitwarden-desktop
