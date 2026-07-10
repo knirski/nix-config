@@ -46,6 +46,7 @@
         "Downloads"
         "Documents"
         "Pictures"
+        "Pictures/Screenshots"
         "Music"
         "Videos"
         ".local/share/Steam"

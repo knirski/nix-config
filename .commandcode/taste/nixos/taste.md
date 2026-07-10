@@ -1,4 +1,8 @@
 # nixos
+- For Hyprland desktop configs, prefer kitty as the default terminal emulator over Ghostty. Confidence: 0.80
+- Do not use SDDM for Hyprland — the user explicitly rejected SDDM and prefers something modern that the Hyprland community favors instead. Confidence: 0.82
+- Use greetd with wlgreet as the display manager for Hyprland instead of SDDM; wlgreet is a Wayland-native greeter and was explicitly preferred by the user. Confidence: 0.65
+- For Hyprland 0.55+ (which defaults to Lua config format), generate a proper `hyprland.lua` config instead of overriding `HYPRLAND_CONFIG` to force the legacy `.conf` format; do not use the `HYPRLAND_CONFIG` env var workaround to bypass Lua config parsing. Confidence: 0.70
 - In Hyprland desktop configurations, prefer Hyprland-native tools (hyprpaper over swaybg, hyprsunset over wlsunset, hypridle over custom idle scripts, hyprlock over swaylock, hyprpolkitagent over polkit_gnome, hyprshot over grim+slurp) over generic Wayland alternatives where available. Confidence: 0.75
 - Persist AI coding agent state directories (`.commandcode`, `.codex`, etc.) only on workstation hosts (e.g., zbook), not on server hosts (e.g., soyo); agent state is workstation-specific and unnecessary on headless server machines. Confidence: 0.65
 - Use `vic/import-tree` to auto-import every `.nix` file under `modules/` as a flake-parts module, replacing the manual registry in `modules/default.nix`. Adding a new aspect module should require zero registry edits. Exclude callPackage files by prefixing their directory with `_` (import-tree skips `/_` paths by default). Confidence: 0.70
@@ -32,6 +36,7 @@
 
 # nixos
 - When Home Manager deprecation warnings appear during evaluation (e.g., `programs.git.userEmail` → `programs.git.settings.user.email`), migrate to the new option paths to silence the warnings rather than leaving deprecated options in place. Confidence: 0.65
+
 
 # deployment
 - When a `github:owner/repo` flake URL returns a 404 error, check whether the repo is private — Nix's built-in GitHub fetcher cannot authenticate to private repos without extra configuration. Fall back to a local clone with SSH auth or configure `netrc`/access-token-based authentication for the fetcher. Confidence: 0.60

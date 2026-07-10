@@ -14,12 +14,13 @@
           enable = true;
           settings = {
             default_session = {
-              command = "${pkgs.gtkgreet}/bin/gtkgreet";
+              # wlgreet is a Wayland-native greeter running inside cage (kiosk
+              # compositor). After auth it launches Hyprland as the user session.
+              command = "${pkgs.cage}/bin/cage -- ${pkgs.wlgreet}/bin/wlgreet -e Hyprland";
               user = "greeter";
             };
           };
         };
-
       };
 
       # Desktop portal for screen sharing / screenshot permissions

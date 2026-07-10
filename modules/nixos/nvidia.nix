@@ -83,7 +83,7 @@
         # Optimus systems, the 60s user.slice freeze timeout races with
         # nvidia-suspend — if certain processes (Docker, libvirtd, Electron
         # apps) refuse to freeze, the delay corrupts GPU state and leaves
-        # cosmic-comp SIGSTOP'd after resume, requiring a cold reboot.
+        # the compositor SIGSTOP'd after resume, requiring a cold reboot.
         # Skip the freeze and let NVIDIA's own suspend handle sequencing.
         # https://github.com/NixOS/nixpkgs/issues/371058
         systemd.services.systemd-suspend.environment.SYSTEMD_SLEEP_FREEZE_USER_SESSIONS = "false";
