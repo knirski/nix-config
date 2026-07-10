@@ -51,9 +51,13 @@
                 off
             }
 
-            default-column-width { proportion 0.5 }
+            default-column-width {
+                proportion 0.5
+            }
             center-focused-column "always"
-            always-center-single-column
+
+            // Dark backdrop (Catppuccin mocha base)
+            background-color "#1e1e2e"
         }
 
         // ── Cursor ───────────────────────────────────────────────────
@@ -66,6 +70,9 @@
         // ── Screenshots ──────────────────────────────────────────────
         screenshot-path "~/Pictures/Screenshots/%Y-%m-%d %H-%M-%S.png"
 
+        // Prefer server-side decorations (eliminates double borders)
+        prefer-no-csd
+
         // ── Environment ──────────────────────────────────────────────
         environment {
             QT_QPA_PLATFORM "wayland;xcb"
@@ -75,74 +82,69 @@
         // ── Binds ────────────────────────────────────────────────────
         binds {
             // Application launchers
-            mod+Return { spawn "kitty"; }
-            mod+D { spawn "fuzzel"; }
+            Mod+Return { spawn "kitty"; }
+            Mod+D { spawn "fuzzel"; }
 
             // Close window
-            mod+Q { close-window; }
+            Mod+Q { close-window; }
 
             // Lock screen
-            mod+Escape { spawn "swaylock"; }
+            Mod+Escape { spawn "swaylock"; }
 
             // Toggle window floating
-            mod+Space { toggle-window-floating; }
+            Mod+Space { toggle-window-floating; }
 
             // Focus movement
-            mod+H { focus-column-left; }
-            mod+J { focus-window-down; }
-            mod+K { focus-window-up; }
-            mod+L { focus-column-right; }
+            Mod+H { focus-column-left; }
+            Mod+J { focus-window-down; }
+            Mod+K { focus-window-up; }
+            Mod+L { focus-column-right; }
 
             // Move windows
-            mod+SHIFT+H { move-column-left; }
-            mod+SHIFT+J { move-window-down; }
-            mod+SHIFT+K { move-window-up; }
-            mod+SHIFT+L { move-column-right; }
+            Mod+Ctrl+H { move-column-left; }
+            Mod+Ctrl+J { move-window-down; }
+            Mod+Ctrl+K { move-window-up; }
+            Mod+Ctrl+L { move-column-right; }
 
             // Workspace switching
-            mod+1 { focus-workspace 1; }
-            mod+2 { focus-workspace 2; }
-            mod+3 { focus-workspace 3; }
-            mod+4 { focus-workspace 4; }
-            mod+5 { focus-workspace 5; }
-            mod+6 { focus-workspace 6; }
-            mod+7 { focus-workspace 7; }
-            mod+8 { focus-workspace 8; }
-            mod+9 { focus-workspace 9; }
-            mod+0 { focus-workspace 10; }
+            Mod+1 { focus-workspace 1; }
+            Mod+2 { focus-workspace 2; }
+            Mod+3 { focus-workspace 3; }
+            Mod+4 { focus-workspace 4; }
+            Mod+5 { focus-workspace 5; }
+            Mod+6 { focus-workspace 6; }
+            Mod+7 { focus-workspace 7; }
+            Mod+8 { focus-workspace 8; }
+            Mod+9 { focus-workspace 9; }
+            Mod+0 { focus-workspace 10; }
 
             // Move windows to workspaces
-            mod+SHIFT+1 { move-window-to-workspace 1; }
-            mod+SHIFT+2 { move-window-to-workspace 2; }
-            mod+SHIFT+3 { move-window-to-workspace 3; }
-            mod+SHIFT+4 { move-window-to-workspace 4; }
-            mod+SHIFT+5 { move-window-to-workspace 5; }
-            mod+SHIFT+6 { move-window-to-workspace 6; }
-            mod+SHIFT+7 { move-window-to-workspace 7; }
-            mod+SHIFT+8 { move-window-to-workspace 8; }
-            mod+SHIFT+9 { move-window-to-workspace 9; }
-            mod+SHIFT+0 { move-window-to-workspace 10; }
+            Mod+Ctrl+1 { move-column-to-workspace 1; }
+            Mod+Ctrl+2 { move-column-to-workspace 2; }
+            Mod+Ctrl+3 { move-column-to-workspace 3; }
+            Mod+Ctrl+4 { move-column-to-workspace 4; }
+            Mod+Ctrl+5 { move-column-to-workspace 5; }
+            Mod+Ctrl+6 { move-column-to-workspace 6; }
+            Mod+Ctrl+7 { move-column-to-workspace 7; }
+            Mod+Ctrl+8 { move-column-to-workspace 8; }
+            Mod+Ctrl+9 { move-column-to-workspace 9; }
 
-            // Special workspace (scratchpad)
-            mod+comma { toggle-window-floating; }
-            mod+period { focus-workspace-previous; }
+            // Previous / special workspace navigation
+            Mod+Tab { focus-workspace-previous; }
+            Mod+Comma { consume-window-into-column; }
+            Mod+Period { expel-window-from-column; }
 
-            // Consume / expel window from column
-            mod+minus { consume-window-into-column; }
-            mod+SHIFT+minus { expel-window-from-column; }
-
-            // Screenshots
-            Print { spawn "grimblast" "copysave" "area"; }
-            mod+Print { spawn "grimblast" "copysave" "output"; }
-            CTRL+Print { spawn "grimblast" "copysave" "area"; }
+            // Screenshots (niri built-in)
+            Print { screenshot; }
+            Ctrl+Print { screenshot-screen; }
 
             // Overview
-            mod+O { overview; }
+            Mod+O { toggle-overview; }
 
             // Audio (repeating, allowed when locked)
-            XF86AudioRaiseVolume { spawn "swayosd-client" "--output-volume" "+5"; allow-when-locked true; repeat; }
-            XF86AudioLowerVolume { spawn "swayosd-client" "--output-volume" "-5"; allow-when-locked true; repeat; }
-            XF86AudioMute { spawn "swayosd-client" "--output-volume" "mute-toggle"; allow-when-locked true; }
+            XF86AudioRaiseVolume allow-when-locked=true { spawn "swayosd-client" "--output-volume" "+5"; }
+            XF86AudioLowerVolume allow-when-locked=true { spawn "swayosd-client" "--output-volume" "-5"; }
+            XF86AudioMute allow-when-locked=true { spawn "swayosd-client" "--output-volume" "mute-toggle"; }
 
             // Media keys
             XF86AudioPlay { spawn "playerctl" "play-pause"; }
@@ -150,18 +152,15 @@
             XF86AudioPrev { spawn "playerctl" "previous"; }
 
             // Brightness
-            XF86MonBrightnessUp { spawn "brightnessctl" "s" "+5%"; repeat; }
-            XF86MonBrightnessDown { spawn "brightnessctl" "s" "5%-"; repeat; }
+            XF86MonBrightnessUp { spawn "brightnessctl" "s" "+5%"; }
+            XF86MonBrightnessDown { spawn "brightnessctl" "s" "5%-"; }
 
-            // Clipboard / emoji / recording
-            mod+V { spawn "sh" "-c" "cliphist list | wofi --dmenu -p 'Clipboard' | cliphist decode | wl-copy"; }
-            mod+E { spawn "emote"; }
-            mod+SHIFT+R { spawn "toggle-recording"; }
-            mod+CTRL+C { spawn "wl-color-picker"; }
+            // Clipboard / emoji / recording / color picker
+            Mod+V { spawn-sh "cliphist list | wofi --dmenu -p 'Clipboard' | cliphist decode | wl-copy"; }
+            Mod+E { spawn "emote"; }
+            Mod+Shift+R { spawn "toggle-recording"; }
+            Mod+Ctrl+C { spawn "wl-color-picker"; }
 
-            // Window drag/resize with mouse
-            mod+mouse:272 { drag-window; }
-            mod+mouse:273 { resize-window; }
         }
 
         // ── Spawn at startup ─────────────────────────────────────────
@@ -175,20 +174,20 @@
 
         // ── Window rules ─────────────────────────────────────────────
         window-rule {
-            match app-id "nm-connection-editor"
-            open-floating
+            match app-id="nm-connection-editor"
+            open-floating true
         }
         window-rule {
-            match app-id "blueman-manager"
-            open-floating
+            match app-id="blueman-manager"
+            open-floating true
         }
         window-rule {
-            match title "Authentication Required"
-            open-floating
+            match title="Authentication Required"
+            open-floating true
         }
         window-rule {
-            match title "Picture-in-Picture"
-            open-floating
+            match title="Picture-in-Picture"
+            open-floating true
         }
       '';
 

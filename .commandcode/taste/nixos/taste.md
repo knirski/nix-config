@@ -1,9 +1,14 @@
 # nixos
+- For Hyprland + UWSM integration, prefer idiomatic Home Manager module setup (home-manager) over raw NixOS module configuration; user explicitly wants Home Manager scoped Hyprland+UWSM setup. Confidence: 0.85
+- In HM's Hyprland module (nixpkgs-unstable), HM natively generates `hyprland.lua` from `wayland.windowManager.hyprland.settings` — do NOT add a manual `xdg.configFile.\"hypr/hyprland.lua\"` that would conflict. The Lua API is fundamentally different from the conf format — `hl.bind()` expects `\"SUPER + Q\"` (with `+` separator) and a dispatcher object like `hl.dsp.window.close()`, NOT a comma-separated CSV string. This means `settings.bind`/`settings.bindm`/`settings.windowrulev2`/`settings.env` all produce invalid Lua. Move all binds, env, exec-once, and window rules to `extraConfig` with proper Lua API calls: `hl.bind(\"SUPER + Q\", hl.dsp.window.close())`, `hl.env(\"KEY\", \"VALUE\")` (two separate args, not one CSV string), `hl.window_rule({name = ..., match = {class = \"...\"}, float = true})`, and bracket notation `hl[\"exec-once\"](\"command\")` for hyphenated methods. Keep only `monitor`, `general`, `decoration`, `input`, `gestures`, `misc` in `settings` — these produce valid Lua table syntax via HM's generator. Validate the generated Lua with `luac -p` before deploying to catch syntax errors early. Confidence: 0.85
+- Even the HM settings that produce "valid" Lua (like `hl.decoration({...})` or `hl.general({...})`) are actually wrong — the correct Hyprland Lua API uses `hl.config({decoration={...}, general={...}})` as a single table, not individual function calls per subsection. HM's generator calls `hl.decoration({...})` which produces "attempt to call a nil value (field 'decoration')". To bypass this entirely, set `wayland.windowManager.hyprland.settings = {}` and `extraConfig = ""` to suppress HM's Lua generation completely, then write a clean `hyprland.lua` via `xdg.configFile.\"hypr/hyprland.lua\".text` with proper `hl.config({...})` syntax. Confidence: 0.78
+- When writing a Lua hyprland config override (via `xdg.configFile.\"hypr/hyprland.lua\"`) to bypass HM's broken Lua generator, prefer a minimal viable config with only the essentials (monitor, core settings, binds, exec-once) rather than a full featured "default" — the user wants to override just what's broken, not replace the entire config. Confidence: 0.60
 - When greetd's wlgreet/cage greeter fails on NVIDIA Optimus (cage/wlroots can't initialize renderer on proprietary driver), wrap the cage command with `WLR_NO_HARDWARE_CURSORS=1` and `GBM_BACKEND=nvidia-drm` env vars rather than swapping to tuigreet; keep the existing greeter and fix the root cause. Confidence: 0.75
 - When Hyprland needs Wayland environment variables (NIXOS_OZONE_WL, MOZ_ENABLE_WAYLAND, QT_QPA_PLATFORM, XDG_SESSION_TYPE, XDG_CURRENT_DESKTOP), set them at the system/global scope (e.g., `environment.sessionVariables`) rather than only in the Hyprland user session, so they are available early for the greeter/login manager and all processes. Confidence: 0.70
 - For Hyprland desktop configs, prefer kitty as the default terminal emulator over Ghostty. Confidence: 0.80
+- Prefer Ly (`services.displayManager.ly.enable = true`) as the display manager/greeter for Hyprland on NVIDIA Optimus systems — it's a modern Rust TUI greeter with no compositor dependencies, runs on the raw VT (bypassing wlroots/NVIDIA incompatibility), and auto-detects Hyprland desktop entries including the UWSM-managed variant. Confidence: 0.65
 - Do not use SDDM for Hyprland — the user explicitly rejected SDDM and prefers something modern that the Hyprland community favors instead. Confidence: 0.82
-- Use greetd with wlgreet as the display manager for Hyprland instead of SDDM; wlgreet is a Wayland-native greeter and was explicitly preferred by the user. Confidence: 0.65
+- Prefer greetd launching UWSM directly (`uwsm start hyprland-uwsm.desktop`; no greeter, autologin style) over introducing a greeter like wlgreet/cage; the user explicitly rejected wlgreet and asked to go back to "pure uwsm". Confidence: 0.65
 - For Hyprland 0.55+ (which defaults to Lua config format), generate a proper `hyprland.lua` config instead of overriding `HYPRLAND_CONFIG` to force the legacy `.conf` format; do not use the `HYPRLAND_CONFIG` env var workaround to bypass Lua config parsing. Confidence: 0.70
 - In Hyprland desktop configurations, prefer Hyprland-native tools (hyprpaper over swaybg, hyprsunset over wlsunset, hypridle over custom idle scripts, hyprlock over swaylock, hyprpolkitagent over polkit_gnome, hyprshot over grim+slurp) over generic Wayland alternatives where available. Confidence: 0.75
 - Persist AI coding agent state directories (`.commandcode`, `.codex`, etc.) only on workstation hosts (e.g., zbook), not on server hosts (e.g., soyo); agent state is workstation-specific and unnecessary on headless server machines. Confidence: 0.65
@@ -33,6 +38,9 @@
 # deployment
 - Use `deploy-rs` as the sole deployment tool for NixOS hosts; remove all old deployment scripts and references. Native `nixos-rebuild switch --flake .#hostname` should only be used as a one-time fallback if deploy-rs is unavailable. Confidence: 0.82
 
+# hyprland
+- When checking Hyprland logs for errors after a config change, do not filter with a restrictive grep — instead read from the end of the log (e.g., `tail -50`) to catch all recent output, since errors may not match keywords like "error" or "lua". The user wants the full recent output, not a filtered subset. Confidence: 0.75
+
 # general
 - When an SSH key or other critical credential is broken/incompatible with the current system, prefer trying recovery/conversion approaches first before generating a fresh key; only regenerate as a last resort after recovery is proven impossible. Confidence: 0.55
 
@@ -46,3 +54,8 @@
 # secrets
 - When configuring identity keys for secret management, use native SSH keys directly rather than converting them to age pubkeys via ssh-to-age; agenix supports encryption with SSH keys natively. Confidence: 0.80
 - When creating SSH keys for a specific host, use a comment matching the hostname (e.g., `krzysiek@soyo` for the soyo host), not a different host (e.g., not `krzysiek@workstation`). Confidence: 0.80
+
+# niri
+- For Niri compositor configuration, prefer the Home Manager module (`programs.niri`) over raw NixOS module setup or manual config files — the user explicitly wants HM-scoped Niri setup. Confidence: 0.65
+- In Niri compositor configurations, avoid `hypr*` tools (hyprpicker, hyprpaper, etc.) — they are Hyprland-specific and should not be used when running Niri; use generic Wayland alternatives instead. Confidence: 0.65
+- For Niri compositor KDL config, prefer a minimal viable configuration with only the essentials (binds, window rules, layout settings) rather than an elaborate feature-rich config; the user values simplicity and idiomatic usage. Confidence: 0.60
