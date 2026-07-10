@@ -26,9 +26,14 @@ check:
 build host="soyo":
     nix build .#nixosConfigurations.{{host}}.config.system.build.toplevel
 
-# Deploy to a host via deploy-rs (auto-rollback, magic rollback).
+# Deploy to a host. Uses deploy-rs for remote hosts, nixos-rebuild for local.
 deploy host="soyo":
-    nix develop '.#' -c deploy .#{{host}}
+    @CURRENT="$(hostname -s)" && \
+    if [ "{{host}}" = "$CURRENT" ]; then \
+      sudo nixos-rebuild switch --flake .#{{host}}; \
+    else \
+      nix develop '.#' -c deploy .#{{host}}; \
+    fi
 
 # Run the on-host health check over SSH.
 #   just healthcheck            # soyo, role/nic auto-detected
