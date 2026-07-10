@@ -10,7 +10,7 @@
         ssh
         tailscale
         desktop
-        hyprland
+        niri
         nvidia
         laptop
         gaming
@@ -32,7 +32,7 @@
             users.krzysiek.imports = [
               config.aspects.homeManager.base
               config.aspects.homeManager.desktop
-              config.aspects.homeManager.hyprland
+              config.aspects.homeManager.niri
             ];
             users.krzysiek.home.enableNixpkgsReleaseCheck = false;
           };
