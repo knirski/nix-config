@@ -1,6 +1,17 @@
 {
   aspects.nixos.hyprland =
     { pkgs, ... }:
+    let
+      # cage can't initialize wlroots on NVIDIA without these set first.
+      # environment.sessionVariables doesn't apply to greetd's greeter user,
+      # so wrap the command with the env vars explicitly.
+      wlgreet-cage = pkgs.writeShellScript "wlgreet-cage" ''
+        export WLR_NO_HARDWARE_CURSORS=1
+        export GBM_BACKEND=nvidia-drm
+        export XCURSOR_SIZE=24
+        exec ${pkgs.cage}/bin/cage -- ${pkgs.wlgreet}/bin/wlgreet -e Hyprland
+      '';
+    in
     {
       programs = {
         hyprland = {
@@ -14,9 +25,9 @@
           enable = true;
           settings = {
             default_session = {
-              # wlgreet is a Wayland-native greeter running inside cage (kiosk
-              # compositor). After auth it launches Hyprland as the user session.
-              command = "${pkgs.cage}/bin/cage -- ${pkgs.wlgreet}/bin/wlgreet -e Hyprland";
+              # wlgreet + cage needs NVIDIA env vars set before wlroots
+              # initializes, so we invoke through a wrapper script.
+              command = "${wlgreet-cage}";
               user = "greeter";
             };
           };

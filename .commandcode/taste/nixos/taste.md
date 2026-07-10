@@ -1,4 +1,6 @@
 # nixos
+- When greetd's wlgreet/cage greeter fails on NVIDIA Optimus (cage/wlroots can't initialize renderer on proprietary driver), wrap the cage command with `WLR_NO_HARDWARE_CURSORS=1` and `GBM_BACKEND=nvidia-drm` env vars rather than swapping to tuigreet; keep the existing greeter and fix the root cause. Confidence: 0.75
+- When Hyprland needs Wayland environment variables (NIXOS_OZONE_WL, MOZ_ENABLE_WAYLAND, QT_QPA_PLATFORM, XDG_SESSION_TYPE, XDG_CURRENT_DESKTOP), set them at the system/global scope (e.g., `environment.sessionVariables`) rather than only in the Hyprland user session, so they are available early for the greeter/login manager and all processes. Confidence: 0.70
 - For Hyprland desktop configs, prefer kitty as the default terminal emulator over Ghostty. Confidence: 0.80
 - Do not use SDDM for Hyprland — the user explicitly rejected SDDM and prefers something modern that the Hyprland community favors instead. Confidence: 0.82
 - Use greetd with wlgreet as the display manager for Hyprland instead of SDDM; wlgreet is a Wayland-native greeter and was explicitly preferred by the user. Confidence: 0.65
