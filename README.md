@@ -9,16 +9,16 @@
   <a href="https://github.com/knirski/nix-config/actions/workflows/ci.yml"><img src="https://github.com/knirski/nix-config/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
 </p>
 
-Multi-host [NixOS](https://nixos.org) flake for a LAN DNS+DHCP appliance (**Soyo**) and a desktop/gaming workstation (**zbook**). Built with [flake-parts](https://flake.parts), auto-imported via [import-tree](https://github.com/vic/import-tree) after the [dendritic pattern](https://github.com/mightyiam/dendritic) — every file under `modules/` is a flake-parts module, and hosts assemble by toggling aspects by name.
+Multi-host [NixOS](https://nixos.org) flake for a LAN DNS+DHCP appliance (**soyo**) and a workstation (**zbook**). Built with [flake-parts](https://flake.parts), auto-imported via [import-tree](https://github.com/vic/import-tree) after the [dendritic pattern](https://github.com/mightyiam/dendritic) — every file under `modules/` is a flake-parts module, and hosts assemble by toggling aspects by name.
 
 This is also a **learning project**: the code and its docs intentionally teach modern Nix idioms. Start at [**docs/learning/README.md**](docs/learning/README.md) for a 37-step guided path from zero to understanding the whole flake.
 
 ## Hosts
 
-| Host     | Hardware                                                                                | Role                     |
-|----------|-----------------------------------------------------------------------------------------|--------------------------|
-| **Soyo** | Intel N150, 16 GB, 512 GB NVMe, Gigabit NIC                                            | LAN DNS + DHCP appliance |
-| **zbook**| HP ZBook Studio 16" G10, 32 GB, NVIDIA RTX 4000 Ada, 2 TB NVMe                        | COSMIC workstation       |
+| Host     | Hardware                                                                                | Role                     | nixpkgs branch       |
+|----------|-----------------------------------------------------------------------------------------|--------------------------|----------------------|
+| **soyo** | Intel N150, 16 GB, 512 GB NVMe, Gigabit NIC                                            | LAN DNS + DHCP appliance | 26.05               |
+| **zbook**| HP ZBook Studio 16" G10, 32 GB, NVIDIA RTX 4000 Ada, 2 TB NVMe                        | Workstation              | unstable            |
 
 ## Architecture — the dendritic pattern
 
@@ -39,7 +39,7 @@ Host **assemblers** (`modules/parts/soyo.nix`, `modules/parts/zbook.nix`) toggle
 ```nix
 modules = (with config.aspects.nixos; [
   base  ssh  server  tailscale  users  persistence   # shared
-  remote-unlock  blocky  dhcp  backup  observability # Soyo-only
+  remote-unlock  blocky  dhcp  backup  observability # soyo-only
 ]);
 ```
 
@@ -73,16 +73,16 @@ Host-specific **data** lives in thin files under `hosts/<name>/` — disko layou
 │   ├── nixos/                    NixOS aspect modules (18 files)
 │   │   ├── base.nix              Shared: timezone, locale, packages, command-code overlay
 │   │   ├── ssh.nix              Shared: OpenSSH key-only lockdown
-│   │   ├── server.nix            Soyo: systemd-networkd, earlyoom
+│   │   ├── server.nix            soyo: systemd-networkd, earlyoom
 │   │   ├── tailscale.nix         Shared: Tailscale auth oneshot
 │   │   ├── users.nix            Shared: mutableUsers=false, agenix user secrets
 │   │   ├── persistence.nix      Shared: impermanent root blank-snapshot rollback
 │   │   ├── backup.nix            Shared: restic + btrbk
 │   │   ├── maintenance.nix      Shared: nix gc, Btrfs scrub, SMART, ntfy alerts
-│   │   ├── blocky.nix            Soyo: DNS resolver with ad-blocking
-│   │   ├── dhcp.nix              Soyo: dnsmasq DHCP + reverse DNS
-│   │   ├── remote-unlock.nix     Soyo: initrd SSH unlock + direct-link rescue
-│   │   ├── observability.nix    Soyo: Grafana/Prometheus/Loki/Tempo/Alloy stack
+│   │   ├── blocky.nix            soyo: DNS resolver with ad-blocking
+│   │   ├── dhcp.nix              soyo: dnsmasq DHCP + reverse DNS
+│   │   ├── remote-unlock.nix     soyo: initrd SSH unlock + direct-link rescue
+│   │   ├── observability.nix    soyo: Grafana/Prometheus/Loki/Tempo/Alloy stack
 │   │   ├── desktop.nix           zbook: PipeWire, Bluetooth, Flatpak, fonts
 │   │   ├── cosmic.nix            zbook: COSMIC DE + greeter, NVIDIA suspend hooks
 │   │   ├── nvidia.nix            zbook: NVIDIA Optimus PRIME offload/sync
@@ -95,14 +95,14 @@ Host-specific **data** lives in thin files under `hosts/<name>/` — disko layou
 │   ├── parts/
 │   │   ├── aspect-options.nix   Defines aspects.nixos/homeManager namespaces
 │   │   ├── perSystem.nix         Dev shell, formatter, pre-commit hooks, checks
-│   │   ├── soyo.nix              Soyo host assembler
+│   │   ├── soyo.nix              soyo host assembler
 │   │   ├── zbook.nix              zbook host assembler
 │   │   ├── deploy.nix            deploy-rs nodes + deployChecks
 │   │   └── topology.nix          nix-topology diagram builder
 │   └── _pkgs/
 │       └── command-code.nix      Command Code CLI package (callPackage, not a module)
 ├── hosts/
-│   ├── soyo/                      Soyo hardware/data (disko, boot, networking, dns, dhcp, …)
+│   ├── soyo/                      soyo hardware/data (disko, boot, networking, dns, dhcp, …)
 │   └── zbook/                      zbook hardware/data (disko, boot, networking, backup)
 ├── lib/observability/             Dashboard builders, Alloy config, Tempo traces (plain Nix functions)
 ├── secrets/                       agenix-rekey master-encrypted .age files + host pubkeys
@@ -124,7 +124,7 @@ just lint            # format + static analysis
 just check           # nix flake check (eval + build + deploy checks + option tests)
 just test            # run dendritic option-namespace tests
 just build soyo      # build soyo's system closure
-just deploy soyo     # deploy Soyo with deploy-rs (auto-rollback + magic rollback)
+just deploy soyo     # deploy soyo with deploy-rs (auto-rollback + magic rollback)
 just topology        # generate LAN topology diagrams
 just healthcheck soyo # run on-host health check over SSH
 
@@ -167,9 +167,7 @@ No registry edits — import-tree auto-discovers every new `.nix` file.
 
 **Thin hosts, fat modules.** All reusable logic is in aspect modules; host directories hold only hardware data.
 
-**TPM auto-unlock.** PCR 0+2+7 binding with Limine Secure Boot; passphrase keyslot always present as fallback.
-
-**On-box observability.** Grafana, Prometheus, Loki, Tempo, and Alloy run as isolated guest services on Soyo with hand-built dashboards.
+**On-box observability.** Grafana, Prometheus, Loki, Tempo, and Alloy run as isolated guest services on soyo with hand-built dashboards.
 
 **Automatic CI.** Lint (deadnix, statix, typos, gitleaks, shellcheck, markdownlint, ruff) → `nix flake check` → build (soyo + zbook) with closure diff → topology artifact.
 
@@ -199,7 +197,7 @@ No registry edits — import-tree auto-discovers every new `.nix` file.
 | [docs/learning/README.md](docs/learning/README.md) | 37-step guided path from zero to understanding the whole flake |
 | [docs/superpowers/specs/soyo-dns-dhcp-appliance.md](docs/superpowers/specs/soyo-dns-dhcp-appliance.md) | Canonical design — every architectural decision and why |
 | [docs/secrets.md](docs/secrets.md) | agenix-rekey walkthrough for beginners |
-| [docs/install-soyo.md](docs/install-soyo.md) | First-install runbook for Soyo |
+| [docs/install-soyo.md](docs/install-soyo.md) | First-install runbook for soyo |
 | [docs/backup-and-restore.md](docs/backup-and-restore.md) | restic restore drill + btrbk snapshot recovery |
 | [docs/recovery.md](docs/recovery.md) | Break-glass recovery procedures |
 | [docs/update-and-rollback.md](docs/update-and-rollback.md) | `nix flake update` + `deploy-rs` rollback |
@@ -208,7 +206,7 @@ No registry edits — import-tree auto-discovers every new `.nix` file.
 ## Requirements
 
 - [Nix](https://nixos.org/download/) 2.18+ with `experimental-features = nix-command flakes`
-- NixOS 26.05 (Soyo) or nixpkgs-unstable (zbook)
+- NixOS 26.05 (soyo) or nixpkgs-unstable (zbook)
 
 ## Acknowledgments
 
