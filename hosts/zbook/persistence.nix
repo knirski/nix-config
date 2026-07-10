@@ -35,6 +35,9 @@
         }
         ".local/share/direnv"
         ".local/state/home-manager"
+        ".local/state/DankMaterialShell"
+        ".cache/DankMaterialShell"
+        ".local/share/dankcalendar"
         ".local/share/applications"
         ".config"
         ".commandcode"

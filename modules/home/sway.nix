@@ -3,8 +3,6 @@
     wayland.windowManager.sway = {
       enable = true;
       xwayland = true;
-      # Use Sway's built-in default config for all standard binds.
-      # Only define our overrides via extraConfig.
       config = rec {
         modifier = "Mod4";
         terminal = "kitty";
@@ -66,7 +64,7 @@
           font_size = 13.0;
           background_opacity = "0.95";
           confirm_os_window_close = 0;
-          shell = "/run/current-system/sw/bin/bash";
+          shell = "/run/current-system/sw/bin/zsh";
         };
       };
 
