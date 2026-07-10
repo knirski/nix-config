@@ -65,6 +65,8 @@
           background_opacity = "0.95";
           confirm_os_window_close = 0;
           shell = "/run/current-system/sw/bin/zsh";
+          clipboard_control = "write-clipboard write-primary read-clipboard-ask";
+          allow_clipboard_controls = true;
         };
       };
 
