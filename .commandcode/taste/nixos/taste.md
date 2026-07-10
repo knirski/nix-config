@@ -69,3 +69,7 @@
 - Add DMS satellite tools as flake inputs: `dsearch` (`github:AvengeMedia/danksearch`, HM module available as `inputs.dsearch.homeModules.default`) and `dcal` (`github:AvengeMedia/dankcalendar`). Confidence: 0.60
 - Add the DMS plugin registry (`github:AvengeMedia/dms-plugin-registry`) as a flake input for community plugins. Confidence: 0.60
 - Use `nix fmt` before committing to satisfy treefmt pre-commit hooks — the project requires formatted files before git operations. Confidence: 0.75
+
+# sway/dms
+- When DMS is the shell, disable the Sway bar by adding `bars = [ ]` to the Sway config or `bar { status_command false }` in `extraConfig` to avoid having two bars active. User explicitly said "I want to disable sway bar - DMS bar is enough". Confidence: 0.75
+- HM `programs.<name>.enable` auto-installs the package — do NOT add a redundant entry in `home.packages`. User corrected that `starship` didn't need to be in both places after `programs.starship.enable = true` was set. Confidence: 0.70

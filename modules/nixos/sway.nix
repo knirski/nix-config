@@ -18,6 +18,7 @@
       QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
       XDG_SESSION_TYPE = "wayland";
       XDG_CURRENT_DESKTOP = "sway";
+      SWAY_UNSUPPORTED_GPU = "1";
     };
   };
 }
