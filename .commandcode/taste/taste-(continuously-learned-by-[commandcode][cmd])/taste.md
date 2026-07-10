@@ -22,6 +22,10 @@
 - In a custom `.gitleaks.toml` with only an `[allowlist]` and no `[[rules]]`, set `useDefault = true` to merge the built-in rules with the allowlist; omitting it silently replaces all built-in rules with zero rules, disabling all secret detection. Confidence: 0.72
 - When configuring git-hooks.nix hooks, prefer using the framework's built-in predefined hook definitions (e.g., cachix/git-hooks.nix's nixpkgs-fmt, statix, etc.) over custom inline writeShellScriptBin wrappers; predefined hooks are more idiomatic, better maintained, and integrate correctly with pass_filenames and the pre-commit lifecycle. Confidence: 0.60
 
+# general
+- Use zsh as the default shell with starship as the shell prompt theme (switched from spaceship to starship). Confidence: 0.65
+- Use oh-my-zsh (or a modern alternative with popular plugins) for zsh plugin management, with the most useful popular plugins enabled. Confidence: 0.70
+
 # git
 - Use user name "Krzysztof Nirski" (not "Krzysiek Knirski") when configuring git identity globally. Confidence: 0.80
 - Use email "krzysztof.nirski+github@gmail.com" when configuring git identity globally. Confidence: 0.80

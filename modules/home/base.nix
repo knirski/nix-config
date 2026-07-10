@@ -18,6 +18,31 @@
       };
 
       programs = {
+        starship = {
+          enable = true;
+          settings = {
+            add_newline = false;
+            cmd_duration.show_milliseconds = false;
+          };
+        };
+        zsh = {
+          enable = true;
+          oh-my-zsh = {
+            enable = true;
+            plugins = [
+              "git"
+              "docker"
+              "docker-compose"
+              "sudo"
+              "copyfile"
+              "dirhistory"
+              "extract"
+              "history"
+              "z"
+              "colored-man-pages"
+            ];
+          };
+        };
         bash = {
           enable = true;
           initExtra = ''

@@ -1,9 +1,11 @@
-{ config, ... }:
+{ config, pkgs, ... }:
 {
   users.users.root.hashedPasswordFile = config.age.secrets.root-password.path;
 
   users.users.krzysiek = {
     isNormalUser = true;
+    shell = pkgs.zsh;
+    ignoreShellProgramCheck = true;
     extraGroups = [
       "wheel"
       "networkmanager"
