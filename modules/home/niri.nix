@@ -79,34 +79,44 @@
             QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
         }
 
-        // ── Binds ────────────────────────────────────────────────────
+        // ── Binds (niri standard layout, see niri --help for full list) ──
         binds {
-            // Application launchers
-            Mod+Return { spawn "kitty"; }
-            Mod+D { spawn "fuzzel"; }
-
-            // Close window
-            Mod+Q { close-window; }
-
-            // Lock screen
+            Mod+Return hotkey-overlay-title="Open a Terminal: kitty" { spawn "kitty"; }
+            Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
             Mod+Escape { spawn "swaylock"; }
-
-            // Toggle window floating
+            Mod+Q { close-window; }
             Mod+Space { toggle-window-floating; }
+            Mod+Shift+V { switch-focus-between-floating-and-tiling; }
 
-            // Focus movement
+            // Focus
             Mod+H { focus-column-left; }
             Mod+J { focus-window-down; }
             Mod+K { focus-window-up; }
             Mod+L { focus-column-right; }
+            Mod+Home { focus-column-first; }
+            Mod+End  { focus-column-last; }
 
-            // Move windows
+            // Move columns / windows
             Mod+Ctrl+H { move-column-left; }
             Mod+Ctrl+J { move-window-down; }
             Mod+Ctrl+K { move-window-up; }
             Mod+Ctrl+L { move-column-right; }
+            Mod+Ctrl+Home { move-column-to-first; }
+            Mod+Ctrl+End  { move-column-to-last; }
 
-            // Workspace switching
+            // Focus monitor (multi-monitor)
+            Mod+Shift+H { focus-monitor-left; }
+            Mod+Shift+J { focus-monitor-down; }
+            Mod+Shift+K { focus-monitor-up; }
+            Mod+Shift+L { focus-monitor-right; }
+
+            // Move column to monitor
+            Mod+Shift+Ctrl+H { move-column-to-monitor-left; }
+            Mod+Shift+Ctrl+J { move-column-to-monitor-down; }
+            Mod+Shift+Ctrl+K { move-column-to-monitor-up; }
+            Mod+Shift+Ctrl+L { move-column-to-monitor-right; }
+
+            // Workspaces: focus by index
             Mod+1 { focus-workspace 1; }
             Mod+2 { focus-workspace 2; }
             Mod+3 { focus-workspace 3; }
@@ -118,7 +128,7 @@
             Mod+9 { focus-workspace 9; }
             Mod+0 { focus-workspace 10; }
 
-            // Move windows to workspaces
+            // Workspaces: move column
             Mod+Ctrl+1 { move-column-to-workspace 1; }
             Mod+Ctrl+2 { move-column-to-workspace 2; }
             Mod+Ctrl+3 { move-column-to-workspace 3; }
@@ -129,19 +139,72 @@
             Mod+Ctrl+8 { move-column-to-workspace 8; }
             Mod+Ctrl+9 { move-column-to-workspace 9; }
 
-            // Previous / special workspace navigation
+            // Workspace cycling
+            Mod+Page_Down { focus-workspace-down; }
+            Mod+Page_Up   { focus-workspace-up; }
+            Mod+U { focus-workspace-down; }
+            Mod+I { focus-workspace-up; }
+            Mod+Ctrl+Page_Down { move-column-to-workspace-down; }
+            Mod+Ctrl+Page_Up   { move-column-to-workspace-up; }
+            Mod+Shift+Page_Down { move-workspace-down; }
+            Mod+Shift+Page_Up   { move-workspace-up; }
+            Mod+Shift+U { move-workspace-down; }
+            Mod+Shift+I { move-workspace-up; }
             Mod+Tab { focus-workspace-previous; }
-            Mod+Comma { consume-window-into-column; }
-            Mod+Period { expel-window-from-column; }
 
-            // Screenshots (niri built-in)
-            Print { screenshot; }
-            Ctrl+Print { screenshot-screen; }
+            // Window consumption / expulsion
+            Mod+Comma  { consume-window-into-column; }
+            Mod+Period { expel-window-from-column; }
+            Mod+BracketLeft  { consume-or-expel-window-left; }
+            Mod+BracketRight { consume-or-expel-window-right; }
+
+            // Column / window sizing
+            Mod+R { switch-preset-column-width; }
+            Mod+Shift+R { switch-preset-column-width-back; }
+            Mod+Alt+R { reset-window-height; }
+            Mod+Minus { set-column-width "-10%"; }
+            Mod+Equal { set-column-width "+10%"; }
+            Mod+Shift+Minus { set-window-height "-10%"; }
+            Mod+Shift+Equal { set-window-height "+10%"; }
+
+            // Fullscreen / maximize / expand
+            Mod+F { maximize-column; }
+            Mod+Shift+F { fullscreen-window; }
+            Mod+M { maximize-window-to-edges; }
+            Mod+Ctrl+F { expand-column-to-available-width; }
+
+            // Center column(s)
+            Mod+C { center-column; }
+            Mod+Ctrl+C { center-visible-columns; }
+
+            // Tabbed display
+            Mod+W { toggle-column-tabbed-display; }
 
             // Overview
             Mod+O { toggle-overview; }
 
-            // Audio (repeating, allowed when locked)
+            // Mouse wheel
+            Mod+WheelScrollDown      cooldown-ms=150 { focus-workspace-down; }
+            Mod+WheelScrollUp        cooldown-ms=150 { focus-workspace-up; }
+            Mod+Ctrl+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
+            Mod+Ctrl+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
+            Mod+WheelScrollRight      { focus-column-right; }
+            Mod+WheelScrollLeft       { focus-column-left; }
+            Mod+Ctrl+WheelScrollRight { move-column-right; }
+            Mod+Ctrl+WheelScrollLeft  { move-column-left; }
+
+            // Screenshots (built-in)
+            Print { screenshot; }
+            Ctrl+Print { screenshot-screen; }
+
+            // Hotkey overlay
+            Mod+Shift+Slash { show-hotkey-overlay; }
+
+            // Quit / power off
+            Mod+Shift+E { quit; }
+            Mod+Shift+P { power-off-monitors; }
+
+            // Audio
             XF86AudioRaiseVolume allow-when-locked=true { spawn "swayosd-client" "--output-volume" "+5"; }
             XF86AudioLowerVolume allow-when-locked=true { spawn "swayosd-client" "--output-volume" "-5"; }
             XF86AudioMute allow-when-locked=true { spawn "swayosd-client" "--output-volume" "mute-toggle"; }
@@ -155,12 +218,11 @@
             XF86MonBrightnessUp { spawn "brightnessctl" "s" "+5%"; }
             XF86MonBrightnessDown { spawn "brightnessctl" "s" "5%-"; }
 
-            // Clipboard / emoji / recording / color picker
+            // Utilities
             Mod+V { spawn-sh "cliphist list | wofi --dmenu -p 'Clipboard' | cliphist decode | wl-copy"; }
             Mod+E { spawn "emote"; }
-            Mod+Shift+R { spawn "toggle-recording"; }
-            Mod+Ctrl+C { spawn "wl-color-picker"; }
-
+            Mod+Shift+Ctrl+R { spawn "toggle-recording"; }
+            Mod+Shift+Ctrl+C { spawn "wl-color-picker"; }
         }
 
         // ── Spawn at startup ─────────────────────────────────────────
