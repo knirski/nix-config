@@ -18,12 +18,8 @@
 
       # Make command-code available everywhere (used in home.base).
       # Make command-code available everywhere (used in home.base).
-      # codex is overridden to 0.144.1 until nixpkgs-unstable catches up.
       nixpkgs.overlays = [
-        (final: prev: {
-          codex = final.callPackage ../../modules/_pkgs/codex.nix {
-            prevCodex = prev.codex;
-          };
+        (final: _: {
           command-code = final.callPackage ../../modules/_pkgs/command-code.nix { };
         })
       ];
