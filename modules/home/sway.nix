@@ -3,10 +3,16 @@
     wayland.windowManager.sway = {
       enable = true;
       xwayland = true;
+      extraConfig = ''
+        output eDP-1 scale 1
+        output DP-6 scale 1
+      '';
       config = rec {
         modifier = "Mod4";
         terminal = "kitty";
-        startup = [ ];
+        startup = [
+          { command = "wl-paste -p --watch wl-copy"; }
+        ];
         bars = [ ];
         keybindings = {
           "${modifier}+Return" = "exec ${terminal}";
@@ -37,6 +43,8 @@
           "${modifier}+Shift+7" = "move container to workspace number 7";
           "${modifier}+Shift+8" = "move container to workspace number 8";
           "${modifier}+Shift+9" = "move container to workspace number 9";
+          "${modifier}+Shift+Left" = "move workspace to output left";
+          "${modifier}+Shift+Right" = "move workspace to output right";
           "${modifier}+Shift+space" = "floating toggle";
           "${modifier}+space" = "focus mode_toggle";
           "${modifier}+Shift+minus" = "move scratchpad";
@@ -79,11 +87,6 @@
         # Replace unwanted defaults
         enableVPN = false;
         enableCalendarEvents = false; # use dcal
-        # User preferences over DMS defaults
-        settings = {
-          color.predefinedScheme = "catppuccin-mocha";
-          bar.position = "bottom";
-        };
         plugins = {
           dankActions.enable = true;
           dankBatteryAlerts.enable = true;
