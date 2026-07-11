@@ -34,6 +34,8 @@
           "${modifier}+7" = "workspace number 7";
           "${modifier}+8" = "workspace number 8";
           "${modifier}+9" = "workspace number 9";
+          "${modifier}+Shift+Left" = "move workspace to output left";
+          "${modifier}+Shift+Right" = "move workspace to output right";
           "${modifier}+Shift+1" = "move container to workspace number 1";
           "${modifier}+Shift+2" = "move container to workspace number 2";
           "${modifier}+Shift+3" = "move container to workspace number 3";
@@ -43,8 +45,6 @@
           "${modifier}+Shift+7" = "move container to workspace number 7";
           "${modifier}+Shift+8" = "move container to workspace number 8";
           "${modifier}+Shift+9" = "move container to workspace number 9";
-          "${modifier}+Shift+Left" = "move workspace to output left";
-          "${modifier}+Shift+Right" = "move workspace to output right";
           "${modifier}+Shift+space" = "floating toggle";
           "${modifier}+space" = "focus mode_toggle";
           "${modifier}+Shift+minus" = "move scratchpad";
@@ -81,12 +81,11 @@
       dank-material-shell = {
         enable = true;
         systemd.enable = true;
-        # Must-haves: dgop for system monitoring, matugen for theming
         enableSystemMonitoring = true;
         enableDynamicTheming = true;
-        # Replace unwanted defaults
         enableVPN = false;
-        enableCalendarEvents = false; # use dcal
+        enableCalendarEvents = false;
+        settings = builtins.fromJSON (builtins.readFile ./dms-settings.json);
         plugins = {
           dankActions.enable = true;
           dankBatteryAlerts.enable = true;

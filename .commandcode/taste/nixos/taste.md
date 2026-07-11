@@ -71,5 +71,6 @@
 - Use `nix fmt` before committing to satisfy treefmt pre-commit hooks — the project requires formatted files before git operations. Confidence: 0.75
 
 # sway/dms
+- Prefer Home Manager managing DMS settings declaratively via `settings` block over letting DMS own the `settings.json` file at runtime; HM-managed means DMS GUI changes get wiped on deploy, but the user explicitly chose this trade-off. Confidence: 0.82
 - When DMS is the shell, disable the Sway bar by adding `bars = [ ]` to the Sway config or `bar { status_command false }` in `extraConfig` to avoid having two bars active. User explicitly said "I want to disable sway bar - DMS bar is enough". Confidence: 0.75
 - HM `programs.<name>.enable` auto-installs the package — do NOT add a redundant entry in `home.packages`. User corrected that `starship` didn't need to be in both places after `programs.starship.enable = true` was set. Confidence: 0.70
