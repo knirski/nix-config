@@ -56,10 +56,16 @@ def main(root: Path) -> int:
                 f"new structured test sources need classification: {unchecked}"
             )
 
+    ignored_components = {".cache", ".devenv", ".direnv", ".git"}
     for path in root.rglob("*.nix"):
-        if "/.git/" in path.as_posix():
+        if ignored_components.intersection(path.relative_to(root).parts):
             continue
-        if "pkgs.writeShellScript" in path.read_text(encoding="utf-8"):
+        try:
+            source = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as error:
+            errors.append(f"{path.relative_to(root)}: cannot inspect Nix source: {error}")
+            continue
+        if "pkgs.writeShellScript" in source:
             errors.append(
                 f"{path.relative_to(root)}: use checked writeShellApplication "
                 "with explicit runtimeInputs"

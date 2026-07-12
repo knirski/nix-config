@@ -18,8 +18,8 @@ were included.
   the test only through an explicit policy.
 - Both complete host closures built successfully with `--no-link`.
 - The whole-repository gate **failed** in `pre-commit`: the untracked
-  `docs/router-recommendation.md` has no H1 and contains the misspelling
-  a misspelling. This baseline task deliberately did not fix implementation or
+  `docs/router-recommendation.md` has no H1 and contains a misspelling. This
+  baseline task deliberately did not fix implementation or
   user-owned files.
 - The other derivations needed by that warm-cache run evaluated successfully;
   only `pre-commit`, `treefmt`, and `topology-freshness` needed rebuilding.

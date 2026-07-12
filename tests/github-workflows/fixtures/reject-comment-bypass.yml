@@ -1,0 +1,6 @@
+on: [push]
+permissions:
+  contents: read
+# An unindented comment must not hide a later write grant.
+  id-token: write
+jobs: {}

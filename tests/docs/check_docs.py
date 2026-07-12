@@ -59,7 +59,7 @@ def anchors(path: Path) -> set[str]:
 
 def links(path: Path) -> list[str]:
     return [
-        next(group for group in match.groups() if group)
+        match.group(1) or match.group(2)
         for match in LINK_RE.finditer(path.read_text(encoding="utf-8"))
     ]
 
@@ -142,7 +142,7 @@ def check_repository(repo: Path) -> list[str]:
     for path, metadata in manifest.items():
         if (
             path != PRIMARY_INDEX
-            and metadata["status"] in {"active", "canonical"}
+            and metadata.get("status") in {"active", "canonical"}
             and path not in primary_links
         ):
             errors.append(f"active document lacks primary docs index link: {path}")

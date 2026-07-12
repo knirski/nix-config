@@ -13,7 +13,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 5 | [Design doc](../superpowers/specs/soyo-dns-dhcp-appliance.md) | All | Every architectural decision and why |
 | 6 | `flake.nix` | M1 | The entry point — thin, delegates to flake-parts; `vic/import-tree` auto-imports every module under `modules/` |
 | 7 | `modules/parts/soyo.nix` | M1 | How a host is assembled by toggling aspects |
-| 8 | `modules/nixos/base.nix` → `server.nix` → `users.nix` | M1 | The role-neutral base, server-only defaults, user policy |
+| 8 | `modules/nixos/base.nix` → `server.nix` → `users.nix`, [Host role models](host-role-models.md) | M1 | The role-neutral base, explicit aspects, typed role registries and boundary checks |
 | 9 | `modules/nixos/persistence.nix`, `hosts/soyo/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + the concrete persisted-path inventory, including why boot signing state like `/var/lib/sbctl` belongs in it |
 | 10 | `modules/nixos/blocky.nix`, `hosts/soyo/dns.nix` | M1 | DNS with blocking (Blocky) |
 | 11 | `modules/nixos/dhcp.nix`, `hosts/soyo/dhcp.nix` | M1 | DHCP + reverse DNS (dnsmasq) |
@@ -23,7 +23,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 15 | `modules/nixos/backup.nix`, `hosts/soyo/backup.nix` | M2 | restic to Synology, btrbk local snapshots |
 | 16 | `modules/nixos/observability.nix`, `lib/observability/`, `hosts/soyo/observability.nix`, [`docs/topology/`](../topology/) | M2 | Exporters, on-box Grafana, Loki logs, Tempo traces, Alloy journal shipping. Reusable helpers extracted to `lib/observability/` (outside `import-tree`'s scope — see comment in the module). LAN observability adds passive inventory collector (`modules/nixos/observability/lan_inventory.py`), blackbox probes (ICMP + HTTP), an `LAN Overview` dashboard, and topology diagrams under `docs/topology/`. Host-local network metadata lives in `hosts/soyo/network.nix` (separated from the DHCP schema to keep the critical path boring). |
 | 17 | `hosts/soyo/boot.nix` | M3 | Limine Secure Boot, TPM PCR binding, and Limine's `sbctl` signing model |
-| 18 | `modules/parts/perSystem.nix` | All | Dev shell, formatter, pre-commit hooks (treefmt, deadnix, statix, typos, end-of-file-fixer, check-merge-conflicts, actionlint, shellcheck, markdownlint, ruff), CI pipeline |
+| 18 | `modules/parts/perSystem.nix`, [Verification layers](verification-layers.md) | All | Dev shell, formatter, pre-commit hooks, pure checks, strict-KVM VM tests and CI/Cachix boundaries |
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
 | 20 | [CI design doc](../superpowers/specs/2026-07-05-ci-pipeline-design.md), [CI plan](../superpowers/plans/2026-07-05-ci-pipeline-plan.md), `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline (lint: deadnix + statix + typos + gitleaks + actionlint + shellcheck + markdownlint + ruff → eval: `nix flake check` → build + closure diff → topology artifact), Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
 | 21 | `modules/nixos/laptop.nix`, `modules/nixos/workstation.nix` | M4 | Laptop power management (power-profiles-daemon, thermald, battery thresholds) and workstation defaults (docker, ssh agent) |

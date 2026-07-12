@@ -8,36 +8,74 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
 
-PINNED_ACTION = re.compile(r"^\s*-\s+uses:\s+[^\s@]+@[0-9a-f]{40}(?:\s+#\s+\S.*)?$")
-ANY_ACTION = re.compile(r"^\s*-\s+uses:\s+(\S+)")
+
+PINNED_ACTION = re.compile(
+    r"^\s*-\s+uses:\s+['\"]?[^\s@'\"]+@[0-9a-f]{40}['\"]?(?:\s+#\s+\S.*)?$"
+)
+ANY_ACTION = re.compile(r"^\s*-\s+uses:\s+")
+
+
+def has_trigger(value: object, trigger: str) -> bool:
+    if isinstance(value, str):
+        return value == trigger
+    if isinstance(value, list):
+        return trigger in value
+    if isinstance(value, dict):
+        return trigger in value
+    return False
+
+
+def permission_errors(value: object, scope: str, require_contents: bool) -> list[str]:
+    errors: list[str] = []
+    if isinstance(value, str):
+        if value == "write-all":
+            errors.append(f"{scope} write permission is forbidden")
+        if require_contents and value != "read-all":
+            errors.append(f"{scope} permissions must include contents: read")
+        return errors
+    if not isinstance(value, dict):
+        return [f"{scope} permissions must be a mapping or read-all"]
+    if require_contents and value.get("contents") != "read":
+        errors.append(f"{scope} permissions must include contents: read")
+    if any(permission == "write" for permission in value.values()):
+        errors.append(f"{scope} write permission is forbidden")
+    return errors
 
 
 def validate(path: Path) -> list[str]:
-    text = path.read_text(encoding="utf-8")
+    try:
+        text = path.read_text(encoding="utf-8")
+        # BaseLoader keeps YAML scalars as strings and, unlike SafeLoader's
+        # YAML 1.1 rules, never turns the workflow key `on` into boolean true.
+        data = yaml.load(text, Loader=yaml.BaseLoader)
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as error:
+        return [f"cannot parse workflow: {error}"]
     lines = text.splitlines()
     errors: list[str] = []
 
-    if re.search(r"(?m)^\s*pull_request_target\s*:", text):
+    if not isinstance(data, dict):
+        return ["workflow root must be a mapping"]
+
+    if has_trigger(data.get("on"), "pull_request_target"):
         errors.append("pull_request_target is forbidden")
 
-    permission_match = re.search(r"(?m)^permissions:\s*\n((?:^[ \t]+.*\n?)*)", text)
-    if permission_match is None:
+    if "permissions" not in data:
         errors.append("top-level permissions block is required")
     else:
-        permissions = permission_match.group(1)
-        if not re.search(r"(?m)^\s+contents:\s+read\s*$", permissions):
-            errors.append("top-level permissions must include contents: read")
-        if re.search(r"(?m)^\s+[-\w]+:\s+write\s*$", permissions):
-            errors.append("top-level write permission is forbidden")
+        errors.extend(permission_errors(data["permissions"], "top-level", True))
 
-    job_permission_blocks = re.finditer(
-        r"(?m)^(?P<indent>[ \t]+)permissions:\s*\n(?P<body>(?:^(?P=indent)[ \t]+.*\n?)*)",
-        text,
-    )
-    for block in job_permission_blocks:
-        if re.search(r"(?m)^\s+[-\w]+:\s+write\s*$", block.group("body")):
-            errors.append("job-level write permission is forbidden")
+    jobs = data.get("jobs", {})
+    if not isinstance(jobs, dict):
+        errors.append("jobs must be a mapping")
+    else:
+        for job_name, job in jobs.items():
+            if not isinstance(job, dict):
+                errors.append(f"job {job_name!r} must be a mapping")
+                continue
+            if "permissions" in job:
+                errors.extend(permission_errors(job["permissions"], "job-level", False))
 
     for number, line in enumerate(lines, start=1):
         if ANY_ACTION.match(line) and not PINNED_ACTION.match(line):

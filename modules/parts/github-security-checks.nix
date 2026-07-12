@@ -4,16 +4,19 @@
 {
   perSystem =
     { pkgs, ... }:
+    let
+      python = pkgs.python3.withPackages (packages: [ packages.pyyaml ]);
+    in
     {
       checks.github-workflow-policy = pkgs.runCommand "github-workflow-policy" { } ''
         checker=${inputs.self}/tests/github-workflows/check_workflows.py
         fixtures=${inputs.self}/tests/github-workflows/fixtures
 
-        ${pkgs.python3}/bin/python "$checker" ${inputs.self}/.github/workflows/*.yml
-        ${pkgs.python3}/bin/python "$checker" "$fixtures/pass.yml"
+        ${python}/bin/python "$checker" ${inputs.self}/.github/workflows/*.yml
+        ${python}/bin/python "$checker" "$fixtures/pass.yml"
 
         for rejected in "$fixtures"/reject-*.yml; do
-          if ${pkgs.python3}/bin/python "$checker" "$rejected" >stdout 2>stderr; then
+          if ${python}/bin/python "$checker" "$rejected" >stdout 2>stderr; then
             echo "error: workflow-policy fixture unexpectedly passed: $rejected" >&2
             exit 1
           fi

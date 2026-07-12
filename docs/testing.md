@@ -13,28 +13,28 @@ so QEMU fails immediately when `/dev/kvm` is missing or inaccessible instead
 of silently falling back to slow TCG emulation. Each guest also verifies the
 KVM clock source, providing runtime evidence that acceleration is active.
 
-The complete local gate therefore requires readable and writable `/dev/kvm`.
-Check access with `test -r /dev/kvm && test -w /dev/kvm` before starting it.
-A hosted CI runner without KVM may explicitly skip only these three VM checks;
-that skip must be visible in the job summary, while evaluation, static checks,
-non-VM integration checks, and both host closure builds remain mandatory. A
-runner with KVM must execute all three VM checks. TCG is not an accepted
-substitute in either environment.
+The complete gate therefore requires a character device at `/dev/kvm` that is
+readable and writable. Check it with
+`test -c /dev/kvm && test -r /dev/kvm && test -w /dev/kvm`. A missing device is
+a hard failure, never a reason to silently fall back to TCG or mark the VM tier
+successful without executing it.
 
 ## CI and local KVM gates
 
-GitHub's official runner documentation says nested virtualization on hosted
-runners is experimental and carries no stability, performance or compatibility
-guarantee. CI therefore does not pretend to provide a strict KVM resilience
-gate. It evaluates every output, builds each non-VM check exactly once in its
-named job, and builds both complete host closures.
+The selected GitHub `ubuntu-24.04` runner currently exposes accelerated KVM;
+the pinned Determinate installer action configures it and has reported
+`Accelerated KVM is enabled` in an actual repository run. CI still verifies the
+device explicitly before running the complete flake suite. If GitHub changes
+the runner image or virtualization contract, the job fails closed instead of
+quietly weakening coverage.
 
 | Trigger class | Evidence |
 | --- | --- |
 | Every push and pull request | Static hooks, documentation/public-data/workflow/shell policies, script contracts and topology freshness |
 | Every push and pull request | Full no-build evaluation, pure invariants and isolated raw-restic integration |
 | After static and evaluation pass | Complete Soyo and zbook closures; sanitized topology artifact |
-| Required local KVM gate | DNS/DHCP packet exchange, impermanence reboot and backup-unit VM tests |
+| After static and evaluation pass | Complete `nix flake check --keep-going`, including all three strict-KVM VM tests |
+| Required before local handoff | The same complete KVM-backed flake gate |
 
 Run the hardware-accelerated resilience tier with:
 
@@ -44,13 +44,15 @@ just test-resilience
 ```
 
 Then run `nix flake check path:. --keep-going` for the authoritative complete
-repository gate. A future self-hosted or larger GitHub runner may add the same
-named VM checks, but they must never be silently replaced by evaluation-only
-success. See GitHub's
-[hosted-runner warning](https://docs.github.com/actions/concepts/runners/github-hosted-runners#nested-virtualization).
+repository gate. The CI job runs the equivalent Git-flake command after the
+KVM preflight. See [Verification layers](learning/verification-layers.md) for a
+beginner-oriented explanation of why evaluation, builds, VM behavior and
+physical recovery drills remain separate forms of evidence.
 
-The CI Cachix credential is available only on a push to `main`; pull requests,
-including fork pull requests, cannot execute a step that references it. The
+Cachix is configured read-only for pull requests, so they can substitute
+previously published paths without receiving credentials. Only a push to
+`main` runs the authenticated Cachix step and may upload new paths. Fork pull
+requests therefore never execute a step that references the secret. The
 workflow token remains read-only. Closure comparison was removed because a
 cached store-path string does not realize its closure in a fresh runner's Nix
 store.

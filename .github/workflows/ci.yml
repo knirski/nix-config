@@ -1,6 +1,6 @@
-# CI validates reviewable source and builds both host closures. Hardware-backed
-# VM resilience tests remain a required local gate because GitHub does not
-# guarantee nested virtualization on hosted runners (see docs/testing.md).
+# CI validates reviewable source, both host closures, and the complete strict-
+# KVM flake suite. Determinate's installer enables KVM on the selected hosted
+# runner; the resilience job fails closed if /dev/kvm is unavailable.
 name: CI
 
 on:
@@ -29,6 +29,10 @@ jobs:
         with:
           use-flakehub: false
       - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        with:
+          name: knirski-nix-config
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: knirski-nix-config
@@ -56,6 +60,10 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
         with:
           use-flakehub: false
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        with:
+          name: knirski-nix-config
       - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
@@ -96,6 +104,10 @@ jobs:
         with:
           use-flakehub: false
       - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        with:
+          name: knirski-nix-config
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: knirski-nix-config
@@ -106,6 +118,31 @@ jobs:
           nix build \
             .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel \
             --keep-going --no-link --print-out-paths
+
+  resilience:
+    name: Complete KVM suite
+    needs: [static, evaluation]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+        with:
+          use-flakehub: false
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        with:
+          name: knirski-nix-config
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: knirski-nix-config
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Require hardware virtualization
+        run: test -c /dev/kvm && test -r /dev/kvm && test -w /dev/kvm
+      - name: Run every flake check with strict KVM acceleration
+        run: nix flake check --keep-going --show-trace
 
   topology:
     name: Publish sanitized topology
@@ -118,6 +155,15 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
         with:
           use-flakehub: false
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        with:
+          name: knirski-nix-config
+      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: knirski-nix-config
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Build sanitized topology overview
         run: |
           topology=$(nix build .#topology-public-overview --no-link --print-out-paths)

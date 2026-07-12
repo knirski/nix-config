@@ -57,7 +57,8 @@ not quick-start commands. Read the matching runbook and review the target first.
 ## Find your path
 
 - **Learn:** follow the [guided learning path](docs/learning/README.md), then
-  explore the [design journey](docs/learning/design-journey.md).
+  explore the [design journey](docs/learning/design-journey.md) and
+  [verification layers](docs/learning/verification-layers.md).
 - **Operate:** use the reviewed runbooks for
   [installation](docs/install-soyo.md),
   [updates and rollback](docs/update-and-rollback.md),
