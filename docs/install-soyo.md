@@ -1,9 +1,9 @@
 # Soyo — First Install from Live USB
 
 This guide walks through provisioning Soyo from a NixOS live USB: partition,
-encrypt, bootstrap secrets, install, and validate. It is the companion to
-[`hosts/soyo/DEPLOY.md`](../hosts/soyo/DEPLOY.md), which holds the condensed
-checklist; this doc explains *why* each step exists.
+encrypt, bootstrap secrets, install, and validate. This is the canonical Soyo
+installation runbook. [`hosts/soyo/DEPLOY.md`](../hosts/soyo/DEPLOY.md) is only
+a pointer for operators browsing the host directory.
 
 > **If installing on replacement hardware:** run `nixos-facter` first to
 > generate the hardware report, commit it as `hosts/<name>/facter.json`, then
@@ -22,8 +22,10 @@ checklist; this doc explains *why* each step exists.
 - [Step 6: Enroll Soyo in agenix and rekey secrets](#step-6-enroll-soyo-in-agenix-and-rekey-secrets)
 - [Step 7: Install](#step-7-install)
 - [Step 8: Post-install enrollment](#step-8-post-install-enrollment)
-- [Step 9: Validate](#step-9-validate)
+- [Step 9: Enable Secure Boot and strengthen TPM binding](#step-9-enable-secure-boot-and-strengthen-tpm-binding)
+- [Step 10: Validate](#step-10-validate)
 - [Subsequent deploys](#subsequent-deploys)
+- [Recovery](#recovery)
 
 ---
 
@@ -95,17 +97,19 @@ master-encrypted secrets:
 #
 # Back on Soyo's live ISO:
 mkdir -p -m 700 ~/.ssh
-# The scp'd file lands as soyo_ed25519; rename to id_ed25519 to match the
-# live ISO masterIdentities path in modules/parts/soyo.nix:
-mv ~/soyo_ed25519 ~/.ssh/id_ed25519 2>/dev/null || echo "Paste manually if scp failed"
-chmod 600 ~/.ssh/id_ed25519
+# The scp'd file lands as soyo_ed25519. Keep it outside the repo and create
+# the stable operator-side symlink used by every host assembler:
+mv ~/soyo_ed25519 ~/.ssh/soyo_ed25519 2>/dev/null || echo "Paste manually if scp failed"
+chmod 600 ~/.ssh/soyo_ed25519
+sudo install -d -m 755 /etc/agenix-rekey
+sudo ln -sfn "$HOME/.ssh/soyo_ed25519" /etc/agenix-rekey/master-identity
 ```
 
 Verify the key works:
 
 ```bash
-echo "test" | nix run nixpkgs#rage -- -e -i ~/.ssh/id_ed25519 -o /tmp/.age-test 2>/dev/null \
-  && nix run nixpkgs#rage -- -d -i ~/.ssh/id_ed25519 /tmp/.age-test 2>/dev/null | grep -q test \
+echo "test" | nix run nixpkgs#rage -- -e -i /etc/agenix-rekey/master-identity -o /tmp/.age-test 2>/dev/null \
+  && nix run nixpkgs#rage -- -d -i /etc/agenix-rekey/master-identity /tmp/.age-test 2>/dev/null | grep -q test \
   && echo "SSH key OK" && rm -f /tmp/.age-test
 ```
 
@@ -307,9 +311,9 @@ procedure), re-enroll against PCR 0+2+7 for stronger tamper detection.
 
 ### Post-install deploy from a workstation
 
-Update `modules/parts/soyo.nix` to point `masterIdentities` to your
-workstation's SSH key path (e.g. `/home/krzysiek/.ssh/soyo_ed25519`)
-instead of the live ISO path. Then from any workstation on the LAN:
+On each workstation, create `/etc/agenix-rekey/master-identity` as a symlink to
+the SSH private key matching `secrets/krzysiek.age.pub`, as described in
+[docs/secrets.md](secrets.md). No host-assembler edit is needed. Then run:
 
 ```bash
 nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
@@ -329,15 +333,57 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
 
 ---
 
-## Step 9: Validate
+## Step 9: Enable Secure Boot and strengthen TPM binding
+
+The first TPM enrollment deliberately binds only PCR 7. After confirming the
+installed system boots, complete the Phase 2 Secure Boot procedure in
+[`docs/recovery.md`](recovery.md#phase-2--limine-secure-boot-setup-one-time-operator-steps).
+That procedure is canonical for key creation, firmware enrollment, signing,
+and recovery if firmware refuses the signed boot path.
+
+After Secure Boot is enabled and a normal boot succeeds, replace the Phase 1
+TPM slot with the Phase 2 PCR 0+2+7 binding:
+
+```bash
+sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
+sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 \
+  /dev/disk/by-partlabel/luks
+sudo systemd-cryptenroll /dev/disk/by-partlabel/luks | grep -i tpm
+```
+
+Never bind PCR 8 or PCR 9: store-path and kernel-image changes would break
+unattended unlock on routine deployments. Keep the passphrase keyslot as the
+break-glass fallback.
+
+---
+
+## Step 10: Validate
+
+Run the automated health check from the repository checkout:
+
+```bash
+nix run .#healthcheck -- soyo
+```
+
+Expect every automated check to report `[PASS]`. Investigate every `[FAIL]`
+before treating the installation as complete.
+
+The following checks require a client, reboot, physical access, or a deliberate
+failure and therefore remain manual:
 
 - `enp1s0` comes up with the `dwmac_motorcomm` driver
 - Blocky answers DNS on port 53 and filters known ad domains
 - dnsmasq hands out DHCP leases with the correct nameserver option
 - `soyo.home.arpa` resolves and clients resolve hostnames in `home.arpa`
-- TPM auto-unlock works on reboot
+- a LAN client receives the correct DNS server and search domain over DHCP
+- TPM auto-unlock works after a reboot
+- the passphrase keyslot can still unlock from the local console
+- LAN initrd SSH unlock works on port 2222
+- direct-link rescue works with the documented static addresses
 - agenix secrets are decrypted (`ls /run/agenix/`)
-- Backups to the Synology run and restore drills pass
+- a forced unit failure sends an ntfy notification
+- a restic restore drill succeeds
+- a tampered boot path fails verification
 
 ---
 
@@ -355,11 +401,7 @@ Use deploy-rs when secrets changed and you want rekey + deploy in one step:
 
 ```bash
 nix develop '.#' -c agenix rekey
-deploy .#soyo
-
-```bash
-nix develop '.#' -c agenix rekey
-nix develop '.#' -c nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
+nix develop '.#' -c deploy .#soyo
 ```
 
 See [`docs/update-and-rollback.md`](update-and-rollback.md) for the full
@@ -370,3 +412,8 @@ update workflow and rollback options.
 If something goes wrong during or after install — TPM unlock fails, a
 deploy breaks networking, or the disk needs replacement — see the recovery
 runbook at [`docs/recovery.md`](recovery.md).
+
+That runbook covers the local-console, LAN initrd SSH, and direct-link unlock
+paths; Secure Boot recovery; rollback; secret recovery; and replacement-host
+restore. Do not wipe the passphrase or TPM keyslot unless the applicable
+recovery procedure explicitly calls for it.

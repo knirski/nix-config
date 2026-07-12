@@ -42,12 +42,15 @@ and its docs must teach (see "Learning docs" below).
    PCR 0+2+7 with Limine Secure Boot. Never bind PCR 9 (kernel image) or PCR 8
    (store paths) — they break unattended auto-unlock. Always keep the passphrase
    keyslot as fallback.
-8. **flake-parts + the dendritic pattern.** `modules/default.nix` explicitly lists
-   every file as a flake-parts module; aspects expose `aspects.nixos.<aspect>`
-   (and `aspects.homeManager.<aspect>`). Hosts assemble by toggling aspects
-   (`with config.aspects.nixos; [ … ]`) in the host assembler module, not by
-   sibling `imports` of aspect files.    The assembler (`modules/parts/soyo.nix`) is also a flake-parts module;
-   `hosts/soyo/` holds hardware/data only.
+8. **flake-parts + the dendritic pattern.** `flake.nix` passes
+   `inputs.import-tree ./modules` to flake-parts, so eligible `.nix` files under
+   `modules/` are auto-imported as flake-parts modules. `_`-prefixed paths such
+   as `modules/_pkgs/` are excluded. Aspects expose `aspects.nixos.<aspect>`
+   (and `aspects.homeManager.<aspect>`), but importing an aspect file does not
+   enable it: hosts opt in via `with config.aspects.nixos; [ … ]` in their
+   assembler, not via sibling `imports`. Keep reusable non-module helpers under
+   `lib/`, outside the imported tree. The assembler (`modules/parts/soyo.nix`)
+   is also a flake-parts module; `hosts/soyo/` holds hardware/data only.
 9. **Reproducible + recoverable.** Everything declarative. Root is impermanent:
    wiped to a blank Btrfs snapshot (`root`/`root-blank`) in systemd initrd each
    boot, durable state only under `/persist` via the `preservation` module; the
@@ -151,7 +154,7 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   actionlint (GitHub Actions), shellcheck (shell scripts), markdownlint (docs),
   ruff (Python).
   Before committing: `nix flake check` and also run `gitleaks` locally
-  (`nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose`).
+  (`nix run path:.#gitleaks -- detect --source . --no-git --verbose`).
   A `gitleaks` pre-commit hook (git-hooks.nix, default rule set) also blocks
   plaintext secrets on every commit.
 - Everyday deploy: `nix develop '.#' -c deploy .#soyo` (Soyo) or `deploy .#zbook` (zbook; or `nixos-rebuild switch --flake .#zbook --target-host krzysiek@zbook --sudo` as fallback).
@@ -159,7 +162,7 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   services, run the automated healthcheck:
 
   ```bash
-  nix run .#healthcheck [hostname] [ip]
+  nix run .#healthcheck -- [host] [role] [nic]
   ```
 
   This checks DNS, services, metrics, timers, secrets, Secure Boot, and more
@@ -186,17 +189,9 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
 - **Suspend: no deep S3 on this firmware.** The HP firmware can enter S3
   but wake events aren't routed (PCH configured for S0ix-native wake).
   `mem_sleep_default=deep` was removed from `hosts/zbook/boot.nix`; s2idle
-  is used instead. See `modules/nixos/cosmic.nix` for the 2s dock
-  re-enumeration delay added for s2idle. If immediate wake happens after
-  suspend, the dock's Realtek RTL8153 Ethernet may be the cause — a udev
-  rule in `modules/nixos/laptop.nix` disables wake on that specific device.
-- **DRM master loss with COSMIC + NVIDIA.** `cosmic-comp` races with
-  `nvidia-suspend.service` for DRM master on `/dev/dri/card1`. Fixed by
-  SIGSTOP as `ExecStartPre` on `nvidia-suspend.service` (before `chvt 63`)
-  and SIGCONT + display re-probe as `ExecStartPost` on
-  `nvidia-resume.service` in `modules/nixos/cosmic.nix`.
-  `powerDownCommands`/`resumeCommands` are not used — they race with the
-  NVIDIA VT switch and `sleep-actions` ordering is unreliable.
+  is used instead. If immediate wake happens after suspend, the dock's
+  Realtek RTL8153 Ethernet may be the cause — a udev rule in
+  `modules/nixos/laptop.nix` disables wake on that specific device.
 - **Logitech receiver stutter.** powertop's `--auto-tune` suspends the
   Unifying/Bolt receiver, causing keyboard/mouse disconnects. Fixed by
   `usbcore.quirks` kernel parameter in `modules/nixos/laptop.nix`

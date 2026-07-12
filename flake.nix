@@ -1,5 +1,5 @@
 {
-  description = "Multi-host NixOS flake; first host is the Soyo DNS/DHCP appliance";
+  description = "Multi-host NixOS flake for the Soyo LAN appliance and zbook workstation";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-26.05";

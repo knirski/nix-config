@@ -1,5 +1,8 @@
 # Installing NixOS on zbook
 
+> **Status: Active.** The current graphical session is Sway with Dank Material
+> Shell. Historical COSMIC-specific behavior is labeled below.
+
 This guide walks through installing NixOS on the HP ZBook Studio 16" G10
 as the sole operating system, replacing the existing dual-boot (Windows + Ubuntu).
 
@@ -97,7 +100,7 @@ Test TPM unlock: `sudo systemd-cryptsetup attach crypted /dev/disk/by-partlabel/
 
 On first boot after `nixos-install`, the proprietary NVIDIA driver is **not
 loaded** — nouveau (the open-source reverse-engineered driver) runs instead.
-This means the COSMIC desktop will be laggy with no GPU acceleration,
+This means the Sway session will be laggy with no GPU acceleration,
 because `hardware.nvidia.enabled` is read-only and only becomes `true` when
 `"nvidia"` is in `services.xserver.videoDrivers`. The initial install from
 the flake includes that fix, but a reboot is needed because nouveau claims
@@ -113,9 +116,9 @@ sudo reboot
 
 After reboot, verify with `nvidia-smi`. The desktop should be smooth.
 
-### Suspend: black screen after resume (DRM master loss)
+### Historical: COSMIC DRM-master workaround
 
-On dual Intel+NVIDIA PRIME offload, the COSMIC compositor (cosmic-comp) can
+An earlier COSMIC configuration could
 lose DRM master on `/dev/dri/card1` during suspend. The log shows:
 
 ```text
@@ -123,12 +126,10 @@ nvidia-suspend.service starts → nvidia-sleep.sh does chvt 63
 cosmic-comp gets udev event → hits DRM EACCES on card1
 ```
 
-Fixed by `SIGSTOP`/`SIGCONT` hooks in `modules/nixos/cosmic.nix`:
-`ExecStartPre` on `nvidia-suspend.service` freezes cosmic-comp before the
-NVIDIA VT switch (`chvt 63`), and `ExecStartPost` on `nvidia-resume.service`
-unfreezes it and re-probes external displays after resume. The resume script
-waits 2s for the USB-C dock to re-enumerate (required for s2idle), then
-polls connectors for up to 10s and triggers a udev `change` event on each.
+The former `modules/nixos/cosmic.nix` used SIGSTOP/SIGCONT hooks around the
+NVIDIA VT switch. That module and workaround were deliberately removed when
+zbook left COSMIC. The current Sway configuration does not claim to implement
+those hooks; investigate current journals rather than restoring them blindly.
 
 Note: this host uses **s2idle** (S0ix), not deep S3 — the HP firmware
 advertises S3 but cannot route wake events back from it. See
@@ -161,7 +162,7 @@ effect.
 
 ## Post-install manual checks
 
-- COSMIC desktop boots and renders correctly (after NVIDIA driver activates)
+- Sway and Dank Material Shell boot and render correctly (after NVIDIA activates)
 - GPU switching works (Intel integrated for desktop, NVIDIA on-demand)
 - Steam launches and can render with DXVK/VKD3D
 - Suspend works with USB-C dock connected (laptop stays asleep)

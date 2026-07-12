@@ -1,5 +1,8 @@
 # LAN Observability Implementation Plan
 
+**Lifecycle: completed.** Preserved as implementation history; consult the
+corresponding design and current modules for present behavior.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add passive LAN inventory and blackbox reachability monitoring for Soyo's main LAN, with a new root-level Grafana dashboard that surfaces important infrastructure and unknown devices quickly.
@@ -860,7 +863,7 @@ This keeps `LAN Overview`, `Fleet Overview`, and `Node Exporter Full` at the roo
   Expected: metrics present, including reserved devices and at least one visible device row.
 
 - [ ] **LAN dashboard provisioned at root**
-  Command: `curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:3000/api/search | jq '[.[] | {title, uid, folderTitle}] | map(select(.title == "LAN Overview" or .title == "Fleet Overview" or .title == "Node Exporter Full"))'`
+  Command: `curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:3000/api/search | jq '[.[] | {title, uid, folderTitle}] | map(select(.title == "LAN Overview" or .title == "Fleet Overview" or .title == "Node Exporter Full"))'` <!-- gitleaks:allow; password is read from agenix at runtime -->
   Expected: `LAN Overview`, `Fleet Overview`, and `Node Exporter Full` appear at the root; the `Soyo` folder still contains only `Soyo Control Plane`, `Blocky`, and `Dnsmasq`.
 ```
 
@@ -880,7 +883,7 @@ nix flake check
 sudo nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --use-remote-sudo
 curl -s http://soyo:9100/metrics | grep '^lan_device_'
 curl -s http://soyo:9090/api/v1/targets | jq '.data.activeTargets[] | select(.labels.job | test("blackbox")) | {job: .labels.job, instance: .labels.instance, target_name: .labels.target_name, health: .health}'
-curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:3000/api/search | jq '[.[] | {title, uid, folderTitle}]'
+curl -s -u admin:"$(sudo cat /run/agenix/grafana-admin-password)" http://soyo:3000/api/search | jq '[.[] | {title, uid, folderTitle}]' # gitleaks:allow; runtime agenix secret
 ```
 
 Expected:

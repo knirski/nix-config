@@ -27,14 +27,14 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 19 | `modules/nixos/server.nix` (Tailscale section) | M2 | Tailscale mesh VPN, remote admin without open ports |
 | 20 | [CI design doc](../superpowers/specs/2026-07-05-ci-pipeline-design.md), [CI plan](../superpowers/plans/2026-07-05-ci-pipeline-plan.md), `.github/workflows/ci.yml`, `modules/nixos/observability.nix` (Grafana alerts) | M2 | CI pipeline (lint: deadnix + statix + typos + gitleaks + actionlint + shellcheck + markdownlint + ruff → eval: `nix flake check` → build + closure diff → topology artifact), Grafana alerting (disk, backup, service health via ntfy), backup Prometheus metric |
 | 21 | `modules/nixos/laptop.nix`, `modules/nixos/workstation.nix` | M4 | Laptop power management (power-profiles-daemon, thermald, battery thresholds) and workstation defaults (docker, ssh agent) |
-| 22 | `modules/nixos/desktop.nix`, `modules/home/desktop.nix` | M4 | COSMIC desktop environment session, NixOS display-manager + HM user-config |
+| 22 | `modules/nixos/desktop.nix`, `modules/nixos/sway.nix`, `modules/home/desktop.nix`, `modules/home/sway.nix` | M4 | Role-neutral desktop services plus the Sway session, DMS greetd greeter, shell, and user configuration |
 | 23 | `modules/nixos/nvidia.nix` | M4 | NVIDIA proprietary driver (RTX 4000 Ada), prime sync, offload modes |
 | 24 | `modules/nixos/gaming.nix` | M4 | Steam, gamemode, MangoHud, game-specific tweaks |
-| 25 | `modules/parts/zbook.nix`, `hosts/zbook/` | M4 | zbook host assembler — toggles laptop, workstation, desktop, nvidia, and gaming aspects onto the same base modules used by Soyo |
+| 25 | `modules/parts/zbook.nix`, `hosts/zbook/` | M4 | zbook host assembler — toggles laptop, workstation, desktop, Sway, NVIDIA, and gaming aspects onto the same base modules used by Soyo |
 | 26 | Nvidia bug (this section) | M4 | The read-only `hardware.nvidia.enabled` trap |
 | 27 | s2idle over deep S3 (this section) | M4 | HP firmware wake routing: S3 enters but never resumes; s2idle is the native suspend mode |
 | 28 | `modules/nixos/laptop.nix` — `usbcore.quirks` | M4 | Kernel-level USB autosuspend disable for Logitech receivers — immutable, immune to powertop |
-| 29 | `modules/nixos/cosmic.nix` — SIGSTOP/SIGCONT | M4 | Freeze cosmic-comp via `ExecStartPre` on `nvidia-suspend.service` (not `powerDownCommands`) to avoid VT switch race; unfreeze via `ExecStartPost` on `nvidia-resume.service` with 2s dock delay and display re-probe |
+| 29 | Historical COSMIC workaround (this section) | M4 | Why the compositor-specific SIGSTOP/SIGCONT workaround was removed when zbook migrated away from COSMIC |
 | 30 | deploy-rs | M4 | `deploy .#hostname` for remote deploys with magic rollback; `deployChecks` wired into `nix flake check`; deploy script auto-detects local vs remote |
 | 31 | SSH key rotation | M4 | When the master SSH key becomes incompatible (old OpenSSH format + OpenSSL 3.6.2), generate a fresh one, re-encrypt all `.age` files, update `krzysiek-authorized-key.pub`, and rekey for all hosts |
 | 32 | Secrets recovery from git history | M4 | If master `.age` files get corrupted (empty decryption), recover plaintext from pre-corruption rekeyed files using the host's own SSH key via `rage -d -i /persist/etc/ssh/ssh_host_ed25519_key`, then re-encrypt with the new master key |
@@ -54,8 +54,11 @@ A NixOS flake that configures a small Intel N150 box ("Soyo") as a LAN DNS and D
 
 **flake-parts** — A framework that splits a flake into composable modules. Each module can contribute to outputs (packages, checks, dev shells, NixOS configs).
 
-**Dendritic pattern** — `modules/default.nix` explicitly lists every `.nix` file under `modules/` as a flake-parts module. Each file is one *aspect* (e.g. `blocky`, `dhcp`, `backup`) and contributes to a    shared namespace: `aspects.nixos.<aspect>`. A host is assembled by
-   toggling aspects on, not by `imports` of file paths.
+**Dendritic pattern** — `flake.nix` calls `inputs.import-tree ./modules`, which
+auto-imports eligible `.nix` files as flake-parts modules. `_`-prefixed paths
+such as `modules/_pkgs/` are skipped. Aspect files contribute to a shared
+namespace such as `aspects.nixos.<aspect>`; a host assembler still has to opt
+into each aspect, so discovery does not enable features by itself.
 
 **Aspect module** — One file under `modules/nixos/` or `modules/home/` that exposes a toggleable feature. Convention: `{ aspects.nixos.<name> = { ... }; }` with an
 `options.lanAppliance.*` namespace for host data.
@@ -95,7 +98,12 @@ modules = (with config.aspects.nixos; [
 ]) ++ [ ... host data files ... ]
 ```
 
-Each name in that list is an aspect contributed by a file under `modules/nixos/`. Because `vic/import-tree` auto-imports every `.nix` under `modules/`, adding a new aspect needs no registry edit — just create a file under `modules/nixos/` that sets `aspects.nixos.<name>` and toggle it in the host assembler.
+Each name in that list is an aspect contributed by a file under
+`modules/nixos/`. Because `vic/import-tree` discovers eligible `.nix` files
+under `modules/`, adding an aspect means creating its file, exposing
+`aspects.nixos.<name>` (or `aspects.homeManager.<name>`), and toggling it in the
+appropriate host assembler. Plain reusable Nix helpers belong under `lib/`,
+outside import-tree's module tree.
 
 ## M4 learnings: NVIDIA and laptop suspend fixes
 
@@ -164,9 +172,10 @@ and the [Arch Wiki](https://wiki.archlinux.org/title/Power_management/Suspend_an
 > shipping with Windows are encouraged to use "Modern standby" by default; if
 > they have voluntarily not advertised it, it is probably broken in some way.
 
-The fix: use s2idle (the firmware-native suspend mode) and add a 2-second
-delay before re-probing external displays on resume, giving the USB-C dock
-time to re-enumerate. See `modules/nixos/cosmic.nix`.
+The current fix is to use s2idle, the firmware-native suspend mode. A former
+COSMIC-specific resume hook also delayed display re-probing for the USB-C dock,
+but it was removed with COSMIC; the current Sway configuration does not claim
+to provide that hook.
 
 ### Udev rules for targeted dock Ethernet wake suppression
 
@@ -215,7 +224,7 @@ This is the cleanest approach because:
 The udev rules were removed once the quirk was confirmed working — they only
 raced with powertop and provided no value with the quirk in place.
 
-### SIGSTOP/SIGCONT for cosmic-comp on suspend/resume
+### Historical: SIGSTOP/SIGCONT for cosmic-comp on suspend/resume
 
 With dual Intel+NVIDIA PRIME offload, `cosmic-comp` (the COSMIC compositor)
 would lose DRM master after suspend. The log told the story:
@@ -231,17 +240,17 @@ over the DRM device. But cosmic-comp still holds DRM master. The VT switch
 (`chvt 63`) inside `nvidia-sleep.sh suspend` triggers a udev event that
 cosmic-comp tries to handle — but it's already lost DRM master permissions.
 
-The fix is the standard Wayland compositor suspend pattern: **SIGSTOP before
-the VT switch, SIGCONT after the GPU resumes**.
+At the time, the fix was the standard Wayland compositor suspend pattern:
+**SIGSTOP before the VT switch, SIGCONT after the GPU resumes**.
 
-The SIGSTOP must be `ExecStartPre` on `nvidia-suspend.service` — not
+The SIGSTOP had to be `ExecStartPre` on `nvidia-suspend.service` — not
 `powerManagement.powerDownCommands` (which goes into `sleep-actions.service
 ExecStart`). They run in parallel and `nvidia-sleep.sh`'s `chvt 63` races
 ahead of SIGSTOP. With `ExecStartPre`, the freeze is guaranteed to fire
 before `ExecStart`.
 
-The SIGCONT + display re-probe goes in `nvidia-resume.service
-ExecStartPost`. The script waits 2s for the USB-C dock to re-enumerate
+The SIGCONT + display re-probe went in `nvidia-resume.service ExecStartPost`.
+The script waited 2s for the USB-C dock to re-enumerate
 (critical on s2idle), then polls NVIDIA external connectors for up to 10s,
 then triggers `udevadm change` on each to simulate a hotplug uevent.
 
@@ -257,6 +266,13 @@ The full execution sequence during suspend/resume:
 | 6 | Sleep 2s for dock re-enumeration | `nvidia-resume.service ExecStartPost` |
 | 7 | SIGCONT cosmic-comp | `nvidia-resume.service ExecStartPost` |
 | 8 | Poll NVIDIA connectors for up to 10s, then udevadm trigger | `nvidia-resume.service ExecStartPost` |
+
+This sequence is retained here as a debugging lesson, not as a description of
+the current system. Commit `7363e60` deliberately deleted `cosmic.nix` when
+zbook migrated from COSMIC to Hyprland; subsequent changes migrated the host to
+DMS and Sway. The active NVIDIA module keeps the GSP firmware workaround and
+disables systemd's user-session freeze, but it does not install compositor
+SIGSTOP/SIGCONT or dock re-probe hooks.
 
 ## Canonical sources
 

@@ -1,5 +1,8 @@
 # CI Pipeline Implementation Plan
 
+**Lifecycle: completed.** Preserved as implementation history; the workflow
+and active testing documentation describe current CI.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the single `nix flake check` CI job with 4 parallel jobs (lint, eval, build+closure-diff, topology) and update the README badge.
