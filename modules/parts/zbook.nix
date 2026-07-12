@@ -59,7 +59,7 @@
           system.stateVersion = "26.11";
           nixpkgs.overlays = [
             (_: prev: {
-              dgop = inputs.dgop.packages.${prev.system}.default;
+              dgop = inputs.dgop.packages.${prev.stdenv.hostPlatform.system}.default;
             })
           ];
 

@@ -1,4 +1,6 @@
-# CI: lint, eval, build, and topology check on every push.
+# CI validates reviewable source and builds both host closures. Hardware-backed
+# VM resilience tests remain a required local gate because GitHub does not
+# guarantee nested virtualization on hosted runners (see docs/testing.md).
 name: CI
 
 on:
@@ -16,8 +18,10 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  static:
+    name: Static and repository policy
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
@@ -25,24 +29,27 @@ jobs:
         with:
           use-flakehub: false
       - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
-        if: github.ref_name == 'main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - run: nix run .#deadnix -- .
-      - run: nix run nixpkgs#statix -- check .
-      - run: nix run nixpkgs#typos -- .
-      - run: nix run nixpkgs#actionlint -- .github/workflows/*.yml
-      - run: nix run nixpkgs#shellcheck -- scripts/healthcheck.sh
-      - run: >-
-          nix run nixpkgs#markdownlint-cli --
-          --disable MD013 MD033 MD060 MD029 MD031 MD032
-          --ignore .commandcode '*.md' 'docs/**/*.md'
-      - run: nix run nixpkgs#ruff -- check modules/nixos/observability/lan_inventory.py modules/nixos/observability/lan_inventory_test.py
-      - run: nix run nixpkgs#gitleaks -- detect --source . --no-git --verbose
+      - name: Build static and repository-policy checks
+        run: |
+          nix build --no-link \
+            .#checks.x86_64-linux.pre-commit \
+            .#checks.x86_64-linux.docs-correctness \
+            .#checks.x86_64-linux.github-workflow-policy \
+            .#checks.x86_64-linux.public-repository-data \
+            .#checks.x86_64-linux.script-contracts \
+            .#checks.x86_64-linux.shell-boundaries \
+            .#checks.x86_64-linux.topology-freshness
+      - name: Scan current source for credentials
+        run: nix run .#gitleaks -- detect --source . --no-git --redact --verbose
 
-  eval:
+  evaluation:
+    name: Evaluation and pure invariants
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
@@ -50,18 +57,36 @@ jobs:
         with:
           use-flakehub: false
       - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
-        if: github.ref_name == 'main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      # The selected runner exposes accelerated KVM. Run the complete suite so
-      # import-from-derivation inputs and strict VM checks are both realised.
-      - run: test -c /dev/kvm && test -r /dev/kvm && test -w /dev/kvm
-      - run: nix flake check --keep-going --show-trace
+      - name: Evaluate every flake output without building VMs
+        run: nix flake check --no-build --show-trace
+      - name: Build pure invariants and software integration
+        run: |
+          nix build --no-link \
+            .#checks.x86_64-linux.backup-restic-integration \
+            .#checks.x86_64-linux.dendritic-options \
+            .#checks.x86_64-linux.deploy-activate \
+            .#checks.x86_64-linux.deploy-schema \
+            .#checks.x86_64-linux.dns-dhcp-config \
+            .#checks.x86_64-linux.host-role-invariants \
+            .#checks.x86_64-linux.impermanence-missing-early-persist \
+            .#checks.x86_64-linux.initrd-recovery-invariants \
+            .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.persistence-invariants \
+            .#checks.x86_64-linux.reservation-validation \
+            .#checks.x86_64-linux.soyo-guest-isolation \
+            .#checks.x86_64-linux.systemd-hardening-invariants
 
   build:
+    name: Build ${{ matrix.host }} closure
+    needs: [static, evaluation]
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
     strategy:
+      fail-fast: false
       matrix:
         host: [soyo, zbook]
     steps:
@@ -71,53 +96,35 @@ jobs:
         with:
           use-flakehub: false
       - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
-        if: github.ref_name == 'main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - run: nix store gc  # free runner disk space before the build
-      - run: >
-          nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel
-          --keep-going
-
-      - name: Restore previous closure path
-        id: closure-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: previous-closure.txt
-          key: closure-${{ matrix.host }}-${{ github.base_ref || github.ref_name }}
-
-      - name: Compare closures
-        if: steps.closure-cache.outputs.cache-hit == 'true'
+      - run: nix store gc
+      - name: Build complete system closure
         run: |
-          PREV=$(cat previous-closure.txt)
-          CURR=$(readlink -f result)
-          if nix path-info "$PREV" &>/dev/null; then
-            echo "### Closure diff for ${{ matrix.host }}" >> "$GITHUB_STEP_SUMMARY"
-            nix store diff-closures "$PREV" "$CURR" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Previous closure not available in store; skipping diff." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Save current closure path
-        run: readlink -f result > previous-closure.txt
+          nix build \
+            .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel \
+            --keep-going --no-link --print-out-paths
 
   topology:
+    name: Publish sanitized topology
+    needs: [static, evaluation]
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
       - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
         with:
           use-flakehub: false
-      - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
-        if: github.ref_name == 'main'
-        with:
-          name: knirski-nix-config
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - run: nix build .#topology
-      - run: mkdir -p topology-output && cp result/*.svg topology-output/
+      - name: Build sanitized topology overview
+        run: |
+          topology=$(nix build .#topology-public-overview --no-link --print-out-paths)
+          mkdir -p topology-output
+          cp "$topology/overview.svg" topology-output/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: topology
           path: topology-output/
+          retention-days: 7
