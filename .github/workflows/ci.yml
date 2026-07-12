@@ -69,12 +69,25 @@ jobs:
         with:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Materialize tracked agenix-rekey inputs
+        run: |
+          nix store add-path --name soyo ./secrets/rekeyed/soyo
+          nix store add-path --name zbook ./secrets/rekeyed/zbook
       - name: Evaluate every flake output without building VMs
         run: nix flake check --no-build --show-trace
+      - name: Evaluate project-owned pure outputs without IFD
+        run: |
+          nix eval --raw \
+            .#checks.x86_64-linux.dashboard-renderer.drvPath \
+            --option allow-import-from-derivation false
+          nix eval --raw \
+            .#packages.x86_64-linux.topology-public-overview.drvPath \
+            --option allow-import-from-derivation false
       - name: Build pure invariants and software integration
         run: |
           nix build --no-link \
             .#checks.x86_64-linux.backup-restic-integration \
+            .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
             .#checks.x86_64-linux.deploy-activate \
             .#checks.x86_64-linux.deploy-schema \

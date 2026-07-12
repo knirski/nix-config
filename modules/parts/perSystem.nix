@@ -179,6 +179,17 @@
               python3 -m unittest lan_inventory_test
               touch $out
             '';
+        dashboard-renderer =
+          pkgs.runCommand "dashboard-renderer-test"
+            {
+              buildInputs = [ pkgs.python3 ];
+            }
+            ''
+              cp ${../../lib/observability/render_dashboard.py} render_dashboard.py
+              cp ${../../lib/observability/render_dashboard_test.py} render_dashboard_test.py
+              python3 -m unittest render_dashboard_test
+              touch $out
+            '';
 
         # Option-namespace test: verify that each host declares the
         # lanAppliance.services.* options matching the aspects it toggles.

@@ -36,6 +36,15 @@ quietly weakening coverage.
 | After static and evaluation pass | Complete `nix flake check --keep-going`, including all three strict-KVM VM tests |
 | Required before local handoff | The same complete KVM-backed flake gate |
 
+The no-build tier runs first in a fresh job, before repository artifacts are
+built. Its sole store prerequisite is the pair of tracked, encrypted
+`secrets/rekeyed/<host>` source trees required by agenix-rekey's local storage
+mode; CI adds those paths directly instead of building either host closure. A
+narrower gate then evaluates project-owned dashboard and topology outputs with
+`allow-import-from-derivation false`; build-time transformations are tested
+separately. The full host configuration cannot disable IFD because agenix-rekey
+uses it to resolve host-specific rekeyed secret files.
+
 Run the hardware-accelerated resilience tier with:
 
 ```bash

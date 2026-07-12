@@ -30,41 +30,18 @@ let
       replacements,
       dashboard,
       tags ? [ ],
+      extraAttrs ? { },
     }:
     let
-      raw = builtins.fromJSON (builtins.readFile dashboard);
-      templateNames = map (r: r.key) replacements;
-
-      dolBracePairs = map (r: "\${${r.key}}") replacements;
-      dolBraceValues = map (r: r.value) replacements;
-      barePairs = map (r: "\"\$${r.key}\"") replacements;
-      bareValues = map (r: "\"${r.value}\"") replacements;
-
-      allPairs = dolBracePairs ++ barePairs ++ [ "$__rate_interval" ];
-      allValues = dolBraceValues ++ bareValues ++ [ "4m" ];
-
-      replaceStrings =
-        x:
-        if builtins.isString x then
-          builtins.replaceStrings allPairs allValues x
-        else if builtins.isList x then
-          map replaceStrings x
-        else if builtins.isAttrs x then
-          lib.mapAttrsRecursive (_: replaceStrings) x
-        else
-          x;
-
-      cleaned = replaceStrings raw;
-      withoutTemplates = cleaned // {
-        templating = cleaned.templating // {
-          list = builtins.filter (v: !(builtins.elem v.name templateNames)) cleaned.templating.list;
-        };
-      };
-      withTags = withoutTemplates // {
-        inherit tags;
-      };
+      specification = pkgs.writeText "dashboard-render-spec.json" (
+        builtins.toJSON {
+          inherit extraAttrs replacements tags;
+        }
+      );
     in
-    pkgs.writeText "dashboard.json" (builtins.toJSON withTags);
+    pkgs.runCommand "dashboard.json" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+      python ${./render_dashboard.py} ${dashboard} ${specification} "$out"
+    '';
 
   mkStaticLabelTarget = t: target: {
     targets = [ target ];

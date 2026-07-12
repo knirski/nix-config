@@ -11,11 +11,21 @@ catches type errors, missing options, failed assertions and invalid module
 composition. It does not prove that a service starts or that packets cross a
 network boundary.
 
-Evaluation can still realize import-from-derivation inputs. For example, the
-Grafana dashboard builder reads generated JSON during evaluation. Do not run
-store garbage collection immediately before this tier: removing a referenced
-derivation can make an otherwise reproducible evaluation fail for the wrong
-reason.
+Project-owned transformations must not depend on realised derivations. CI
+evaluates their checks and public outputs with
+`allow-import-from-derivation false`. Grafana dashboard substitutions therefore
+run in a normal build-time Python derivation, and the upstream nix-topology
+operator output sits behind an explicit app rather than the recursively checked
+package set.
+
+The full host evaluation cannot disable IFD globally: agenix-rekey deliberately
+realises the host-specific rekey derivation while resolving each secret's file.
+In local storage mode it addresses each tracked `secrets/rekeyed/<host>` tree by
+its named Nix store path. CI materialises only those encrypted source trees
+before evaluation; it does not prebuild a host closure or decrypt a secret. The
+ordinary no-build gate retains IFD for this documented upstream boundary, while
+the narrower no-IFD gate prevents project code from silently adding more
+evaluation-time builds.
 
 ## 2. Builds ask whether artifacts can be produced
 
