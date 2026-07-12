@@ -38,6 +38,15 @@
       };
 
       config = lib.mkIf cfg.enable {
+        # Keep the client agent available for both interactive and headless
+        # users.  The agent is a per-user systemd service; it does not change
+        # how this host's SSH server authenticates inbound connections.
+        programs.ssh = {
+          startAgent = true;
+          extraConfig = "AddKeysToAgent yes";
+        };
+        services.gnome.gcr-ssh-agent.enable = false;
+
         services.openssh = {
           enable = true;
           settings = {
