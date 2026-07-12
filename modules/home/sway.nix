@@ -10,6 +10,11 @@
       config = rec {
         modifier = "Mod4";
         terminal = "kitty";
+        input = {
+          "*" = {
+            xkb_layout = "pl";
+          };
+        };
         startup = [
           { command = "wl-paste -p --watch wl-copy"; }
         ];

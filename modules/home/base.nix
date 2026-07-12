@@ -14,6 +14,7 @@
           gh
           command-code
           codex
+          opencode
         ];
       };
 
