@@ -1,0 +1,6 @@
+name: Fixture
+on: [push]
+permissions:
+  contents: read
+  security-events: write
+jobs: {}

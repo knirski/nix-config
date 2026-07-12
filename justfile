@@ -7,24 +7,29 @@ default:
 
 # Format all Nix/Python/shell/markdown with treefmt.
 fmt:
-    nix run .#formatter
+    nix run path:.#formatter
 
 # Check formatting + static analysis (deadnix, statix, typos, shellcheck, ...).
 lint:
-    nix run .#formatter -- --check
-    nix run .#deadnix -- .
-    nix run nixpkgs#statix -- check .
-    nix run nixpkgs#typos -- .
-    nix run nixpkgs#actionlint -- .github/workflows/*.yml
-    nix run nixpkgs#shellcheck -- scripts/healthcheck.sh
+    nix build path:.#checks.x86_64-linux.pre-commit --no-link
+    # Unlike the staged pre-commit hook, a manual lint scans the whole tree.
+    nix run path:.#gitleaks -- detect --source . --no-git --redact --verbose
 
 # Evaluate the whole flake (lints + builds every output incl. deploy checks).
 check:
-    nix flake check
+    @test -r /dev/kvm && test -w /dev/kvm || { echo "error: complete checks require readable and writable /dev/kvm" >&2; exit 1; }
+    nix flake check path:.
+
+# Run the three KVM-backed resilience tests required before merging changes.
+test-resilience:
+    nix build --no-link \
+      path:.#checks.x86_64-linux.backup-unit-vm \
+      path:.#checks.x86_64-linux.dns-dhcp-vm \
+      path:.#checks.x86_64-linux.impermanence-vm
 
 # Build a host's toplevel system.
 build host="soyo":
-    nix build .#nixosConfigurations.{{host}}.config.system.build.toplevel
+    nix build path:.#nixosConfigurations.{{host}}.config.system.build.toplevel
 
 # Deploy to a host. Uses deploy-rs for remote hosts, nixos-rebuild for local.
 deploy host="soyo":
@@ -51,11 +56,11 @@ set-tailscale-keys *args:
 
 # Run dendritic option-namespace tests (wired into nix flake check, also runs there).
 test:
-    nix build .#checks.x86_64-linux.dendritic-options --no-link --print-out-paths
+    nix build path:.#checks.x86_64-linux.dendritic-options --no-link --print-out-paths
 
 # Re-key all agenix secrets for every host after a key change.
 rekey:
-    nix run github:oddlama/agenix-rekey -- rekey
+    nix develop '.#' -c agenix rekey
 
 # Refresh the sanitized, public topology overview.
 topology:

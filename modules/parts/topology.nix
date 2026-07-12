@@ -158,12 +158,8 @@ in
   perSystem =
     { pkgs, ... }:
     {
-      packages = rec {
+      packages = {
         topology-public-overview = pkgs.writeTextDir "overview.svg" publicOverview;
-
-        # Compatibility for the existing CI job while this stacked series is
-        # reviewed. The final CI PR switches to the explicit public name.
-        topology = topology-public-overview;
 
         # Intentionally local-only: do not commit or upload this output. It
         # retains nix-topology's full extracted inventory for troubleshooting.
