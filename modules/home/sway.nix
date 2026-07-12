@@ -2,70 +2,6 @@ _: {
   aspects.homeManager.sway =
     { pkgs, ... }:
     {
-      home.packages = [
-        (pkgs.writeShellApplication {
-          name = "clipboard-sync";
-          runtimeInputs = [
-            pkgs.coreutils
-            pkgs.diffutils
-            pkgs.wl-clipboard
-          ];
-          text = ''
-              set -eu
-
-              paste_target() {
-                if [ "$1" = primary ]; then
-                  wl-paste --primary
-                else
-                  wl-paste
-                fi
-              }
-
-              copy_target() {
-                target="$1"
-                shift
-                if [ "$target" = primary ]; then
-                  wl-copy --primary "$@"
-                else
-                  wl-copy "$@"
-                fi
-              }
-
-            sync_selection() {
-              target="$1"
-              content=$(mktemp)
-              trap 'rm -f "$content"' EXIT
-
-              cat > "$content"
-              if [ "''${CLIPBOARD_STATE:-data}" = clear ] || [ "''${CLIPBOARD_STATE:-data}" = nil ]; then
-                copy_target "$target" --clear
-              elif ! paste_target "$target" | cmp -s - "$content"; then
-                copy_target "$target" < "$content"
-                fi
-              }
-
-              case "$1" in
-                regular-to-primary)
-                  exec wl-paste --watch "$0" regular-event
-                  ;;
-                primary-to-regular)
-                  exec wl-paste --primary --watch "$0" primary-event
-                  ;;
-              regular-event)
-                sync_selection primary
-                ;;
-              primary-event)
-                sync_selection regular
-                  ;;
-                *)
-                  printf 'clipboard-sync: unknown mode: %s\n' "''${1:-}" >&2
-                  exit 2
-                  ;;
-              esac
-          '';
-        })
-      ];
-
       wayland.windowManager.sway = {
         enable = true;
         xwayland = true;
@@ -81,10 +17,10 @@ _: {
               xkb_layout = "pl";
             };
           };
-          startup = [
-            { command = "clipboard-sync regular-to-primary"; }
-            { command = "clipboard-sync primary-to-regular"; }
-          ];
+          # DMS owns the regular clipboard and its rich MIME types. PRIMARY
+          # remains compositor/application-owned for middle-click pasting;
+          # synchronizing the two selections corrupts images and file offers.
+          startup = [ ];
           bars = [ ];
           keybindings = {
             "${modifier}+Return" = "exec ${terminal}";
@@ -158,6 +94,14 @@ _: {
           enableVPN = false;
           enableCalendarEvents = false;
           settings = builtins.fromJSON (builtins.readFile ./dms-settings.json);
+          clipboardSettings = {
+            disabled = false;
+            maxHistory = 100;
+            maxPinned = 25;
+            maxEntrySize = 5 * 1024 * 1024;
+            autoClearDays = 7;
+            clearAtStartup = false;
+          };
           plugins = {
             dankActions.enable = true;
             dankBatteryAlerts.enable = true;
