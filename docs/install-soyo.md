@@ -98,7 +98,9 @@ master-encrypted secrets:
 # Back on Soyo's live ISO:
 mkdir -p -m 700 ~/.ssh
 # The scp'd file lands as soyo_ed25519. Keep it outside the repo and create
-# the stable operator-side symlink used by every host assembler:
+# the operator-side symlink for this live environment. This is the master
+# operator key, not Soyo's host key; it is used only for the install-time
+# rekey operation and should not be installed permanently on Soyo.
 mv ~/soyo_ed25519 ~/.ssh/soyo_ed25519 2>/dev/null || echo "Paste manually if scp failed"
 chmod 600 ~/.ssh/soyo_ed25519
 sudo install -d -m 755 /etc/agenix-rekey
@@ -309,11 +311,14 @@ sudo systemd-cryptenroll /dev/disk/by-partlabel/luks | grep -i tpm
 After Secure Boot setup (see [docs/recovery.md](recovery.md) for the Phase 2
 procedure), re-enroll against PCR 0+2+7 for stronger tamper detection.
 
-### Post-install deploy from a workstation
+### Post-install deploy from an operator machine
 
-On each workstation, create `/etc/agenix-rekey/master-identity` as a symlink to
-the SSH private key matching `secrets/krzysiek.age.pub`, as described in
-[docs/secrets.md](secrets.md). No host-assembler edit is needed. Then run:
+On the operator machine from which you deploy, create
+`/etc/agenix-rekey/master-identity` as a symlink to the local SSH private key
+matching `secrets/krzysiek.age.pub`, as described in [docs/secrets.md](secrets.md).
+The target machine only needs its own host private key under `/persist`; it does
+not need the operator's `soyo_ed25519` key. No host-assembler edit is needed.
+Then run:
 
 ```bash
 nixos-rebuild switch --flake .#soyo --target-host krzysiek@10.0.0.9 --sudo
