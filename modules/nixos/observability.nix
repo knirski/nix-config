@@ -143,41 +143,27 @@
           hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
         };
       };
-      nodeExporterJson =
-        let
-          dashboard = builtins.fromJSON (
-            builtins.readFile (
-              builder.fillTemplating {
-                replacements = [
-                  {
-                    key = "ds_prometheus";
-                    value = "soyo-prometheus";
-                  }
-                  {
-                    key = "job";
-                    value = "node";
-                  }
-                ];
-                tags = [
-                  "linux"
-                  "node-exporter"
-                ];
-                dashboard = builder.fetchDashboard {
-                  id = 1860;
-                  hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
-                };
-              }
-            )
-          );
-        in
-        pkgs.writeText "node-exporter-full-root.json" (
-          builtins.toJSON (
-            dashboard
-            // {
-              uid = "node-exporter-root";
-            }
-          )
-        );
+      nodeExporterJson = builder.fillTemplating {
+        replacements = [
+          {
+            key = "ds_prometheus";
+            value = "soyo-prometheus";
+          }
+          {
+            key = "job";
+            value = "node";
+          }
+        ];
+        tags = [
+          "linux"
+          "node-exporter"
+        ];
+        extraAttrs.uid = "node-exporter-root";
+        dashboard = builder.fetchDashboard {
+          id = 1860;
+          hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
+        };
+      };
 
       inherit (builder) mkStaticLabelTarget;
 

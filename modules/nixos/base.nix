@@ -4,6 +4,7 @@
     {
       time.timeZone = "Europe/Warsaw";
       i18n.defaultLocale = "en_US.UTF-8";
+      console.keyMap = "pl2";
       environment.variables.EDITOR = "nvim";
 
       # Allow unfree packages globally. Some packages in the nixpkgs
@@ -24,6 +25,14 @@
       ];
 
       nix.settings = {
+        # Pull pre-built closures from the public project cache before building
+        # locally. CI already publishes successful main-branch builds there.
+        substituters = [
+          "https://knirski-nix-config.cachix.org"
+        ];
+        trusted-public-keys = [
+          "knirski-nix-config.cachix.org-1:PZGqi8FqCamG8Pna7PdDIoUKFSYmwR15cjyqlgfZEAk="
+        ];
         experimental-features = [
           "nix-command"
           "flakes"

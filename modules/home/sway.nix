@@ -68,6 +68,11 @@ _: {
         config = rec {
           modifier = "Mod4";
           terminal = "kitty";
+          input = {
+            "*" = {
+              xkb_layout = "pl";
+            };
+          };
           startup = [
             { command = "clipboard-sync regular-to-primary"; }
             { command = "clipboard-sync primary-to-regular"; }

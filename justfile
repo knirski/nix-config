@@ -68,7 +68,7 @@ topology:
 
 # Build detailed operator diagrams locally and print their store path.
 topology-operator-detailed:
-    nix build path:.#topology-operator-detailed --no-link --print-out-paths
+    nix run path:.#topology-operator-detailed
 
 # Enter the dev shell with all tooling (pre-commit hooks auto-install).
 dev:
