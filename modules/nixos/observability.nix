@@ -8,6 +8,7 @@
     }:
     let
       cfg = config.lanAppliance.services.observability;
+      hardening = import ../../lib/systemd-hardening.nix;
       grafanaCfg = cfg.grafana;
 
       inherit (cfg) networkData;
@@ -369,14 +370,17 @@
                 prometheus-node-exporter.serviceConfig = {
                   MemoryMax = "64M";
                   CPUQuota = "10%";
+                  Nice = 10;
                 };
                 prometheus-dnsmasq-exporter.serviceConfig = {
                   MemoryMax = "64M";
                   CPUQuota = "10%";
+                  Nice = 10;
                 };
                 prometheus-blackbox-exporter.serviceConfig = {
                   MemoryMax = "96M";
                   CPUQuota = "10%";
+                  Nice = 10;
                 };
                 lan-inventory-exporter = {
                   description = "Emit passive LAN inventory metrics for node_exporter textfile collector";
@@ -385,7 +389,7 @@
                     "dnsmasq.service"
                   ];
                   wants = [ "network-online.target" ];
-                  serviceConfig = {
+                  serviceConfig = hardening.offline // {
                     Type = "oneshot";
                     User = "prometheus";
                     Group = "prometheus";
@@ -393,6 +397,10 @@
                     ExecStart = "${lanInventoryScript}/bin/lan-inventory-exporter";
                     MemoryMax = "96M";
                     CPUQuota = "10%";
+                    Nice = 10;
+                    ReadWritePaths = [ "/var/lib/prometheus/textfiles" ];
+                    TimeoutStartSec = "1m";
+                    Restart = "no";
                   };
                 };
               };

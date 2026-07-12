@@ -83,8 +83,10 @@
 
           age.rekey = {
             hostPubkey = ../../secrets/zbook.pub;
+            # Shared operator-side symlink; see docs/secrets.md.  Keep this an
+            # absolute string so the private key never enters the Nix store.
             masterIdentities = [
-              "/home/krzysiek/.ssh/soyo_ed25519"
+              "/etc/agenix-rekey/master-identity"
             ];
             storageMode = "local";
             localStorageDir = ../../. + "/secrets/rekeyed/zbook";

@@ -5,6 +5,7 @@
     hostName = "soyo";
     enableTracing = true;
     enablePromMetrics = true;
+    isolateResources = true;
 
     restic = {
       # Synology DS423+ reachable by hostname (Blocky resolves czworaczki

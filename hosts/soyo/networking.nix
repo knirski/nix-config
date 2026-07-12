@@ -22,6 +22,8 @@
   # 10.0.0.0/24 LAN is reachable via Tailscale.
   lanAppliance.services.tailscale = {
     enable = true;
+    isolateResources = true;
+    nice = 10;
     authKeyFile = config.age.secrets.tailscale-auth-key.path;
     extraArgs = [ "--advertise-routes=10.0.0.0/24" ];
   };

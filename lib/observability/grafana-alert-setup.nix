@@ -1,16 +1,21 @@
 { config, pkgs, ... }:
+let
+  hardening = import ../systemd-hardening.nix;
+in
 {
   systemd.services.grafana-alert-setup = {
     description = "Provision Grafana alerting rules and ntfy contact point";
     after = [ "grafana.service" ];
     wants = [ "grafana.service" ];
     wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
+    serviceConfig = hardening.networkClient // {
       Type = "oneshot";
       RemainAfterExit = true;
       MemoryMax = "64M";
       CPUQuota = "10%";
       Nice = 10;
+      TimeoutStartSec = "2m";
+      Restart = "no";
       ExecStart =
         let
           script = pkgs.writeShellApplication {
