@@ -52,7 +52,9 @@
             powerManagement.enable = true;
             powerManagement.finegrained = true;
             open = false; # Proprietary driver (RTX 4000 Ada needs this)
-            nvidiaPersistenced = true;
+            # In offload mode the GPU powers down — persistenced isn't needed
+            # and just fails trying to query the sleeping device.
+            nvidiaPersistenced = false;
             prime = {
               inherit (cfg.prime) intelBusId nvidiaBusId;
               sync.enable = cfg.syncMode == "sync";
