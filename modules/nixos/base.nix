@@ -71,12 +71,21 @@
 
       documentation.nixos.enable = true;
 
-      programs.neovim = {
-        enable = true;
-        viAlias = true;
+      programs = {
+        neovim = {
+          enable = true;
+          viAlias = true;
+        };
+        zsh.enable = true;
+        nh = {
+          enable = true;
+          clean = {
+            enable = true;
+            extraArgs = "--keep-since 30d --keep 3";
+          };
+          flake = "/home/krzysiek/github/knirski/nix-config";
+        };
       };
-
-      programs.zsh.enable = true;
 
       environment.systemPackages = with pkgs; [
         git
