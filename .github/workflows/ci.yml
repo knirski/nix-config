@@ -54,9 +54,10 @@ jobs:
         with:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      # Hosted runners do not guarantee /dev/kvm. The final CI stack builds
-      # every pure check explicitly; strict KVM tests remain a local gate.
-      - run: nix flake check --no-build --show-trace
+      # The selected runner exposes accelerated KVM. Run the complete suite so
+      # import-from-derivation inputs and strict VM checks are both realised.
+      - run: test -c /dev/kvm && test -r /dev/kvm && test -w /dev/kvm
+      - run: nix flake check --keep-going --show-trace
 
   build:
     runs-on: ubuntu-24.04
