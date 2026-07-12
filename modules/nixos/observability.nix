@@ -143,7 +143,7 @@
           hash = "0lci2a09ghmjab226m06shcmyxh11pqld0hkjv9ibv22fmrcw0w3";
         };
       };
-      nodeExporterJson = builder.fillTemplating {
+      nodeExporterDashboard = builder.fillTemplating {
         replacements = [
           {
             key = "ds_prometheus";
@@ -158,12 +158,22 @@
           "linux"
           "node-exporter"
         ];
-        extraAttrs.uid = "node-exporter-root";
         dashboard = builder.fetchDashboard {
           id = 1860;
           hash = "11hrll7fm626ikbva5md4gm0rca537vp4xsxa9sxl1pk15s6nk0q";
         };
       };
+      # Keep JSON transformation at build time. Reading a generated store path
+      # with builtins.readFile would require import-from-derivation and makes
+      # clean `nix flake check --no-build` runners depend on a warm store.
+      nodeExporterJson =
+        pkgs.runCommand "node-exporter-full-root.json"
+          {
+            nativeBuildInputs = [ pkgs.jq ];
+          }
+          ''
+            ${pkgs.jq}/bin/jq '. + {uid: "node-exporter-root"}' ${nodeExporterDashboard} > "$out"
+          '';
 
       inherit (builder) mkStaticLabelTarget;
 

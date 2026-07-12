@@ -3,58 +3,58 @@ let
   nodes = [
     {
       x = 40;
-      y = 215;
-      width = 150;
+      y = 225;
+      width = 160;
       label = "Internet";
       kind = "external";
     }
     {
       x = 245;
       y = 70;
-      width = 180;
+      width = 190;
       label = "Upstream DNS";
       kind = "external";
     }
     {
       x = 245;
-      y = 215;
-      width = 180;
+      y = 225;
+      width = 190;
       label = "Router";
       kind = "boundary";
     }
     {
       x = 500;
-      y = 165;
-      width = 235;
+      y = 175;
+      width = 260;
       label = "DNS + DHCP appliance";
       detail = "Critical roles";
       kind = "critical";
     }
     {
       x = 500;
-      y = 350;
-      width = 235;
+      y = 370;
+      width = 260;
       label = "Isolated guest services";
       kind = "guest";
     }
     {
-      x = 900;
-      y = 165;
-      width = 190;
+      x = 930;
+      y = 175;
+      width = 210;
       label = "Workstation";
       kind = "host";
     }
     {
-      x = 900;
-      y = 350;
-      width = 190;
+      x = 930;
+      y = 370;
+      width = 210;
       label = "Backup target";
       kind = "host";
     }
     {
       x = 40;
-      y = 455;
-      width = 180;
+      y = 500;
+      width = 230;
       label = "VPN administration";
       kind = "external";
     }
@@ -103,7 +103,7 @@ let
     '';
 in
 ''
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 590" width="1160" height="590" role="img" aria-labelledby="overview-title overview-description">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" width="1200" height="620" role="img" aria-labelledby="overview-title overview-description">
     <title id="overview-title">Public architecture overview</title>
     <desc id="overview-description">Role and trust flow overview</desc>
     <defs>
@@ -112,22 +112,25 @@ in
       </marker>
     </defs>
 
-    <rect x="460" y="115" width="680" height="380" rx="24" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
-    <text x="485" y="145" fill="#475569" font-family="sans-serif" font-size="18" font-weight="600">Home LAN</text>
+    <rect x="0" y="0" width="1200" height="620" rx="24" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+    <rect x="460" y="125" width="700" height="410" rx="24" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
+    <text x="485" y="155" fill="#475569" font-family="sans-serif" font-size="18" font-weight="600">Home LAN</text>
 
     <g fill="none" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)">
-      <path d="M 190 258 H 245"/>
-      <path d="M 425 258 H 500"/>
-      <path d="M 618 165 V 113 H 425"/>
-      <path d="M 735 208 H 900"/>
-      <path d="M 618 251 V 350"/>
-      <path d="M 735 393 H 900"/>
-      <path d="M 220 498 H 780 V 251 H 900"/>
+      <path d="M 200 268 H 245"/>
+      <path d="M 435 250 H 500"/>
+      <path d="M 630 175 V 113 H 435"/>
+      <path d="M 760 218 H 930"/>
+      <path d="M 630 261 V 370"/>
+      <path d="M 760 240 L 930 390"/>
+      <path d="M 1035 261 V 370"/>
+      <path d="M 270 543 H 850 V 261 H 930"/>
+      <path d="M 850 261 H 760"/>
     </g>
 
     <text x="500" y="98" fill="#475569" font-family="sans-serif" font-size="14">Encrypted DNS</text>
-    <text x="760" y="382" fill="#475569" font-family="sans-serif" font-size="14">Encrypted backups</text>
-    <text x="700" y="488" fill="#475569" font-family="sans-serif" font-size="14">Remote access</text>
+    <text x="790" y="320" fill="#475569" font-family="sans-serif" font-size="14">Encrypted backups</text>
+    <text x="700" y="533" fill="#475569" font-family="sans-serif" font-size="14">Remote access</text>
 
     ${lib.concatMapStrings renderNode nodes}
   </svg>

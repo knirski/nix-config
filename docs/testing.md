@@ -24,7 +24,7 @@ successful without executing it.
 The selected GitHub `ubuntu-24.04` runner currently exposes accelerated KVM;
 the pinned Determinate installer action configures it and has reported
 `Accelerated KVM is enabled` in an actual repository run. CI still verifies the
-device explicitly before running the complete flake suite. If GitHub changes
+device explicitly before running the strict behavior-test tier. If GitHub changes
 the runner image or virtualization contract, the job fails closed instead of
 quietly weakening coverage.
 
@@ -33,7 +33,7 @@ quietly weakening coverage.
 | Every push and pull request | Static hooks, documentation/public-data/workflow/shell policies, script contracts and topology freshness |
 | Every push and pull request | Full no-build evaluation, pure invariants and isolated raw-restic integration |
 | After static and evaluation pass | Complete Soyo and zbook closures; sanitized topology artifact |
-| After static and evaluation pass | Complete `nix flake check --keep-going`, including all three strict-KVM VM tests |
+| After static and evaluation pass | Three strict-KVM behavior tests; together with earlier tiers, every flake check is covered without rebuilding pure checks |
 | Required before local handoff | The same complete KVM-backed flake gate |
 
 The no-build tier runs first in a fresh job, before repository artifacts are
@@ -53,8 +53,9 @@ just test-resilience
 ```
 
 Then run `nix flake check path:. --keep-going` for the authoritative complete
-repository gate. The CI job runs the equivalent Git-flake command after the
-KVM preflight. See [Verification layers](learning/verification-layers.md) for a
+repository gate. CI distributes that check set by evidence class; the KVM job
+runs only behavior tests after its device preflight. See
+[Verification layers](learning/verification-layers.md) for a
 beginner-oriented explanation of why evaluation, builds, VM behavior and
 physical recovery drills remain separate forms of evidence.
 
