@@ -7,22 +7,7 @@
 A multi-host NixOS flake for a dependable LAN appliance and a daily-driver
 workstation—built as a practical guide to modern, readable Nix.
 
-```mermaid
-flowchart LR
-  internet([Internet]) --> router[Router]
-  router --> appliance[DNS + DHCP appliance]
-  upstream[Upstream DNS] <-->|Encrypted DNS| appliance
-
-  subgraph lan[Home LAN]
-    appliance -->|DNS + DHCP| workstation[Workstation]
-    appliance --> guests[Isolated guest services]
-    appliance -->|Encrypted backups| backup[Backup target]
-    workstation -->|Encrypted backups| backup
-  end
-
-  vpn[VPN administration] -->|Remote access| appliance
-  vpn -->|Remote access| workstation
-```
+![Sanitized overview of the repository's host roles and trust flows](docs/topology/overview.svg)
 
 ## Hosts
 
