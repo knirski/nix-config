@@ -157,39 +157,58 @@ in
 {
   perSystem =
     { pkgs, ... }:
-    {
-      packages = {
-        topology-public-overview = pkgs.writeTextDir "overview.svg" publicOverview;
-
-        # Intentionally local-only: do not commit or upload this output. It
-        # retains nix-topology's full extracted inventory for troubleshooting.
-        topology-operator-detailed =
-          (import nix-topology {
-            pkgs = pkgs.extend (import "${nix-topology}/pkgs/default.nix");
-            modules = [
-              {
-                nixosConfigurations = lib.filterAttrs (_: c: c.config ? topology) self.nixosConfigurations;
-              }
-              {
-                networks = {
-                  lan = {
-                    name = "Home LAN";
-                    cidrv4 = "10.0.0.0/24";
-                  };
-                  rescue = {
-                    name = "Direct-Link Rescue";
-                    cidrv4 = "192.168.254.0/30";
-                  };
-                  internet = {
-                    name = "Internet";
-                    cidrv4 = "0.0.0.0/0";
-                  };
+    let
+      # nix-topology currently realises icon helpers while evaluating its
+      # detailed output. Keep that explicitly operator-invoked output in the
+      # non-recursive legacy package set so normal flake evaluation stays pure.
+      operatorDetailed =
+        (import nix-topology {
+          pkgs = pkgs.extend (import "${nix-topology}/pkgs/default.nix");
+          modules = [
+            {
+              nixosConfigurations = lib.filterAttrs (_: c: c.config ? topology) self.nixosConfigurations;
+            }
+            {
+              networks = {
+                lan = {
+                  name = "Home LAN";
+                  cidrv4 = "10.0.0.0/24";
                 };
+                rescue = {
+                  name = "Direct-Link Rescue";
+                  cidrv4 = "192.168.254.0/30";
+                };
+                internet = {
+                  name = "Internet";
+                  cidrv4 = "0.0.0.0/0";
+                };
+              };
 
-                nodes = builtins.listToAttrs allNodes;
-              }
-            ];
-          }).config.output;
+              nodes = builtins.listToAttrs allNodes;
+            }
+          ];
+        }).config.output;
+      operatorApp = pkgs.writeShellApplication {
+        name = "topology-operator-detailed";
+        runtimeInputs = [ pkgs.nix ];
+        text = ''
+          exec nix build \
+            "path:$PWD#legacyPackages.${pkgs.stdenv.hostPlatform.system}.topology-operator-detailed" \
+            --no-link --print-out-paths "$@"
+        '';
+      };
+    in
+    {
+      packages.topology-public-overview = pkgs.writeTextDir "overview.svg" publicOverview;
+
+      # Intentionally local-only: do not commit or upload this output. It
+      # retains nix-topology's full extracted inventory for troubleshooting.
+      legacyPackages.topology-operator-detailed = operatorDetailed;
+
+      apps.topology-operator-detailed = {
+        type = "app";
+        program = pkgs.lib.getExe operatorApp;
+        meta.description = "Build the local-only detailed operator topology";
       };
     };
 }

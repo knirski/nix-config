@@ -36,6 +36,11 @@ quietly weakening coverage.
 | After static and evaluation pass | Complete `nix flake check --keep-going`, including all three strict-KVM VM tests |
 | Required before local handoff | The same complete KVM-backed flake gate |
 
+The no-build tier sets `allow-import-from-derivation false`. This prevents a
+warm developer store or an earlier CI build from masking evaluation-time reads
+of generated paths. Build-time transformations belong in derivations and are
+tested separately.
+
 Run the hardware-accelerated resilience tier with:
 
 ```bash

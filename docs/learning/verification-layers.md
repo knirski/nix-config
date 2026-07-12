@@ -11,11 +11,12 @@ catches type errors, missing options, failed assertions and invalid module
 composition. It does not prove that a service starts or that packets cross a
 network boundary.
 
-Evaluation can still realize import-from-derivation inputs. For example, the
-Grafana dashboard builder reads generated JSON during evaluation. Do not run
-store garbage collection immediately before this tier: removing a referenced
-derivation can make an otherwise reproducible evaluation fail for the wrong
-reason.
+Evaluation must not depend on realised derivations. CI enforces this with
+`allow-import-from-derivation false`. Grafana dashboard substitutions therefore
+run in a normal build-time Python derivation, and the upstream nix-topology
+operator output sits behind an explicit app rather than the recursively checked
+package set. A cold store and a warm store now make the same evaluation
+decision.
 
 ## 2. Builds ask whether artifacts can be produced
 
