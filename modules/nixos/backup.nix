@@ -15,6 +15,7 @@
     let
       cfg = config.lanAppliance.services.backup;
       hostName = if cfg.hostName != null then cfg.hostName else config.networking.hostName;
+      hardening = import ../../lib/systemd-hardening.nix;
     in
     {
       options.lanAppliance.services.backup = {
@@ -28,6 +29,7 @@
 
         enableTracing = lib.mkEnableOption "OTLP tracing of backup runs to local Tempo";
         enablePromMetrics = lib.mkEnableOption "Prometheus textfile metrics for backup success/ran status";
+        isolateResources = lib.mkEnableOption "resource limits for backup units on a role-constrained host";
 
         restic = {
           repository = lib.mkOption {
@@ -116,27 +118,36 @@
             systemd.services.restic-backup-metric-bootstrap = {
               description = "Seed restic backup alert metrics before the first backup run";
               wantedBy = [ "multi-user.target" ];
-              serviceConfig = {
+              serviceConfig = hardening.offline // {
                 Type = "oneshot";
-                ExecStart = pkgs.writeShellScript "restic-backup-metric-bootstrap" ''
-                  set -euo pipefail
-                  mkdir -p /var/lib/prometheus/textfiles
-                  if [ -e /var/lib/prometheus/textfiles/backup.prom ]; then
-                    exit 0
-                  fi
+                ExecStart = lib.getExe (
+                  pkgs.writeShellApplication {
+                    name = "restic-backup-metric-bootstrap";
+                    runtimeInputs = [ pkgs.coreutils ];
+                    text = ''
+                      set -euo pipefail
+                      mkdir -p /var/lib/prometheus/textfiles
+                      if [ -e /var/lib/prometheus/textfiles/backup.prom ]; then
+                        exit 0
+                      fi
 
-                  printf '%s\n' \
-                    '# HELP restic_backup_ran 1 after the first backup attempt completes, 0 before that.' \
-                    '# TYPE restic_backup_ran gauge' \
-                    'restic_backup_ran 0' \
-                    '# HELP restic_backup_success 1 if the last completed backup succeeded, 0 otherwise.' \
-                    '# TYPE restic_backup_success gauge' \
-                    'restic_backup_success 1' \
-                    > /var/lib/prometheus/textfiles/backup.prom
-                '';
+                      printf '%s\n' \
+                        '# HELP restic_backup_ran 1 after the first backup attempt completes, 0 before that.' \
+                        '# TYPE restic_backup_ran gauge' \
+                        'restic_backup_ran 0' \
+                        '# HELP restic_backup_success 1 if the last completed backup succeeded, 0 otherwise.' \
+                        '# TYPE restic_backup_success gauge' \
+                        'restic_backup_success 1' \
+                        > /var/lib/prometheus/textfiles/backup.prom
+                    '';
+                  }
+                );
                 MemoryMax = "64M";
                 CPUQuota = "10%";
                 Nice = 10;
+                ReadWritePaths = [ "/var/lib/prometheus/textfiles" ];
+                TimeoutStartSec = "30s";
+                Restart = "no";
               };
             };
           })
@@ -238,6 +249,16 @@
                 mv /var/lib/prometheus/textfiles/backup.prom.$$ /var/lib/prometheus/textfiles/backup.prom
               '';
             };
+
+            # Backups are deliberately subordinate to the host's primary role.
+            # The cap is large enough for restic's index while preventing an
+            # unusually large repository operation from exhausting Soyo.
+            systemd.services."restic-backups-${hostName}".serviceConfig = lib.mkIf cfg.isolateResources {
+              MemoryMax = "1G";
+              CPUQuota = "50%";
+              Nice = 10;
+              IOWeight = 25;
+            };
           }
 
           # Local Btrfs snapshots via the first-class btrbk module.
@@ -268,6 +289,12 @@
                   };
                 };
               };
+            };
+            systemd.services."btrbk-${hostName}".serviceConfig = lib.mkIf cfg.isolateResources {
+              MemoryMax = "512M";
+              CPUQuota = "25%";
+              Nice = 10;
+              IOWeight = 25;
             };
           })
         ]

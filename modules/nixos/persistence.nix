@@ -24,6 +24,10 @@
       # deleted first or `btrfs subvolume delete root` fails.
       boot.initrd.systemd.services.rollback-root = {
         wantedBy = [ "initrd.target" ];
+        # `after` orders existing jobs but does not pull cryptsetup in.  The
+        # rollback must make the mapper a hard prerequisite or it can race
+        # udev during initrd startup and try to mount an unopened device.
+        requires = [ "systemd-cryptsetup@crypted.service" ];
         after = [ "systemd-cryptsetup@crypted.service" ];
         before = [ "sysroot.mount" ];
         unitConfig.DefaultDependencies = "no";

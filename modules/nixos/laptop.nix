@@ -50,7 +50,7 @@
       serviceConfig.Type = "oneshot";
       script = ''
         for dev in TXHC TDM0 TDM1; do
-          if grep -q "^$dev[[:space:]]\+S[0-9][[:space:]]\+\*enabled" /proc/acpi/wakeup; then
+          if grep -q "^''${dev}[[:space:]]\+S[0-9][[:space:]]\+\*enabled" /proc/acpi/wakeup; then
             echo "$dev" > /proc/acpi/wakeup
           fi
         done

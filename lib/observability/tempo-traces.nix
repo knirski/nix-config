@@ -1,4 +1,7 @@
 { lib, pkgs, ... }:
+let
+  hardening = import ../systemd-hardening.nix;
+in
 {
   services.tempo = {
     enable = true;
@@ -90,7 +93,7 @@
         ];
         wants = [ "tempo.service" ];
         wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
+        serviceConfig = hardening.networkClient // {
           Type = "oneshot";
           ExecStart =
             let
@@ -144,6 +147,8 @@
           MemoryMax = "64M";
           CPUQuota = "10%";
           Nice = 19;
+          TimeoutStartSec = "1m";
+          Restart = "no";
         };
       };
 
@@ -155,7 +160,7 @@
           "tempo.service"
         ];
         wants = [ "tempo.service" ];
-        serviceConfig = {
+        serviceConfig = hardening.networkClient // {
           Type = "oneshot";
           ExecStart =
             let
@@ -210,6 +215,8 @@
           MemoryMax = "32M";
           CPUQuota = "5%";
           Nice = 19;
+          TimeoutStartSec = "1m";
+          Restart = "no";
         };
       };
       soyo-health-trace = {
@@ -219,7 +226,7 @@
           "tempo.service"
         ];
         wants = [ "tempo.service" ];
-        serviceConfig = {
+        serviceConfig = hardening.networkClient // {
           Type = "oneshot";
           ExecStart =
             let
@@ -316,6 +323,8 @@
           MemoryMax = "64M";
           CPUQuota = "10%";
           Nice = 19;
+          TimeoutStartSec = "1m";
+          Restart = "no";
         };
       };
     };

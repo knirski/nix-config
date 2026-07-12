@@ -17,7 +17,6 @@
       };
 
       # Make command-code available everywhere (used in home.base).
-      # Make command-code available everywhere (used in home.base).
       nixpkgs.overlays = [
         (final: _: {
           command-code = final.callPackage ../../modules/_pkgs/command-code.nix { };
@@ -48,24 +47,36 @@
 
       # Weekly nix store optimisation (replaces `auto-optimise-store`, which
       # causes lock contention on every nix command and O(n) GC cost).
-      systemd.services.nix-store-optimise = {
-        description = "Optimise the Nix store";
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${pkgs.nix}/bin/nix store optimise";
-          MemoryMax = "512M";
-          CPUQuota = "50%";
-          Nice = 19;
-          IOSchedulingClass = "idle";
+      systemd = {
+        # Have NixOS render `script`, `preStart`, `postStart`, and related unit
+        # fragments through writeShellApplication. This catches undefined
+        # variables and ShellCheck findings while the system closure builds.
+        # Arbitrary ExecStart commands and separately authored scripts are
+        # covered by the repository shell-boundary check instead.
+        enableStrictShellChecks = true;
+        services.nix-store-optimise = {
+          description = "Optimise the Nix store";
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = "${pkgs.nix}/bin/nix store optimise";
+            MemoryMax = "512M";
+            CPUQuota = "50%";
+            Nice = 19;
+            IOSchedulingClass = "idle";
+          };
         };
-      };
-      systemd.timers.nix-store-optimise = {
-        description = "Weekly Nix store optimisation";
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnCalendar = "weekly";
-          RandomizedDelaySec = "6h";
-          Persistent = true;
+        # nixpkgs also declares an unactivated `nix-optimise.service` for its
+        # `nix.optimise` option. This repository deliberately uses the bounded
+        # weekly unit above, so remove the redundant manual unit.
+        services.nix-optimise.enable = false;
+        timers.nix-store-optimise = {
+          description = "Weekly Nix store optimisation";
+          wantedBy = [ "timers.target" ];
+          timerConfig = {
+            OnCalendar = "weekly";
+            RandomizedDelaySec = "6h";
+            Persistent = true;
+          };
         };
       };
 

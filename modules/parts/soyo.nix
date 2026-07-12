@@ -40,6 +40,7 @@
         ../../hosts/soyo/initrd-unlock.nix
         ../../hosts/soyo/dns.nix
         ../../hosts/soyo/dhcp.nix
+        ../../hosts/soyo/maintenance.nix
         ../../hosts/soyo/backup.nix
         ../../hosts/soyo/observability.nix
         ../../hosts/soyo/topology.nix
@@ -61,14 +62,12 @@
           # /persist/etc/ssh/ during first install.
           age.rekey = {
             hostPubkey = ../../secrets/soyo.pub;
-            # Path to the operator's SSH private key, used to decrypt
-            # master-encrypted secrets before rekeying for the host.
-            # Must be an absolute string (not a Nix path) so it's NOT
-            # copied to the nix store.  Adjust this to your machine:
-            #   live ISO: /home/nixos/.ssh/id_ed25519
-            #   workstation: /home/krzysiek/.ssh/soyo_ed25519
+            # Operator-side convention shared by every host assembler.
+            # Make this path a symlink to the real SSH private key; see
+            # docs/secrets.md.  It must remain an absolute string (not a Nix
+            # path), otherwise Nix would copy the private key into the store.
             masterIdentities = [
-              "/home/krzysiek/.ssh/soyo_ed25519"
+              "/etc/agenix-rekey/master-identity"
             ];
             storageMode = "local";
             localStorageDir = ../../. + "/secrets/rekeyed/soyo";
