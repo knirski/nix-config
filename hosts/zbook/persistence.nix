@@ -34,6 +34,11 @@
           mode = "0700";
         }
         ".local/share/direnv"
+        # GNOME Keyring stores encrypted Secret Service credentials here.
+        {
+          directory = ".local/share/keyrings";
+          mode = "0700";
+        }
         ".local/state/home-manager"
         ".local/state/DankMaterialShell"
         ".cache/DankMaterialShell"
