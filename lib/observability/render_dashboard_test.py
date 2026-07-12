@@ -41,6 +41,43 @@ class RenderDashboardTests(unittest.TestCase):
         self.assertEqual(rendered["tags"], ["managed"])
         self.assertEqual(rendered["uid"], "managed-dashboard")
 
+    def test_accepts_dashboards_without_a_template_list(self) -> None:
+        specification = {
+            "replacements": [{"key": "source", "value": "prometheus"}],
+            "tags": ["managed"],
+            "extraAttrs": {},
+        }
+
+        for templating in (None, {}, {"list": None}):
+            with self.subTest(templating=templating):
+                dashboard = {"title": "Simple dashboard"}
+                if templating is not None:
+                    dashboard["templating"] = templating
+
+                rendered = render(dashboard, specification)
+
+                self.assertEqual(rendered["title"], "Simple dashboard")
+                self.assertEqual(rendered["tags"], ["managed"])
+
+    def test_preserves_non_object_template_entries(self) -> None:
+        dashboard = {
+            "templating": {
+                "list": ["unexpected", {"name": "source"}, {"name": "retained"}]
+            }
+        }
+        specification = {
+            "replacements": [{"key": "source", "value": "prometheus"}],
+            "tags": [],
+            "extraAttrs": {},
+        }
+
+        rendered = render(dashboard, specification)
+
+        self.assertEqual(
+            rendered["templating"]["list"],
+            ["unexpected", {"name": "retained"}],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

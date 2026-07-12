@@ -35,11 +35,15 @@ def render(dashboard: dict[str, Any], specification: dict[str, Any]) -> dict[str
 
     rendered = replace_strings(dashboard, replacements)
     template_names = {item["key"] for item in configured}
-    rendered["templating"]["list"] = [
-        item
-        for item in rendered["templating"]["list"]
-        if item.get("name") not in template_names
-    ]
+    templating = rendered.get("templating")
+    if isinstance(templating, dict):
+        template_list = templating.get("list")
+        if isinstance(template_list, list):
+            templating["list"] = [
+                item
+                for item in template_list
+                if not isinstance(item, dict) or item.get("name") not in template_names
+            ]
     rendered["tags"] = specification["tags"]
     rendered.update(specification["extraAttrs"])
     return rendered

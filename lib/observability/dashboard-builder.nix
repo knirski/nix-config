@@ -40,7 +40,7 @@ let
       );
     in
     pkgs.runCommand "dashboard.json" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-      python ${./render-dashboard.py} ${dashboard} ${specification} "$out"
+      python ${./render_dashboard.py} ${dashboard} ${specification} "$out"
     '';
 
   mkStaticLabelTarget = t: target: {

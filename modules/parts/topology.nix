@@ -190,10 +190,14 @@ in
         }).config.output;
       operatorApp = pkgs.writeShellApplication {
         name = "topology-operator-detailed";
-        runtimeInputs = [ pkgs.nix ];
+        runtimeInputs = [
+          pkgs.git
+          pkgs.nix
+        ];
         text = ''
+          flake_dir=$(git rev-parse --show-toplevel 2>/dev/null || printf '%s\n' "$PWD")
           exec nix build \
-            "path:$PWD#legacyPackages.${pkgs.stdenv.hostPlatform.system}.topology-operator-detailed" \
+            "path:$flake_dir#legacyPackages.${pkgs.stdenv.hostPlatform.system}.topology-operator-detailed" \
             --no-link --print-out-paths "$@"
         '';
       };

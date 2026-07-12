@@ -185,7 +185,7 @@
               buildInputs = [ pkgs.python3 ];
             }
             ''
-              cp ${../../lib/observability/render-dashboard.py} render_dashboard.py
+              cp ${../../lib/observability/render_dashboard.py} render_dashboard.py
               cp ${../../lib/observability/render_dashboard_test.py} render_dashboard_test.py
               python3 -m unittest render_dashboard_test
               touch $out
