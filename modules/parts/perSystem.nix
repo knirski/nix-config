@@ -250,6 +250,27 @@
               fi
               touch "$out"
             '';
+
+        # Regression check for maintenance hosts that do not enable
+        # observability: free-space-check's ReadWritePaths must exist before
+        # systemd starts the service.
+        maintenance-paths =
+          let
+            zbook = inputs.self.nixosConfigurations.zbook.config;
+            requiredRule = "d /var/lib/prometheus/textfiles 0755 - - -";
+          in
+          pkgs.runCommand "maintenance-paths-test"
+            {
+              nativeBuildInputs = [ pkgs.jq ];
+              rules = builtins.toJSON zbook.systemd.tmpfiles.rules;
+            }
+            ''
+              if ! jq -e --arg rule '${requiredRule}' 'index($rule) != null' <<< "$rules" >/dev/null; then
+                echo "missing maintenance tmpfiles rule: ${requiredRule}" >&2
+                exit 1
+              fi
+              touch "$out"
+            '';
       };
 
       devShells.default = pkgs.mkShell {
