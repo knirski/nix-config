@@ -69,12 +69,15 @@ jobs:
         with:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      # Some generated Soyo configuration inputs (Grafana dashboards and
-      # topology icons) use import-from-derivation during evaluation. Build the
-      # authoritative Soyo closure first so the subsequent no-build flake
-      # check also works on a clean runner.
-      - name: Materialize Soyo evaluation-time inputs
-        run: nix build --no-link .#nixosConfigurations.soyo.config.system.build.toplevel
+      # Generated host configurations and nix-topology use
+      # import-from-derivation during evaluation. Materialize all consumers
+      # first so the subsequent no-build flake check works on a clean runner.
+      - name: Materialize evaluation-time inputs
+        run: |
+          nix build --no-link \
+            .#nixosConfigurations.soyo.config.system.build.toplevel \
+            .#nixosConfigurations.zbook.config.system.build.toplevel \
+            .#topology-operator-detailed
       - name: Evaluate every flake output without building VMs
         run: nix flake check --no-build --show-trace
       - name: Build pure invariants and software integration
