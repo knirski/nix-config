@@ -8,6 +8,8 @@
         mpv
         bitwarden-desktop
         freetube
+        signal-desktop
+        spotify
         zed-editor
       ];
     };
