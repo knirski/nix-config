@@ -4,7 +4,25 @@ _: {
     {
       home.packages = [
         (pkgs.writeShellScriptBin "clipboard-sync" ''
-          set -eu
+            set -eu
+
+            paste_target() {
+              if [ "$1" = primary ]; then
+                wl-paste --primary
+              else
+                wl-paste
+              fi
+            }
+
+            copy_target() {
+              target="$1"
+              shift
+              if [ "$target" = primary ]; then
+                wl-copy --primary "$@"
+              else
+                wl-copy "$@"
+              fi
+            }
 
           sync_selection() {
             target="$1"
@@ -13,30 +31,30 @@ _: {
 
             cat > "$content"
             if [ "''${CLIPBOARD_STATE:-data}" = clear ] || [ "''${CLIPBOARD_STATE:-data}" = nil ]; then
-              wl-copy "$target" --clear
-            elif ! wl-paste "$target" | cmp -s - "$content"; then
-              wl-copy "$target" < "$content"
-            fi
-          }
+              copy_target "$target" --clear
+            elif ! paste_target "$target" | cmp -s - "$content"; then
+              copy_target "$target" < "$content"
+              fi
+            }
 
-          case "$1" in
-            regular-to-primary)
-              exec wl-paste --watch "$0" regular-event
-              ;;
-            primary-to-regular)
-              exec wl-paste --primary --watch "$0" primary-event
-              ;;
+            case "$1" in
+              regular-to-primary)
+                exec wl-paste --watch "$0" regular-event
+                ;;
+              primary-to-regular)
+                exec wl-paste --primary --watch "$0" primary-event
+                ;;
             regular-event)
-              sync_selection --primary
+              sync_selection primary
               ;;
             primary-event)
-              sync_selection
-              ;;
-            *)
-              printf 'clipboard-sync: unknown mode: %s\n' "''${1:-}" >&2
-              exit 2
-              ;;
-          esac
+              sync_selection regular
+                ;;
+              *)
+                printf 'clipboard-sync: unknown mode: %s\n' "''${1:-}" >&2
+                exit 2
+                ;;
+            esac
         '')
       ];
 
