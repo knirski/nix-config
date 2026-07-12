@@ -55,7 +55,9 @@ jobs:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: nix store gc
-      - run: nix flake check
+      # Hosted runners do not guarantee /dev/kvm. The final CI stack builds
+      # every pure check explicitly; strict KVM tests remain a local gate.
+      - run: nix flake check --no-build --show-trace
 
   build:
     runs-on: ubuntu-24.04
