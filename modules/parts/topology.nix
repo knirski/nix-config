@@ -4,8 +4,9 @@
 # of truth. Add a device there, it appears in the diagram automatically.
 # Soyo itself is auto-extracted by the NixOS module (interfaces, IPs, services).
 #
-# Render with: nix build .#topology.x86_64-linux && cp result/main.svg .
-# Result: result/main.svg (physical topology), result/network.svg (network view)
+# The detailed output is an operator-only troubleshooting artifact. The small
+# public overview is rendered independently from generic roles so exact host
+# inventory can never leak through an extractor.
 #
 # Docs: https://oddlama.github.io/nix-topology/
 {
@@ -16,6 +17,7 @@
 }:
 let
   inherit (inputs) nix-topology;
+  publicOverview = import ../../lib/topology/public-overview.nix { inherit lib; };
 
   networkData = import ../../hosts/soyo/network.nix;
   inherit (networkData) reservations;
@@ -156,32 +158,42 @@ in
   perSystem =
     { pkgs, ... }:
     {
-      packages.topology =
-        (import nix-topology {
-          pkgs = pkgs.extend (import "${nix-topology}/pkgs/default.nix");
-          modules = [
-            {
-              nixosConfigurations = lib.filterAttrs (_: c: c.config ? topology) self.nixosConfigurations;
-            }
-            {
-              networks = {
-                lan = {
-                  name = "Home LAN";
-                  cidrv4 = "10.0.0.0/24";
-                };
-                rescue = {
-                  name = "Direct-Link Rescue";
-                  cidrv4 = "192.168.254.0/30";
-                };
-                internet = {
-                  name = "Internet";
-                  cidrv4 = "0.0.0.0/0";
-                };
-              };
+      packages = rec {
+        topology-public-overview = pkgs.writeTextDir "overview.svg" publicOverview;
 
-              nodes = builtins.listToAttrs allNodes;
-            }
-          ];
-        }).config.output;
+        # Compatibility for the existing CI job while this stacked series is
+        # reviewed. The final CI PR switches to the explicit public name.
+        topology = topology-public-overview;
+
+        # Intentionally local-only: do not commit or upload this output. It
+        # retains nix-topology's full extracted inventory for troubleshooting.
+        topology-operator-detailed =
+          (import nix-topology {
+            pkgs = pkgs.extend (import "${nix-topology}/pkgs/default.nix");
+            modules = [
+              {
+                nixosConfigurations = lib.filterAttrs (_: c: c.config ? topology) self.nixosConfigurations;
+              }
+              {
+                networks = {
+                  lan = {
+                    name = "Home LAN";
+                    cidrv4 = "10.0.0.0/24";
+                  };
+                  rescue = {
+                    name = "Direct-Link Rescue";
+                    cidrv4 = "192.168.254.0/30";
+                  };
+                  internet = {
+                    name = "Internet";
+                    cidrv4 = "0.0.0.0/0";
+                  };
+                };
+
+                nodes = builtins.listToAttrs allNodes;
+              }
+            ];
+          }).config.output;
+      };
     };
 }
