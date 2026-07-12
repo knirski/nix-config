@@ -19,7 +19,7 @@
     let
       # PerSystem pkgs with unfree allowed (needed for packages.command-code).
       pkgs' = import inputs.nixpkgs {
-        inherit system;
+        localSystem = { inherit system; };
         config.allowUnfree = true;
         overlays = [ ];
       };
