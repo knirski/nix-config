@@ -69,6 +69,10 @@ jobs:
         with:
           name: knirski-nix-config
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Materialize tracked agenix-rekey inputs
+        run: |
+          nix store add-path --name soyo ./secrets/rekeyed/soyo
+          nix store add-path --name zbook ./secrets/rekeyed/zbook
       - name: Evaluate every flake output without building VMs
         run: nix flake check --no-build --show-trace
       - name: Evaluate project-owned pure outputs without IFD
