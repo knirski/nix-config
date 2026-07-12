@@ -32,6 +32,15 @@ setup() { setup_contract_test; }
   assert_log_has '<krzysiek@custom-host> <ip link show eth-explicit | grep -q'
 }
 
+@test "unreachable host fails once before discovery" {
+  run env SSH_FAIL_PATTERN='krzysiek@offline true' SSH_FAIL_OUTPUT='timed out' SSH_FAIL_STATUS=255 \
+    "$HEALTHCHECK" offline
+  assert_status 1
+  assert_output_has 'Cannot connect to offline via SSH'
+  assert_output_lacks 'timed out'
+  [[ "$(grep -c 'krzysiek@offline' "$OPERATOR_TEST_LOG")" -eq 1 ]]
+}
+
 @test "declarative marker wins and compatibility fallback remains bounded" {
   export SSH_ROLE_MARKER=workstation SSH_APPLIANCE_FALLBACK=1
   run "$HEALTHCHECK" test-host

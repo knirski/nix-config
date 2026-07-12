@@ -9,6 +9,8 @@
     "docs/issue-2-reconciliation.md": { "status": "completed", "role": "GitHub issue reconciliation record" },
     "docs/learning/README.md": { "status": "active", "role": "guided learning path" },
     "docs/learning/design-journey.md": { "status": "active", "role": "architecture narrative" },
+    "docs/learning/host-role-models.md": { "status": "active", "role": "host role design guide" },
+    "docs/learning/verification-layers.md": { "status": "active", "role": "verification learning guide" },
     "docs/optional-work-plan.md": { "status": "superseded", "role": "completed planning record", "replacement": "docs/superpowers/plans/2026-07-12-correctness-resilience-docs.md" },
     "docs/recovery.md": { "status": "active", "role": "recovery runbook" },
     "docs/router-recommendation.md": { "status": "active", "role": "network design advisory" },

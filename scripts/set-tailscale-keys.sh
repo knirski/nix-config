@@ -99,7 +99,9 @@ cleanup() {
     rm -rf "$rekeyed"
     if [[ -e "$tmpdir/rekeyed.previous" ]]; then cp -a "$tmpdir/rekeyed.previous" "$rekeyed"; fi
   fi
-  rm -rf "$tmpdir"
+  if [[ -n "${tmpdir:-}" && -d "$tmpdir" ]]; then
+    rm -rf -- "$tmpdir"
+  fi
   return "$status"
 }
 trap cleanup EXIT

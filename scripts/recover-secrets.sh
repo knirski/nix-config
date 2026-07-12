@@ -105,7 +105,9 @@ cleanup() {
       fi
     fi
   done
-  rm -rf "$tmpdir"
+  if [[ -n "${tmpdir:-}" && -d "$tmpdir" ]]; then
+    rm -rf -- "$tmpdir"
+  fi
   return "$status"
 }
 trap cleanup EXIT

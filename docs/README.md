@@ -17,6 +17,8 @@ enforcement belongs to the documentation-check layer.
   Nix, flake-parts, host assembly and each implemented milestone.
 - [Design journey](learning/design-journey.md) — why the repository evolved
   toward aspects, thin hosts and declarative recovery.
+- [Host role models](learning/host-role-models.md) — alternatives for defining,
+  assembling and checking host responsibilities.
 
 ## Operate
 
@@ -43,6 +45,8 @@ enforcement belongs to the documentation-check layer.
 
 - [Testing and verification](testing.md) — evidence layers, automated checks
   and the manual-verification boundary.
+- [Verification layers](learning/verification-layers.md) — a beginner-friendly
+  explanation of evaluation, builds, KVM tests, caches and physical drills.
 - [Testing baseline](testing-baseline.md) — recorded repository check inventory
   and timing evidence.
 - [Public repository data policy](security/public-repository.md) — what the

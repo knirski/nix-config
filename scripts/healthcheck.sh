@@ -47,6 +47,17 @@ if [[ -n "$NIC" && ! "$NIC" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
   echo "Invalid network interface '$NIC'" >&2
   exit 2
 fi
+if [[ -n "$ROLE" && "$ROLE" != "appliance" && "$ROLE" != "workstation" ]]; then
+  echo "Unknown role '$ROLE' (expected appliance or workstation)" >&2
+  exit 2
+fi
+
+# Fail once, quickly, before optional discovery would multiply connection
+# timeouts. This also gives operators one clear transport error.
+if ! "$SSH_BIN" -o ConnectTimeout=5 -o LogLevel=QUIET "krzysiek@$HOST" true 2>/dev/null; then
+  echo "Error: Cannot connect to $HOST via SSH" >&2
+  exit 1
+fi
 
 # --- Discover facts from the live host when not given ---
 if [[ -z "$NIC" ]]; then

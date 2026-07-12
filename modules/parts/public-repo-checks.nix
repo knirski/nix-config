@@ -26,6 +26,7 @@
             reject-external-url.svg) echo 'external resource reference' ;;
             reject-interface.svg) echo 'prohibited network interface' ;;
             reject-ip.svg) echo 'prohibited IPv4 address' ;;
+            reject-ipv6.svg) echo 'prohibited IPv6 address' ;;
             reject-known-device.svg) echo 'prohibited known LAN device label' ;;
             reject-mac.svg) echo 'prohibited MAC address' ;;
             reject-non-text-content.svg) echo 'text in non-text element' ;;

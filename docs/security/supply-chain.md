@@ -12,7 +12,15 @@ This flake has two dependency surfaces with different controls:
 The `github-workflow-policy` flake check enforces immutable action references,
 read-only top-level workflow permissions, and rejection of
 `pull_request_target`. Actionlint remains responsible for workflow syntax and
-expression correctness. These checks complement each other.
+expression correctness. Structural policy is parsed as YAML, while immutable
+`uses:` references are checked line by line for actionable locations. Mutation
+fixtures cover scalar, flow-mapping, comment, quoting and trigger variants.
+These checks complement each other.
+
+Cachix is a performance layer, not an authority boundary. Pull requests
+configure the public `knirski-nix-config` cache without credentials. Only a
+push to `main` references `CACHIX_AUTH_TOKEN` and can upload paths; forked code
+cannot access that step or secret.
 
 ## Secret and public-data scans
 

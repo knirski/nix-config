@@ -5,12 +5,6 @@ such as a USB-C RTL8153 adapter), and how should it be connected? The current
 layout uses an Orange Funbox 6 connected to WAN and a Netgear Orbi RBR50 with
 two satellites as a second router and mesh Wi-Fi provider.
 
-I’ll assess the failure domains and verify the relevant Orbi AP-mode and Funbox capabilities from primary documentation. The key question is whether making Soyo the gateway improves control enough to justify putting routing behind a USB NIC and expanding the appliance’s critical role.
-
-Searching the web
-
-Searched the web for site:kb.netgear.com RBR50 AP mode Internet port router mode access point ...
-
 I would not make Soyo the router by default. It conflicts with the repository’s strongest invariant—DNS and DHCP are its only critical roles—and makes every Soyo reboot, bad deployment, USB-NIC reset, or firewall mistake an internet outage.
 
 A better simplification is:

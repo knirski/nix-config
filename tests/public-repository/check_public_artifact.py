@@ -33,10 +33,25 @@ ALLOWED_TEXT = {
 
 PROHIBITED_PATTERNS = {
     "IPv4 address": re.compile(r"(?<![0-9.])(?:\d{1,3}\.){3}\d{1,3}(?![0-9.])"),
+    "IPv6 address": re.compile(
+        r"(?i)(?<![0-9a-f:])(?:"
+        r"(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}|"
+        r"(?:[0-9a-f]{1,4}:){1,7}:|"
+        r"(?:[0-9a-f]{1,4}:){1,6}:[0-9a-f]{1,4}|"
+        r"(?:[0-9a-f]{1,4}:){1,5}(?::[0-9a-f]{1,4}){1,2}|"
+        r"(?:[0-9a-f]{1,4}:){1,4}(?::[0-9a-f]{1,4}){1,3}|"
+        r"(?:[0-9a-f]{1,4}:){1,3}(?::[0-9a-f]{1,4}){1,4}|"
+        r"(?:[0-9a-f]{1,4}:){1,2}(?::[0-9a-f]{1,4}){1,5}|"
+        r"[0-9a-f]{1,4}:(?:(?::[0-9a-f]{1,4}){1,6})|"
+        r":(?:(?::[0-9a-f]{1,4}){1,7}|:)"
+        r")(?![0-9a-f:])"
+    ),
     "MAC address": re.compile(r"(?i)(?<![0-9a-f])(?:[0-9a-f]{2}:){5}[0-9a-f]{2}(?![0-9a-f])"),
     "disk or device path": re.compile(r"(?i)(?:/dev/|\b(?:ata|nvme)-[a-z0-9._-]+|\bUUID=)"),
     "network interface": re.compile(
-        r"(?i)\b(?:enp\w+|eno\w+|ens\w+|eth\d+|wlan\w+|wl[a-z0-9]+|tailscale\d+|virbr\d+|veth\w+)\b"
+        r"(?i)\b(?:enp\w+|eno\w+|ens\w+|eth\d+|wlan\w+|wl[a-z0-9]+|"
+        r"tailscale\d+|virbr\d+|veth\w+|wg\d+|tun\d+|tap\d+|br\d+|"
+        r"bond\d+|docker\d+|en\d+)\b"
     ),
     "username or home path": re.compile(r"(?i)(?:\bkrzysiek\b|/home/[a-z0-9._-]+)"),
     "rescue addressing": re.compile(r"(?i)(?:\bdirect[- ]link\b|\brescue\b|192\.168\.254\.)"),
@@ -113,9 +128,10 @@ def validate(path: Path) -> list[str]:
     try:
         size = path.stat().st_size
         if size > MAX_BYTES:
-            errors.append(f"exceeds {MAX_BYTES}-byte size limit: {size} bytes")
-        root = ET.parse(path).getroot()
-    except (ET.ParseError, OSError) as error:
+            return [f"exceeds {MAX_BYTES}-byte size limit: {size} bytes"]
+        serialized_text = path.read_text(encoding="utf-8")
+        root = ET.fromstring(serialized_text)
+    except (ET.ParseError, OSError, UnicodeDecodeError) as error:
         return [f"cannot parse SVG: {error}"]
 
     if local_name(root.tag) != "svg":
@@ -132,7 +148,6 @@ def validate(path: Path) -> list[str]:
     except (KeyError, ValueError) as error:
         errors.append(f"invalid or missing dimensions: {error}")
 
-    serialized_text = path.read_text(encoding="utf-8")
     for label, pattern in PROHIBITED_PATTERNS.items():
         if match := pattern.search(serialized_text):
             errors.append(f"contains prohibited {label}: {match.group(0)!r}")
