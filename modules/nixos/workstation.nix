@@ -4,9 +4,10 @@
 # aspects (ssh.nix, tailscale.nix, backup.nix). Toggle those separately
 # in the host assembler.
 #
-# Kept as empty semantic marker so the assembler's `workstation` reference
-# still works and clearly says "this is a workstation" even though all
-# sub-features are now their own aspects.
-_: {
-  aspects.nixos.workstation = { };
+# The role marker gives host-agnostic tooling a stable way to select checks;
+# all workstation sub-features remain separate opt-in aspects.
+{
+  aspects.nixos.workstation = {
+    environment.etc."nix-config/role".text = "workstation\n";
+  };
 }

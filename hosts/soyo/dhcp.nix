@@ -1,5 +1,6 @@
 let
   reservations = import ./reservations.nix;
+  networkPolicy = import ./network-policy.nix;
 in
 {
   lanAppliance.services.dhcp = {
@@ -10,6 +11,8 @@ in
     searchDomain = "home.arpa";
     leaseFile = "/var/lib/dnsmasq/dnsmasq.leases";
     inherit reservations;
-    dhcpRanges = [ "10.0.0.50,10.0.0.199,12h" ];
+    dhcpRanges = [
+      "${networkPolicy.subnetPrefix}${toString networkPolicy.dynamicPool.first},${networkPolicy.subnetPrefix}${toString networkPolicy.dynamicPool.last},${networkPolicy.dynamicPool.leaseTime}"
+    ];
   };
 }

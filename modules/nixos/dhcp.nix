@@ -55,6 +55,13 @@
           };
         };
 
+        # Pinned nixpkgs generates `mkdir -m 755 -p /var/lib/dnsmasq` in its
+        # preStart, which trips ShellCheck SC2174 because -m with -p only
+        # controls the deepest directory. The directory is separately owned by
+        # the explicit tmpfiles rule below. Keep strict checks enabled globally
+        # and scope this upstream-owned exception to dnsmasq only.
+        systemd.services.dnsmasq.enableStrictShellChecks = false;
+
         # Lease DB lives on /persist so leases survive reboots/rebuilds.
         systemd.tmpfiles.rules = [
           "d ${leaseDir} 0750 dnsmasq dnsmasq -"

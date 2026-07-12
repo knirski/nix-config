@@ -7,6 +7,10 @@
     { lib, ... }:
     {
       config = {
+        # Health checks consume this declarative marker instead of inferring the
+        # host role from mutable network state.
+        environment.etc."nix-config/role".text = "appliance\n";
+
         networking.useNetworkd = true;
 
         systemd = {
