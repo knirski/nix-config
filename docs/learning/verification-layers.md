@@ -11,12 +11,18 @@ catches type errors, missing options, failed assertions and invalid module
 composition. It does not prove that a service starts or that packets cross a
 network boundary.
 
-Evaluation must not depend on realised derivations. CI enforces this with
+Project-owned transformations must not depend on realised derivations. CI
+evaluates their checks and public outputs with
 `allow-import-from-derivation false`. Grafana dashboard substitutions therefore
 run in a normal build-time Python derivation, and the upstream nix-topology
 operator output sits behind an explicit app rather than the recursively checked
-package set. A cold store and a warm store now make the same evaluation
-decision.
+package set.
+
+The full host evaluation cannot disable IFD globally: agenix-rekey deliberately
+realises the host-specific rekey derivation while resolving each secret's file.
+The ordinary no-build gate therefore retains IFD for this documented upstream
+boundary, while the narrower no-IFD gate prevents project code from silently
+adding more evaluation-time builds.
 
 ## 2. Builds ask whether artifacts can be produced
 

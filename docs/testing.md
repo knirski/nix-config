@@ -36,10 +36,11 @@ quietly weakening coverage.
 | After static and evaluation pass | Complete `nix flake check --keep-going`, including all three strict-KVM VM tests |
 | Required before local handoff | The same complete KVM-backed flake gate |
 
-The no-build tier sets `allow-import-from-derivation false`. This prevents a
-warm developer store or an earlier CI build from masking evaluation-time reads
-of generated paths. Build-time transformations belong in derivations and are
-tested separately.
+The no-build tier runs first in a fresh job, before repository artifacts are
+built. A narrower gate then evaluates project-owned dashboard and topology
+outputs with `allow-import-from-derivation false`; build-time transformations
+are tested separately. The full host configuration cannot disable IFD because
+agenix-rekey uses it to resolve host-specific rekeyed secret files.
 
 Run the hardware-accelerated resilience tier with:
 
