@@ -58,7 +58,6 @@
           settings = {
             user.name = "Krzysztof Nirski";
             user.email = "krzysztof.nirski+github@gmail.com";
-            url."git@github.com:".insteadOf = "https://github.com/";
           };
         };
         home-manager.enable = true;
