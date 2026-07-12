@@ -34,11 +34,10 @@
 
       config = lib.mkIf cfg.enable {
         # --- nix.gc: automated store cleanup ---
-        # Use mkDefault so hosts can opt into nh clean instead.
         nix.gc = {
-          automatic = lib.mkDefault true;
-          dates = lib.mkDefault "weekly";
-          options = lib.mkDefault "--delete-older-than 30d";
+          automatic = true;
+          dates = "weekly";
+          options = "--delete-older-than 30d";
         };
 
         # --- journald: bounded log size ---

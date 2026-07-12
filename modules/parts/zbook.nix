@@ -62,8 +62,6 @@
               dgop = inputs.dgop.packages.${prev.system}.default;
             })
           ];
-          # nh clean replaces the built-in nix.gc
-          nix.gc.automatic = false;
 
           # Maintenance: enable for this host, set disk to zbook's NVMe
           lanAppliance.services.maintenance = {
