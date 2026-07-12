@@ -7,14 +7,29 @@
 A multi-host NixOS flake for a dependable LAN appliance and a daily-driver
 workstation—built as a practical guide to modern, readable Nix.
 
-![Sanitized overview of the repository's host roles and trust flows](docs/topology/overview.svg)
+```mermaid
+flowchart LR
+  internet([Internet]) --> router[Router]
+  router --> appliance[DNS + DHCP appliance]
+  upstream[Upstream DNS] <-->|Encrypted DNS| appliance
+
+  subgraph lan[Home LAN]
+    appliance -->|DNS + DHCP| workstation[Workstation]
+    appliance --> guests[Isolated guest services]
+    appliance -->|Encrypted backups| backup[Backup target]
+    workstation -->|Encrypted backups| backup
+  end
+
+  vpn[VPN administration] -->|Remote access| appliance
+  vpn -->|Remote access| workstation
+```
 
 ## Hosts
 
 | Host | Role | Channel | Status |
 | --- | --- | --- | --- |
 | **Soyo** | DNS and DHCP appliance | NixOS 26.05 | Production; Secure Boot enabled |
-| **zbook** | Desktop and gaming workstation | nixpkgs unstable | Production |
+| **zbook** | Desktop, gaming and backup client | nixpkgs unstable | Production; Secure Boot enabled |
 
 The diagram intentionally shows roles and trust flows, not a home-network
 inventory. See the [public repository data policy](docs/security/public-repository.md).

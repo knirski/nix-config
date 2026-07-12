@@ -57,8 +57,9 @@ nix flake check path:. --keep-going
 ```
 
 The GitHub workflow performs the same preflight on `ubuntu-24.04`. The pinned
-Nix installer enables KVM on that runner, and the job runs the whole flake suite
-after static and evaluation tiers pass.
+Nix installer enables KVM on that runner. Static, pure-invariant, topology and
+host-closure jobs own their outputs; the KVM job builds only the three behavior
+tests, avoiding a second build of checks already proven by earlier tiers.
 
 ## 4. Mutation fixtures ask whether checks can detect bad changes
 
