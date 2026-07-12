@@ -7,6 +7,7 @@
         imv
         mpv
         bitwarden-desktop
+        freetube
         zed-editor
       ];
     };
