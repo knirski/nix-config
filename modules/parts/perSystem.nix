@@ -23,6 +23,42 @@
         config.allowUnfree = true;
         overlays = [ ];
       };
+      healthcheck = pkgs.writeShellApplication {
+        name = "healthcheck";
+        # The source-level directive documents the same intentional remote
+        # argv expansion, but writeShellApplication prepends its own header so
+        # ShellCheck no longer treats that directive as file-wide.
+        excludeShellChecks = [ "SC2029" ];
+        runtimeInputs = with pkgs; [
+          curl
+          dnsutils
+          gnugrep
+          gnused
+          iputils
+          jq
+          openssh
+        ];
+        text = builtins.readFile ../../scripts/healthcheck.sh;
+      };
+      recover-secrets = pkgs.writeShellApplication {
+        name = "recover-secrets";
+        runtimeInputs = with pkgs; [
+          coreutils
+          git
+          rage
+        ];
+        text = builtins.readFile ../../scripts/recover-secrets.sh;
+      };
+      set-tailscale-keys = pkgs.writeShellApplication {
+        name = "set-tailscale-keys";
+        runtimeInputs = with pkgs; [
+          coreutils
+          git
+          nix
+          rage
+        ];
+        text = builtins.readFile ../../scripts/set-tailscale-keys.sh;
+      };
     in
     {
       pre-commit.settings = {
@@ -95,25 +131,43 @@
       formatter = config.treefmt.build.wrapper;
 
       packages = {
-        inherit (pkgs) deadnix;
+        # Expose the scanner from this flake's locked nixpkgs input. Using the
+        # registry shorthand `nixpkgs#gitleaks` would select the caller's
+        # registry revision instead of the reviewed flake.lock revision.
+        inherit (pkgs) deadnix gitleaks;
+        inherit healthcheck recover-secrets set-tailscale-keys;
         command-code = pkgs'.callPackage ../../modules/_pkgs/command-code.nix { };
-        healthcheck = pkgs.writeShellApplication {
-          name = "healthcheck";
-          runtimeInputs = with pkgs; [
-            curl
-            dnsutils
-            gnugrep
-            gnused
-            iputils
-            jq
-            openssh
-          ];
-          text = ''exec ${../../scripts/healthcheck.sh} "$@"'';
+      };
+
+      apps = {
+        gitleaks = {
+          type = "app";
+          program = pkgs.lib.getExe pkgs.gitleaks;
+          meta.description = "Scan repository content for credentials and secrets";
+        };
+        healthcheck = {
+          type = "app";
+          program = pkgs.lib.getExe healthcheck;
+          meta.description = "Run role-aware post-deployment checks over SSH";
+        };
+        recover-secrets = {
+          type = "app";
+          program = pkgs.lib.getExe recover-secrets;
+          meta.description = "Recover master-encrypted secrets from historical host ciphertext";
+        };
+        set-tailscale-keys = {
+          type = "app";
+          program = pkgs.lib.getExe set-tailscale-keys;
+          meta.description = "Encrypt per-host Tailscale keys and run agenix-rekey";
         };
       };
 
       checks = {
-        formatting = config.treefmt.build.check inputs.self;
+        # `path:.` includes local VCS metadata, unlike the normal Git flake
+        # source used by CI. Filter it before treefmt so a generated hook under
+        # `.git/` can never become formatting input or a sandbox dependency.
+        treefmt = pkgs.lib.mkForce (config.treefmt.build.check (pkgs.lib.cleanSource inputs.self));
+        formatting = config.treefmt.build.check (pkgs.lib.cleanSource inputs.self);
         lan-inventory =
           pkgs.runCommand "lan-inventory-test"
             {

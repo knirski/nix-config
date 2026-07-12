@@ -1,0 +1,5 @@
+{ pkgs, ... }:
+{
+  systemd.services.unchecked.serviceConfig.ExecStart =
+    pkgs.writeShellScript "unchecked" ''echo "$UNDEFINED"'';
+}

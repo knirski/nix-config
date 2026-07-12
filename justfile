@@ -41,6 +41,14 @@ deploy host="soyo":
 healthcheck host="soyo" role="" nic="":
     nix run .#healthcheck -- {{host}} {{role}} {{nic}}
 
+# Recover historical encrypted secrets. Pass --dry-run first; never auto-commits.
+recover-secrets *args:
+    nix run .#recover-secrets -- {{args}}
+
+# Replace Tailscale key secrets from protected files; never auto-commits.
+set-tailscale-keys *args:
+    nix run .#set-tailscale-keys -- {{args}}
+
 # Run dendritic option-namespace tests (wired into nix flake check, also runs there).
 test:
     nix build .#checks.x86_64-linux.dendritic-options --no-link --print-out-paths
