@@ -26,7 +26,6 @@ rec {
     ".local/share/direnv"
     ".cache/DankMaterialShell"
     ".local/share/applications"
-    ".local/share/hyprland"
     "tmp"
     "Pictures/Screenshots"
   ];
