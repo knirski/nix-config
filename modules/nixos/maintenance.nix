@@ -59,6 +59,15 @@
         };
         networking.timeServers = cfg.ntpServers;
 
+        # free-space-check runs on hosts without the observability aspect too.
+        # Create its textfile output directory before systemd builds the
+        # service's ReadWritePaths namespace; the script cannot mkdir it after
+        # namespace setup has already failed.  Leave ownership unchanged when
+        # another aspect (such as observability) manages this directory.
+        systemd.tmpfiles.rules = [
+          "d /var/lib/prometheus/textfiles 0755 - - -"
+        ];
+
         # --- ntfy OnFailure: individual service drop-ins ---
         # Set on services defined in this module (global drop-ins via
         # systemd/system/service.d/ are not portable across nixpkgs versions).
