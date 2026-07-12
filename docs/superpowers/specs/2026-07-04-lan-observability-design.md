@@ -1,7 +1,7 @@
 # LAN Observability Design
 
 Date: 2026-07-04
-Status: Approved for spec review
+Status: active implemented-subsystem reference
 
 ## Goal
 

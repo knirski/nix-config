@@ -18,7 +18,14 @@ The simplest NixOS flake has one `nixosConfiguration` in `flake.nix` and a `hard
 
 **Fork: flake-parts or flat flakes.** A flat flake works for one host. `flake-parts` gives modular outputs (dev shell, formatter, checks, NixOS config) and a module system to compose them. Picked flake-parts: keeps `flake.nix` thin and lets each feature be its own module, shareable across hosts.
 
-**Fork: dendritic or flat imports.** The dendritic pattern (`modules/default.nix` explicitly lists every module file) is indirection — you can't see what's imported just by reading the file tree. The alternative is explicit `imports` lists in each host. Picked dendritic for its learning value: it forces understanding the aspect→host wiring, and the docs compensate for the indirection overhead. A future laptop toggles the same shared aspects.
+**Fork: dendritic or flat imports.** The dendritic pattern uses
+`inputs.import-tree ./modules` to discover flake-parts modules, while host
+assemblers separately select which discovered aspects to enable. This is
+indirection: seeing a file in the tree does not tell you which host uses it.
+The alternative is explicit `imports` lists in each host. Picked dendritic for
+its learning value: it forces understanding the aspect→host wiring, and the
+docs compensate for the indirection overhead. A future laptop toggles the same
+shared aspects.
 
 ## Filesystem: impermanence
 
@@ -319,4 +326,7 @@ tempoTraces = import ../../lib/observability/tempo-traces.nix { inherit lib pkgs
 
 **Key constraint:** When merging fragments that share nested attribute paths (e.g. both the base block and `tempoTraces` contribute to `services`), use `mkMerge` not `//`. Shallow `//` replaced the entire `services` attrset, dropping `services.grafana` and others — `mkMerge` recurses into nested structures correctly.
 
-**Lesson:** The dendritic pattern's explicit module registry makes `modules/` a reserved namespace. Reusable non-module code needs `lib/` or another directory outside the module tree. The `lib/` directory at the repo root is the conventional choice and is called out in AGENTS.md as the place for reusable helpers.
+**Lesson:** Import-tree makes `modules/` a reserved namespace for flake-parts
+modules. Reusable non-module code needs `lib/` or another directory outside the
+imported tree. The `lib/` directory at the repo root is the conventional choice
+and is called out in AGENTS.md as the place for reusable helpers.

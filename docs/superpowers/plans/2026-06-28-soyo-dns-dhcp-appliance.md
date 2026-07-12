@@ -1,5 +1,9 @@
 # Soyo DNS/DHCP Appliance Implementation Plan
 
+**Lifecycle: completed.** Preserved as implementation history; the
+[canonical design](../specs/soyo-dns-dhcp-appliance.md) and active runbooks
+describe the current system.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the first real host in this flake: `soyo`, a DNS and DHCP appliance built as a dendritic flake, with an impermanent root (blank-snapshot rollback + `preservation`), declarative hardware via `nixos-facter`, that serves the LAN from declarative config and recovers unattended after power loss.

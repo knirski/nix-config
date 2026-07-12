@@ -1,8 +1,13 @@
 # Hyprland desktop
 
-The zbook workstation runs [Hyprland](https://hyprland.org), a dynamic
-Wayland compositor, in place of a full desktop environment. This document
-covers the stack, what replaces each DE component, and how to get started.
+> **Status: Superseded.** This records an earlier Hyprland desktop experiment.
+> zbook now runs Sway with Dank Material Shell; see `modules/home/sway.nix` and
+> the [learning path](learning/README.md). Do not use the commands or bindings
+> below as current operating instructions.
+
+The experiment used [Hyprland](https://hyprland.org), a dynamic Wayland
+compositor, in place of a full desktop environment. This document preserves
+the evaluated stack and its trade-offs.
 
 ## Quick reference
 

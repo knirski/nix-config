@@ -92,12 +92,31 @@ This repo uses **two separate keypairs** for two different jobs:
 
 - **Who holds it:** the operator (you).
 - **What it does:** lets you edit and rekey secrets.
-- **Where it lives:** `~/.ssh/soyo_ed25519` on your workstation.
+- **Where agenix-rekey finds it:** `/etc/agenix-rekey/master-identity` on the
+  operator machine. This is a symlink to the real SSH private key, which may
+  live anywhere outside the repository and Nix store.
 - **Its public key in the repo:** `secrets/krzysiek.age.pub`.
 
 Every master-encrypted `.age` file in `secrets/` can be decrypted only by
 someone holding the matching SSH private key.  This is how we keep secrets
 editable by the right people while still committing them to git.
+
+Both host assemblers use the same stable operator-side path. Set it up once on
+each workstation or live environment used for secret operations:
+
+```bash
+sudo install -d -m 755 /etc/agenix-rekey
+sudo ln -sfn "$HOME/.ssh/soyo_ed25519" /etc/agenix-rekey/master-identity
+```
+
+The symlink target is only an example; point it at the private key matching
+`secrets/krzysiek.age.pub`. The assembler stores the `/etc` path as an
+**absolute string**, not a Nix path literal. Therefore evaluation does not
+require the key to exist and Nix does not copy it into the world-readable
+store. `agenix edit`, `agenix rekey`, and `agenix generate` require the symlink
+target at runtime. Do not use `builtins.getEnv` or put the private key in this
+repository: the former makes evaluation impure, while the latter can expose the
+key through the store.
 
 ### Host key (the machine's SSH host key)
 
@@ -359,7 +378,7 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 
    ```bash
    echo -n "my-api-token-value" \
-     | nix run nixpkgs#rage -- -e -i ~/.ssh/soyo_ed25519 \
+     | nix run nixpkgs#rage -- -e -i /etc/agenix-rekey/master-identity \
        -o secrets/my-api-token.age
    ```
 
@@ -412,6 +431,33 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 
 ## Key rotation & recovery
 
+### Safe operator commands
+
+Two destructive workflows are packaged as reviewed flake apps. Always preview
+them first:
+
+```bash
+nix run .#set-tailscale-keys -- \
+  --soyo-key-file /run/user/$UID/soyo.key \
+  --zbook-key-file /run/user/$UID/zbook.key \
+  --dry-run
+
+nix run .#recover-secrets -- --revision 061eb80 --host zbook --dry-run
+```
+
+The key files should be mode `0600` on a temporary, user-private filesystem.
+Secret values are never accepted as command-line arguments because argv can be
+visible to other local processes and may be retained in shell history. A real
+run additionally requires `--yes`; both commands use a private temporary
+directory, clean it on exit, and stage destination files before replacement.
+
+`set-tailscale-keys` runs `agenix rekey` after replacing both master-encrypted
+files. `recover-secrets` deliberately does not rekey. Neither command stages,
+commits, pushes, deploys, or prints plaintext. After either command, inspect
+`git diff`, run the documented checks, and commit the encrypted outputs
+manually. If rekeying fails, inspect `secrets/rekeyed/` before retrying because
+that upstream operation manages its own generated outputs.
+
 ### Change a secret on a running system
 
 Use the same flow for any secret — password hash, API token, or backup passphrase:
@@ -423,7 +469,7 @@ echo -n "new-ntfy-token" > /dev/null # replace with your actual token
 
 # 2. Re-encrypt the master file with your SSH key
 echo -n "new-value" \
-  | nix run nixpkgs#rage -- -e -i ~/.ssh/soyo_ed25519 \
+  | nix run nixpkgs#rage -- -e -i /etc/agenix-rekey/master-identity \
     -o secrets/ntfy-token.age
 
 # 3. Rekey for all hosts
@@ -461,9 +507,8 @@ for f in secrets/*.age; do
     && mv "$f.tmp" "$f"
 done
 
-# 4. Update masterIdentities in the host assembler to point to the new key
-#    (absolute path on your workstation)
-#    modules/parts/soyo.nix → masterIdentities = [ "/home/krzysiek/.ssh/id_ed25519_new" ];
+# 4. Retarget the operator-side symlink; no Nix edit is needed
+sudo ln -sfn "$HOME/.ssh/id_ed25519_new" /etc/agenix-rekey/master-identity
 
 # 5. Rekey for all hosts
 nix develop '.#' -c agenix rekey
@@ -538,7 +583,8 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 
 | File | Purpose | Created by |
 | ---- | ------- | ----------- |
-| `~/.ssh/soyo_ed25519` | Master **private** key (YOUR SSH key) | `ssh-keygen` on your workstation |
+| `/etc/agenix-rekey/master-identity` | Operator-side symlink to the master **private** key | `ln -s` on each operator machine |
+| `~/.ssh/soyo_ed25519` | Example location of the master **private** key | `ssh-keygen` on your workstation |
 | `~/.ssh/soyo_ed25519.pub` | Master public key | same |
 | `secrets/krzysiek.age.pub` | Master age public key, stored in repo | `ssh-to-age < ~/.ssh/soyo_ed25519.pub` (one-time setup) |
 | `secrets/soyo.pub` | Soyo's SSH public key (raw, not age-converted) | `cat /persist/etc/ssh/ssh_host_ed25519_key.pub` during install |
@@ -561,7 +607,7 @@ rage -e -r "$(ssh-to-age < ~/.ssh/soyo_ed25519.pub)" \
   < plaintext.txt > secrets/encrypted.age
 
 # Decrypt with the SSH private key directly
-rage -d -i ~/.ssh/soyo_ed25519 secrets/encrypted.age
+rage -d -i /etc/agenix-rekey/master-identity secrets/encrypted.age
 ```
 
 This only works when the file was encrypted for a recipient that matches the
@@ -569,9 +615,9 @@ SSH key (i.e. the age public key was derived from that SSH key via
 `ssh-to-age`). The `agenix edit` command handles this correctly; raw `rage -e`
 also works as long as you use `ssh-to-age` to derive the recipient.
 
-The `masterIdentities` in `modules/parts/soyo.nix` can point directly to your
-SSH private key — `agenix rekey` passes it to `rage` as `-i <path>`, and
-`rage` handles the rest.
+The `masterIdentities` in both host assemblers point to the stable
+`/etc/agenix-rekey/master-identity` symlink. `agenix rekey` passes its target to
+`rage` as an identity, and `rage` handles the SSH private key directly.
 
 ---
 

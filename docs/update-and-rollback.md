@@ -1,6 +1,8 @@
 # Update & Rollback
 
-How to update Soyo to the latest `nixos-unstable` and roll back when an update goes wrong.
+How to update Soyo on its pinned NixOS 26.05 release branch and roll back when
+an update goes wrong. Moving to another release or to `nixos-unstable` is a
+separate migration, not a routine lock-file refresh.
 
 ## Routine update
 
