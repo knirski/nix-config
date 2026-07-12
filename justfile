@@ -57,10 +57,13 @@ test:
 rekey:
     nix run github:oddlama/agenix-rekey -- rekey
 
-# Render the LAN topology diagram to docs/topology/.
+# Refresh the sanitized, public topology overview.
 topology:
-    nix build .#topology
-    cp -f result/*.svg docs/topology/
+    topology=$(nix build path:.#topology-public-overview --no-link --print-out-paths); cp -f "$topology/overview.svg" docs/topology/overview.svg
+
+# Build detailed operator diagrams locally and print their store path.
+topology-operator-detailed:
+    nix build path:.#topology-operator-detailed --no-link --print-out-paths
 
 # Enter the dev shell with all tooling (pre-commit hooks auto-install).
 dev:

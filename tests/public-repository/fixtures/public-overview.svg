@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" width="640" height="240" role="img">
+  <title>Home LAN</title>
+  <text x="20" y="30">Internet</text>
+  <text x="150" y="30">Upstream DNS</text>
+  <text x="300" y="30">Router</text>
+  <text x="420" y="30">DNS + DHCP appliance</text>
+  <text x="420" y="65">Encrypted DNS</text>
+  <text x="420" y="100">Encrypted backups</text>
+  <text x="20" y="210">VPN</text>
+  <text x="150" y="210">Remote access</text>
+  <text x="300" y="210">Home LAN</text>
+  <text x="500" y="210">Backup target</text>
+</svg>
