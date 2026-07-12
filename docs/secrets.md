@@ -120,10 +120,8 @@ local convention. Point the symlink at whichever private key matches
 `secrets/krzysiek.age.pub`; verify the public half before rekeying:
 
 ```bash
-ssh-keygen -y -f "$HOME/.ssh/soyo_ed25519" > /tmp/master.pub
-diff -u <(awk '{print $1" "$2}' "$HOME/.ssh/soyo_ed25519.pub") \
-  <(awk '{print $1" "$2}' /tmp/master.pub)
-rm -f /tmp/master.pub
+diff -u secrets/krzysiek.age.pub \
+  <(ssh-keygen -y -f "$HOME/.ssh/soyo_ed25519" | ssh-to-age)
 ```
 
 The assembler stores the `/etc` path as an
@@ -272,14 +270,14 @@ secrets/
 ├── tailscale-auth-key-zbook.age # Master-encrypted (Tailscale pre-auth key for zbook)
 └── rekeyed/
     └── soyo/               # Host-specific rekeyed files (soyo's key)
-        ├── root-password.age
-        ├── krzysiek-password.age
-        ├── soyo-restic-password.age
-        ├── ntfy-token.age
-        ├── ntfy-topic.age
-        ├── grafana-admin-password.age
-        ├── grafana-secret-key.age
-        └── tailscale-auth-key-soyo.age  # (rekeyed for soyo; zbook's in rekeyed/zbook/)
+        ├── d7955d0b892ce732d0122b31e48031c0-root-password.age
+        ├── 92dcd5bf1beb53eae1ca89a45aa249e6-krzysiek-password.age
+        ├── 5035b51f3ee6781a81831ed70586d7f5-restic-password.age
+        ├── c7f058a90627615046edada1ee8eb4f7-ntfy-token.age
+        ├── a83523ffd9255155b2974803ab3d8fca-ntfy-topic.age
+        ├── ef4130293373fab8ccefb0195d4a82ba-grafana-admin-password.age
+        ├── 97e1e26111fa781025bc9b5049d5d73f-grafana-secret-key.age
+        └── 03525577030dea452eaa63b773c44a74-tailscale-auth-key.age  # (zbook's in rekeyed/zbook/)
 ```
 
 Files under `secrets/rekeyed/` are produced by `agenix rekey` and tracked in
