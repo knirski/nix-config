@@ -17,7 +17,6 @@
     systemd.services.greetd.enableStrictShellChecks = false;
 
     environment.sessionVariables = {
-      GTK_THEME = "Adwaita:dark";
       NIXOS_OZONE_WL = "1";
       MOZ_ENABLE_WAYLAND = "1";
       QT_QPA_PLATFORM = "wayland;xcb";

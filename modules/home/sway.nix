@@ -1,5 +1,5 @@
 {
-  aspects.homeManager.sway = _: {
+  aspects.homeManager.sway = { pkgs, ... }: {
     wayland.windowManager.sway = {
       enable = true;
       xwayland = true;
@@ -100,10 +100,17 @@
       };
     };
 
+    gtk = {
+      enable = true;
+      theme = {
+        name = "Adwaita-dark";
+        package = pkgs.gnome-themes-extra;
+      };
+    };
+
     dconf.settings = {
       "org/gnome/desktop/interface" = {
         color-scheme = "prefer-dark";
-        gtk-theme = "Adwaita-dark";
       };
     };
   };
