@@ -34,6 +34,7 @@
             users.krzysiek.imports = [
               config.aspects.homeManager.base
               config.aspects.homeManager.desktop
+              config.aspects.homeManager.ssh
               config.aspects.homeManager.sway
               inputs.dms.homeModules.dank-material-shell
               inputs.dcal.homeModules.dank-calendar

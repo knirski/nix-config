@@ -9,6 +9,8 @@
     let
       cfg = config.lanAppliance.services.maintenance;
       hardening = import ../../lib/systemd-hardening.nix;
+      prometheusTextfileDirectory = "/var/lib/prometheus/textfiles";
+      prometheusTextfileEnabled = config.services.prometheus.exporters.node.enable;
     in
     {
       options.lanAppliance.services.maintenance = {
@@ -137,7 +139,7 @@
               wantedBy = [ "multi-user.target" ];
               serviceConfig = hardening.networkClient // {
                 Type = "oneshot";
-                ReadWritePaths = [ "/var/lib/prometheus/textfiles" ];
+                ReadWritePaths = lib.optional prometheusTextfileEnabled prometheusTextfileDirectory;
                 Restart = "no";
                 TimeoutStartSec = "1m";
                 MemoryMax = "64M";
@@ -172,12 +174,14 @@
                           exit 1
                         fi
 
-                      # Export a Btrfs-aware Prometheus metric so Grafana alerts on the
-                      # same signal as the ntfy check, not df-style filesystem stats.
+                      ${lib.optionalString prometheusTextfileEnabled ''
+                        # Export a Btrfs-aware Prometheus metric so Grafana alerts on the
+                        # same signal as the ntfy check, not df-style filesystem stats.
                         mkdir -p /var/lib/prometheus/textfiles
                         host="${config.networking.hostName}"
                         printf '%s\n' '# HELP btrfs_usage_percent Percent of Btrfs device space currently used.' '# TYPE btrfs_usage_percent gauge' "btrfs_usage_percent{host=\"$host\"} $USED_PCT" '# HELP btrfs_usage_threshold_percent Configured Btrfs usage alert threshold.' '# TYPE btrfs_usage_threshold_percent gauge' "btrfs_usage_threshold_percent{host=\"$host\"} $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
                         mv /var/lib/prometheus/textfiles/btrfs-space.prom.$$ /var/lib/prometheus/textfiles/btrfs-space.prom
+                      ''}
 
                         if [ "$USED_PCT" -gt "$THRESHOLD" ]; then
                           TOKEN=$(cat ${config.age.secrets.ntfy-token.path})

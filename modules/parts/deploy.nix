@@ -3,27 +3,38 @@
 { inputs, ... }:
 let
   inherit (inputs) deploy-rs;
-in
-{
-  flake.deploy.nodes.soyo = {
-    hostname = "soyo";
+  zbookSystem = deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.zbook;
+  zbookNode = hostname: {
+    inherit hostname;
     sshUser = "krzysiek";
     autoRollback = true;
     magicRollback = true;
     profiles.system = {
       user = "root";
-      path = deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.soyo;
+      path = zbookSystem;
     };
   };
+in
+{
+  flake = {
+    deploy = {
+      nodes = {
+        soyo = {
+          hostname = "soyo";
+          sshUser = "krzysiek";
+          autoRollback = true;
+          magicRollback = true;
+          profiles.system = {
+            user = "root";
+            path = deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.soyo;
+          };
+        };
 
-  flake.deploy.nodes.zbook = {
-    hostname = "zbook";
-    sshUser = "krzysiek";
-    autoRollback = true;
-    magicRollback = true;
-    profiles.system = {
-      user = "root";
-      path = deploy-rs.lib.x86_64-linux.activate.nixos inputs.self.nixosConfigurations.zbook;
+        zbook = zbookNode "zbook";
+        # Keep the normal Tailscale target above and provide an explicit local alias
+        # for running deploy-rs directly on the workstation.
+        zbook-local = zbookNode "localhost";
+      };
     };
   };
 
