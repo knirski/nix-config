@@ -1,3 +1,6 @@
+let
+  inventory = import ../../lib/zbook-persistence.nix;
+in
 {
   preservation.preserveAt."/persist" = {
     directories = [
@@ -28,38 +31,16 @@
       }
     ];
     users.krzysiek = {
-      directories = [
-        {
-          directory = ".ssh";
-          mode = "0700";
-        }
-        ".local/share/direnv"
-        # GNOME Keyring stores encrypted Secret Service credentials here.
-        {
-          directory = ".local/share/keyrings";
-          mode = "0700";
-        }
-        ".local/state/home-manager"
-        ".local/state/DankMaterialShell"
-        ".cache/DankMaterialShell"
-        ".local/share/dankcalendar"
-        ".local/share/applications"
-        ".config"
-        ".commandcode"
-        ".codex"
-        ".local/share/hyprland"
-        ".local/state/wireplumber"
-        "tmp"
-        "github"
-        "Downloads"
-        "Documents"
-        "Pictures"
-        "Pictures/Screenshots"
-        "Music"
-        "Videos"
-        ".local/share/Steam"
-        ".local/share/lutris"
-      ];
+      directories = map (
+        directory:
+        if directory == ".ssh" then
+          {
+            inherit directory;
+            mode = "0700";
+          }
+        else
+          directory
+      ) inventory.all;
       files = [
         ".bash_history"
         ".zsh_history"

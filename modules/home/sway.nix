@@ -18,8 +18,7 @@ _: {
             };
           };
           # DMS owns the regular clipboard and its rich MIME types. PRIMARY
-          # remains compositor/application-owned for middle-click pasting;
-          # synchronizing the two selections corrupts images and file offers.
+          # remains compositor/application-owned for middle-click pasting.
           startup = [ ];
           bars = [ ];
           keybindings = {
@@ -80,6 +79,8 @@ _: {
             font_size = 13.0;
             background_opacity = "0.95";
             confirm_os_window_close = 0;
+            # Make a mouse selection immediately available to applications.
+            copy_on_select = "clipboard";
             shell = "/run/current-system/sw/bin/zsh";
             clipboard_control = "write-clipboard write-primary read-clipboard-ask";
             allow_clipboard_controls = true;
@@ -114,6 +115,22 @@ _: {
           enable = true;
           systemd.enable = true;
         };
+      };
+
+      # Bitwarden writes secrets to the regular clipboard. Keep a text-only
+      # copy in PRIMARY so middle-click paste works too; a one-way bridge
+      # avoids feedback loops and does not reinterpret image/file offers.
+      systemd.user.services.clipboard-primary-sync = {
+        Unit = {
+          Description = "Copy regular clipboard text to PRIMARY";
+          After = [ "graphical-session.target" ];
+          PartOf = [ "graphical-session.target" ];
+        };
+        Service = {
+          ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.wl-clipboard}/bin/wl-copy --primary";
+          Restart = "on-failure";
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
       };
 
       gtk = {

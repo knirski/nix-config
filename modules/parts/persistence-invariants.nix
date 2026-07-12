@@ -13,6 +13,7 @@
         soyo = inputs.self.nixosConfigurations.soyo.config;
         zbook = inputs.self.nixosConfigurations.zbook.config;
       };
+      zbookPersistence = import ../../lib/zbook-persistence.nix;
 
       preserve = host: hosts.${host}.preservation.preserveAt."/persist";
       bindDirectories =
@@ -49,36 +50,12 @@
       ];
       # Losing these paths would lose operator data or non-reproducible program
       # state, so the check requires them to remain in the inventory.
-      zbookRequiredDurableDirectories = map (path: "/home/krzysiek/${path}") [
-        ".ssh"
-        ".local/state/home-manager"
-        ".local/state/DankMaterialShell"
-        ".local/share/dankcalendar"
-        ".config"
-        ".commandcode"
-        ".codex"
-        ".local/state/wireplumber"
-        "github"
-        "Downloads"
-        "Documents"
-        "Pictures"
-        "Music"
-        "Videos"
-        ".local/share/Steam"
-        ".local/share/lutris"
-      ];
+      zbookRequiredDurableDirectories = map (path: "/home/krzysiek/${path}") zbookPersistence.durable;
       # These paths are intentionally persisted for convenience but are not a
       # durability contract: caches can be regenerated, tmp/download content is
       # user-managed, and the application/hyprland paths may become obsolete.
       # New persisted paths must be classified in one of these two inventories.
-      zbookBestEffortDirectories = map (path: "/home/krzysiek/${path}") [
-        ".local/share/direnv"
-        ".cache/DankMaterialShell"
-        ".local/share/applications"
-        ".local/share/hyprland"
-        "tmp"
-        "Pictures/Screenshots"
-      ];
+      zbookBestEffortDirectories = map (path: "/home/krzysiek/${path}") zbookPersistence.bestEffort;
       zbookClassifiedDirectories = zbookRequiredDurableDirectories ++ zbookBestEffortDirectories;
 
       # Pictures/Screenshots is the sole allowed nested preservation entry. It
