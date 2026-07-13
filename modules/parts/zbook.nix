@@ -51,6 +51,8 @@
         ../../hosts/zbook/backup.nix
         ../../hosts/zbook/networking.nix
         ../../hosts/zbook/topology.nix
+        ../../hosts/zbook/maintenance.nix
+        ../../hosts/zbook/nvidia.nix
         inputs.nix-topology.nixosModules.default
         inputs.nixos-facter-modules.nixosModules.facter
         { facter.reportPath = ../../hosts/zbook/facter.json; }
@@ -63,24 +65,6 @@
               dgop = inputs.dgop.packages.${prev.stdenv.hostPlatform.system}.default;
             })
           ];
-
-          # Maintenance: enable for this host, set disk to zbook's NVMe
-          lanAppliance.services.maintenance = {
-            enable = true;
-            smartdDevices = [
-              "/dev/disk/by-id/nvme-XPG_GAMMIX_S70_BLADE_2N11292JQEJC"
-            ];
-          };
-
-          # NVIDIA Optimus: Intel for desktop, NVIDIA on-demand for games
-          lanAppliance.services.nvidia = {
-            enable = true;
-            prime = {
-              intelBusId = "PCI:0:2:0";
-              nvidiaBusId = "PCI:1:0:0";
-            };
-            syncMode = "offload";
-          };
 
           age.rekey = {
             hostPubkey = ../../secrets/zbook.pub;

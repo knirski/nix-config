@@ -220,7 +220,7 @@ Dependencies: none
 
 Recommended agent: `gpt-5.6-luna`, medium effort
 
-Likely files: `docs/testing-baseline.md` (committed evidence destination)
+Likely files: `docs/archive/testing-baseline.md` (committed evidence destination)
 
 Steps:
 
@@ -423,7 +423,7 @@ Recommended agent: `gpt-5.6-terra`, high effort
 
 Likely files: `docs/README.md`, `docs/status.json` or `docs/status.nix`,
 `docs/install-soyo.md`,
-`hosts/zbook/INSTALL.md`, `docs/hyprland-desktop.md`,
+`hosts/zbook/INSTALL.md`, `docs/archive/hyprland-desktop.md`,
 `docs/superpowers/plans/*.md`, `docs/superpowers/specs/*.md`, issue #2 comment
 only after explicit authorization
 
@@ -439,7 +439,7 @@ Steps:
    GitHub links and history where practical.
 3. Audit `hosts/zbook/INSTALL.md` against current Sway/DMS and NVIDIA code;
    remove or label historical COSMIC workarounds that have no implementation.
-4. Decide whether `docs/hyprland-desktop.md` is current, future, or historical;
+4. Decide whether `docs/archive/hyprland-desktop.md` is current, future, or historical;
    make its status visible and link it from only the matching docs-hub section.
 5. Compare issue #2 step-by-step with `docs/install-soyo.md`: disk safety gate,
    pre-wipe build, blank snapshot, initrd/stage-2 keys, agenix rekey, TPM phase,

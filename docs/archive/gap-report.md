@@ -2,7 +2,7 @@
 
 > **Status: Historical.** This audit drove the completed gap-remediation pass.
 > Its observations and task prompts are preserved as evidence; use
-> [testing.md](testing.md) and the current code for present behavior.
+> [testing.md](../testing.md) and the current code for present behavior.
 
 Status refreshed after the Home Manager fix.
 
@@ -31,7 +31,7 @@ Each task below is intentionally bounded so a smaller model can execute it indep
 
 Before changing anything:
 
-1. Read [AGENTS.md](../AGENTS.md).
+1. Read [AGENTS.md](../../AGENTS.md).
 2. Read the files listed under the task.
 3. Do not modify:
    - `flake.lock` manually
@@ -74,14 +74,14 @@ There is no `modules/default.nix`.
 
 Conflicting sources:
 
-- [AGENTS.md](../AGENTS.md)
-- [canonical design](../docs/superpowers/specs/soyo-dns-dhcp-appliance.md)
-- [learning README](../docs/learning/README.md)
-- [design journey](../docs/learning/design-journey.md)
+- [AGENTS.md](../../AGENTS.md)
+- [canonical design](../superpowers/specs/soyo-dns-dhcp-appliance.md)
+- [learning README](../learning/README.md)
+- [design journey](../learning/design-journey.md)
 
 Current implementation:
 
-- [flake.nix](../flake.nix)
+- [flake.nix](../../flake.nix)
 
 ### T1 Required decision
 
@@ -145,17 +145,17 @@ The repository documents `modules/nixos/cosmic.nix`, but the file does not exist
 
 Stale references include:
 
-- [AGENTS.md](../AGENTS.md)
-- [README.md](../README.md)
-- [learning README](../docs/learning/README.md)
-- [learning README](../docs/learning/README.md)
+- [AGENTS.md](../../AGENTS.md)
+- [README.md](../../README.md)
+- [learning README](../learning/README.md)
+- [learning README](../learning/README.md)
 
 Current code:
 
-- [zbook assembler](../modules/parts/zbook.nix)
-- [NixOS Sway aspect](../modules/nixos/sway.nix)
-- [Home Manager Sway aspect](../modules/home/sway.nix)
-- [NVIDIA aspect](../modules/nixos/nvidia.nix)
+- [zbook assembler](../../modules/parts/zbook.nix)
+- [NixOS Sway aspect](../../modules/nixos/sway.nix)
+- [Home Manager Sway aspect](../../modules/home/sway.nix)
+- [NVIDIA aspect](../../modules/nixos/nvidia.nix)
 
 ### T2 Important caution
 
@@ -196,7 +196,7 @@ After determining the current truth:
 
 Relevant health-check location:
 
-- [scripts/healthcheck.sh](../scripts/healthcheck.sh)
+- [scripts/healthcheck.sh](../../scripts/healthcheck.sh)
 
 ### T2 Acceptance criteria
 
@@ -245,9 +245,9 @@ Risk: Low
 
 Lint definitions are duplicated across:
 
-- [modules/parts/perSystem.nix](../modules/parts/perSystem.nix)
-- [justfile](../justfile)
-- [.github/workflows/ci.yml](../.github/workflows/ci.yml)
+- [modules/parts/perSystem.nix](../../modules/parts/perSystem.nix)
+- [justfile](../../justfile)
+- [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
 
 The copies are already inconsistent. ShellCheck is explicitly run only against:
 
@@ -332,7 +332,7 @@ Risk: Low
 
 ### T4 Problem
 
-[hosts/soyo/reservations.nix](../hosts/soyo/reservations.nix) is the critical single source of truth for:
+[hosts/soyo/reservations.nix](../../hosts/soyo/reservations.nix) is the critical single source of truth for:
 
 - DHCP assignments
 - forward DNS
@@ -569,12 +569,12 @@ With a wiped root, missing persistence is an operational failure. Current invent
 
 Relevant files:
 
-- [shared persistence module](../modules/nixos/persistence.nix)
-- [Soyo inventory](../hosts/soyo/persistence.nix)
-- [zbook inventory](../hosts/zbook/persistence.nix)
-- [backup module](../modules/nixos/backup.nix)
-- [Soyo backup data](../hosts/soyo/backup.nix)
-- [zbook backup data](../hosts/zbook/backup.nix)
+- [shared persistence module](../../modules/nixos/persistence.nix)
+- [Soyo inventory](../../hosts/soyo/persistence.nix)
+- [zbook inventory](../../hosts/zbook/persistence.nix)
+- [backup module](../../modules/nixos/backup.nix)
+- [Soyo backup data](../../hosts/soyo/backup.nix)
+- [zbook backup data](../../hosts/zbook/backup.nix)
 
 ### T7 Required checks
 
@@ -644,8 +644,8 @@ Risk: Low
 
 Soyo installation guidance is duplicated between:
 
-- [docs/install-soyo.md](../docs/install-soyo.md)
-- [hosts/soyo/DEPLOY.md](../hosts/soyo/DEPLOY.md)
+- [docs/install-soyo.md](../install-soyo.md)
+- [hosts/soyo/DEPLOY.md](../../hosts/soyo/DEPLOY.md)
 
 Both cover sensitive operational steps involving:
 
@@ -727,9 +727,9 @@ The zbook assembler uses the same Soyo-named identity.
 
 Relevant files:
 
-- [Soyo assembler](../modules/parts/soyo.nix)
-- [zbook assembler](../modules/parts/zbook.nix)
-- [secrets guide](../docs/secrets.md)
+- [Soyo assembler](../../modules/parts/soyo.nix)
+- [zbook assembler](../../modules/parts/zbook.nix)
+- [secrets guide](../secrets.md)
 
 The string avoids copying the private key into the Nix store, which is correct. The gap is portability and naming, not secret exposure.
 
@@ -804,7 +804,7 @@ evaluation warning: 'system' has been renamed to/replaced by
 
 A likely local candidate is:
 
-- [modules/parts/zbook.nix](../modules/parts/zbook.nix), where an overlay uses `prev.system`.
+- [modules/parts/zbook.nix](../../modules/parts/zbook.nix), where an overlay uses `prev.system`.
 
 Prefer:
 
@@ -856,7 +856,7 @@ description = "Multi-host NixOS flake for the Soyo LAN appliance and zbook works
 
 File:
 
-- [flake.nix](../flake.nix)
+- [flake.nix](../../flake.nix)
 
 Acceptance:
 
@@ -876,7 +876,7 @@ Current role detection infers “appliance” from a Tailscale route appearing i
 
 File:
 
-- [scripts/healthcheck.sh](../scripts/healthcheck.sh)
+- [scripts/healthcheck.sh](../../scripts/healthcheck.sh)
 
 Potential problems:
 

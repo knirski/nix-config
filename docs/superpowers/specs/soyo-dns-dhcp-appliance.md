@@ -18,7 +18,7 @@ Covers:
 - naming policy for `IP`, `soyo`, and `soyo.home.arpa`
 - IPv4/IPv6 addressing decision
 - first-install and USB-boot provisioning
-- `nixos-unstable` upgrade workflow
+- nixpkgs channel strategy (Soyo tracks `release-26.05` for stability; zbook tracks `nixpkgs-unstable` for latest desktop packages)
 - power-loss and unlock recovery
 - maintenance defaults
 - learning-oriented documentation (with canonical source links) produced by the implementation
@@ -91,7 +91,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 | Backups | restic to Synology DS423+ (first-class `services.restic.backups`), local Btrfs snapshots, GitHub for config |
 | Health checking | self-heal + ntfy OnFailure + Synology Uptime Kuma probe |
 | Redundancy | single disk, no RAID; verified backups are the resilience story |
-| Updates | manual but easy `nixos-unstable`; unattended out of scope |
+| Updates | Soyo tracks `release-26.05` for stability; zbook tracks `nixpkgs-unstable` for latest desktop packages; unattended out of scope |
 
 ## Chosen Tooling
 
@@ -101,7 +101,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 - `disko` — declarative GPT, LUKS2, Btrfs layout
 - `preservation` — explicit persisted-path inventory on top of a root rolled back to a blank snapshot each boot (a newer, more principled alternative to `impermanence`). Note: neither is in nixpkgs; `impermanence` is the more battle-tested, example-everywhere choice. The maturity argument (the same one that picks `restic` over `rustic`) was considered and **consciously overridden** here by the radical-modern learning goal — `preservation` is the deliberate teaching choice, with fewer examples accepted as part of the learning cost
 - `agenix` — encrypted secrets, including password hashes
-- `agenix-rekey` — optional operator-side rekey helper kept as the migration path once multi-host secret churn justifies moving beyond plain `agenix`
+- `agenix-rekey` — per-host rekey helper used from M1 via the `rekeyFile` flow (master-encrypted `.age` files rekeyed per host at build time; see docs/secrets.md)
 - Home Manager — declarative per-user environment and dotfiles
 - `restic` — encrypted, deduplicated off-host backups to the Synology DS423+ via the first-class `services.restic.backups` NixOS module
 - `btrbk` — scheduled local Btrfs snapshots
@@ -377,7 +377,7 @@ Editable defaults; the real values live in host-local config, not this design do
 - Soyo LAN IP: `10.0.0.9/24`
 - infrastructure/static range: `10.0.0.2`–`10.0.0.49`
 - DHCP pool: `10.0.0.50`–`10.0.0.199`
-- emergency manual range: `10.0.0.200`–`10.0.0.219`
+- emergency manual range: `10.0.0.200`–`10.0.0.219` (planned; not yet implemented in `network-policy.nix`)
 - direct-link rescue subnet: `192.168.254.0/30` — recovery laptop `192.168.254.1`, Soyo initrd `192.168.254.2`
 - search/local domain: `home.arpa`
 
@@ -551,9 +551,7 @@ Plain manual installation at the console remains a last-resort fallback.
 
 An intentionally small toolchain.
 
-Required: `nixos-anywhere` (alternative remote install), `agenix` (secret create/edit/rekey), `treefmt-nix` (formatting), `deadnix` (dead-code lint). Day-2 remote deploys use native `nixos-rebuild --target-host` — local build on the workstation, closure copied, remote activation (no `--build-host`, so the N150 never builds) — first-class, no extra input.
-
-Optional: `agenix-rekey` (future migration path beyond plain `agenix`), `deploy-rs` (M4 multi-host deploy orchestration), `nh` (rebuild/cleanup convenience) — the canonical documented workflow must still work with plain `nix` and `nixos-rebuild`.
+Required: `nixos-anywhere` (alternative remote install), `agenix` (secret create/edit/rekey), `agenix-rekey` (per-host rekeying via the `rekeyFile` flow), `treefmt-nix` (formatting), `deadnix` (dead-code lint). Day-2 remote deploys use native `nixos-rebuild --target-host` — local build on the workstation, closure copied, remote activation (no `--build-host`, so the N150 never builds) — first-class, no extra input. `deploy-rs` (deploy checks, magic-rollback) is available for multi-host orchestration.
 
 Expose the required tools in a dev shell and wire formatting/linting into `nix flake check` where practical.
 
@@ -595,11 +593,11 @@ Failure notification and health-check detail is in Reliability and Observability
 
 ### Updates
 
-Easy path to the newest `nixos-unstable`:
+Easy path to updating nixpkgs:
 
 - `flake.lock` is the authoritative pin
 - a documented command/wrapper updates the `nixpkgs` input
-- M1/M2 remote deploys use native `nixos-rebuild --target-host` (local build on the workstation, remote activation); `deploy-rs` (deploy checks wired into `nix flake check`) is deferred to M4 multi-host
+- M1/M2 remote deploys use native `nixos-rebuild --target-host` (local build on the workstation, remote activation); `deploy-rs` (deploy checks wired into `nix flake check`) is available for multi-host orchestration
 - local break-glass path remains `nixos-rebuild test|switch`
 - rollback documented alongside update
 - kernel is `linuxPackages_latest` — no separate pin; after each nixpkgs update confirm `enp1s0` still comes up
@@ -763,7 +761,7 @@ Consolidated failure-class index:
 - normal power loss → TPM2 auto-unlock; reboots and resumes unattended
 - TPM auto-unlock fails (PCR change, cleared TPM) → break-glass passphrase unlock (local console or LAN initrd SSH), then re-enroll
 - router/LAN down while a manual unlock is needed → local console, or direct-link rescue (laptop + Ethernet straight into Soyo) if the box is headless; both independent of the router/LAN
-- bad `nixos-unstable` update → rollback and preserved boot entries
+- bad nixpkgs update → rollback and preserved boot entries
 - reinstall after disk replacement → USB install or `nixos-anywhere`, with `disko` + agenix bootstrap
 - operator machine lacks a DHCP lease during LAN recovery → documented temporary static-IP profile
 - data loss/corruption of real data → Btrfs snapshots for recent mistakes, restic restore for larger loss
@@ -862,26 +860,26 @@ These do not change the design direction.
 
 A small, focused custom flake that borrows patterns from established NixOS repos without forking any large personal repo.
 
-Borrow: `flake-parts` with the dendritic pattern (`import-tree`, aspect modules) and thin host dirs; declarative hardware via `nixos-facter`; `nixos-anywhere` install; `disko` layout; `preservation` with a blank-snapshot rollback and a documented persisted-path inventory; `agenix-rekey`'s `rekeyFile` flow (used from day one — master-encrypted files rekeyed per host at build time); native `nixos-rebuild --target-host` for routine remote activation (`deploy-rs` deferred to M4); systemd-native server/initrd patterns; TPM2 auto-unlock via `systemd-cryptenroll` hardened by Limine Secure Boot; headless Home Manager on a shared base; declarative `restic` backups via `services.restic.backups`.
+Borrow: `flake-parts` with the dendritic pattern (`import-tree`, aspect modules) and thin host dirs; declarative hardware via `nixos-facter`; `nixos-anywhere` install; `disko` layout; `preservation` with a blank-snapshot rollback and a documented persisted-path inventory; `agenix-rekey`'s `rekeyFile` flow (used from day one — master-encrypted files rekeyed per host at build time); native `nixos-rebuild --target-host` for routine remote activation (`deploy-rs` available for multi-host orchestration); systemd-native server/initrd patterns; TPM2 auto-unlock via `systemd-cryptenroll` hardened by Limine Secure Boot; headless Home Manager on a shared base; declarative `restic` backups via `services.restic.backups`.
 
 Avoid: desktop policy; broad self-hosting stacks; ZFS; legacy initrd shell hacks; over-automation of unattended updates.
 
 ## Deliverables for the Implementation Phase
 
-1. New `flake.nix` on `flake-parts` + `import-tree` with `nixos-facter-modules`, `disko`, `preservation`, `agenix`, and `home-manager` inputs, plus optional operator tooling such as `agenix-rekey` (`deploy-rs` added at M4)
+1. New `flake.nix` on `flake-parts` + `import-tree` with `nixos-facter-modules`, `disko`, `preservation`, `agenix`, `agenix-rekey`, and `home-manager` inputs, plus `deploy-rs` for multi-host orchestration
 2. Dendritic aspect-module tree (base, server, service, user, Home Manager aspects in `aspects.*`), with each host toggling the aspects it uses
 3. `hosts/soyo` host assembly
 4. Boot config using `linuxPackages_latest` — in-tree `dwmac_motorcomm` driver, no pin needed
 5. Encrypted Btrfs `disko` definition with `root`/`root-blank` subvolumes and an initrd blank-snapshot rollback for the impermanent root
 6. Limine config plus TPM2 auto-unlock: Phase 1 enrolls `systemd-cryptenroll` against PCR 7 with a passphrase fallback; Phase 2 enables Limine Secure Boot (`secureBoot.enable`, `sbctl` keys with Microsoft keys kept) and re-enrolls the TPM against PCR 0+2+7, with documented rollback/recovery steps
-7. agenix secret layout and example password-hash onboarding, with the future `agenix-rekey` migration path documented but not required for M1/M2
+7. agenix secret layout and example password-hash onboarding, using `agenix-rekey`'s `rekeyFile` flow from M1
 8. Blocky and dnsmasq modules
 9. systemd initrd break-glass unlock module: LAN address plus direct-link rescue address, with local console also available
 10. Headless Home Manager profile for the admin user, with user persistence declared explicitly
 11. Backup aspect: restic to the Synology via `services.restic.backups`, plus scheduled Btrfs snapshots
 12. Observability module: Blocky metrics retained, plus `node_exporter`, dnsmasq exporter, and on-box Grafana+Prometheus+Loki+Tempo+Alloy as resource-isolated guest services with Grafana alerting (disk, backup, service health) routed through ntfy
 13. ntfy failure-notification wiring for systemd units and smartd (in maintenance.nix); backup alerts now route through Grafana
-14. Update/deploy workflow on native `nixos-rebuild` (`--target-host` for remote: local build + remote activation; `test|switch` locally), with `nh` only as local convenience; `deploy-rs` deferred to M4
+14. Update/deploy workflow on native `nixos-rebuild` (`--target-host` for remote: local build + remote activation; `test|switch` locally), with `nh` only as local convenience; `deploy-rs` available for multi-host orchestration
 15. Operator docs for install, update, validation, backup/restore, and outage recovery
 16. Learning-oriented documentation (first-class, see Learning Goals): a design-journey narrative deriving the design from basics through its important transient steps and rejected alternatives, a guided entry-point doc with an explicit reading order mapped to M1–M4, a glossary of the repo's non-obvious terms, per-concept explainer notes each linked to a canonical source (nix.dev, NixOS/Nixpkgs/Home Manager manuals, `flake.parts`, search.nixos.org), an explicit explanation of the dendritic aspect→host wiring, and modules commented with the idiom and the *why*
 
@@ -909,7 +907,7 @@ Outcome: serves DNS/DHCP on the LAN, restores the declared durable state after r
 - backups: restic to the Synology via `services.restic.backups` + `btrbk` snapshots + a tested restore drill
 - maintenance defaults: `nix.gc`, scrub, journald cap, `smartd`, free-space monitoring
 - reliability: ntfy `OnFailure` notifications; Synology Uptime Kuma probe
-- observability: Blocky metrics, `node_exporter`, dnsmasq exporter, and an off-box scraper/dashboard path
+- observability: Blocky metrics, `node_exporter`, dnsmasq exporter, and on-box Grafana+Prometheus+Loki+Tempo+Alloy as resource-isolated guest services
 - headless Home Manager profile; documented native `nixos-rebuild --target-host` deploy workflow (deploy-rs deferred to M4)
 
 Outcome: backed up, observable, recoverable. Validate: restore drill, forced-failure ntfy, probe reports DNS down when powered off.
@@ -921,12 +919,13 @@ Outcome: backed up, observable, recoverable. Validate: restore drill, forced-fai
 
 Outcome: signed boot, cmdline-injection closed, auto-unlock surviving updates. Validate: `sbctl status` signed, tampered cmdline fails to boot, auto-unlock after a kernel update, re-enroll restores it after a deliberate PCR change.
 
-### M4 — Expansion (later)
+### M4 — Expansion
 
-- gaming laptop host (`hosts/laptop`, desktop modules)
-- `deploy-rs` for multi-host remote deployment (deploy checks, magic-rollback) once a second host justifies it over native `nixos-rebuild --target-host`
-- future services on Soyo (Jellyfin etc.) over NFS to the Synology
-- off-site NAS replication; RAID1 if a second disk slot exists
+- gaming laptop host (`hosts/zbook`, desktop modules) — **shipped**: zbook is a fully configured Sway/NVIDIA/gaming workstation with its own persistence, backup, and observability
+- `deploy-rs` for multi-host remote deployment (deploy checks, magic-rollback) — **shipped**: wired in `modules/parts/deploy.nix`, used for both hosts
+- future services on Soyo (Jellyfin etc.) over NFS to the Synology — deferred
+- off-site NAS replication; RAID1 if a second disk slot exists — deferred
+- full dual-stack DHCPv6/IPv6 DNS — deferred
 
 ## Appendix: Alternatives Considered
 
@@ -960,6 +959,6 @@ Decision (revised): **adopt the dendritic pattern.** With the project reframed a
 
 ### Bootloader and Secure Boot: Limine vs lanzaboote
 
-lanzaboote was the initial assumption. Limine was chosen: in-tree, CI-tested nixpkgs module with no external flake input, suiting an appliance tracking `nixos-unstable` for low maintenance — and nixpkgs dropped the `lanzaboote-tool` package in 2025 for lack of integration maintenance, with lanzaboote able to lag systemd on unstable. lanzaboote's edge is its audited single signed UKI, but Limine's module force-enables the safe settings under Secure Boot, so the configuration-correctness gap is small.
+lanzaboote was the initial assumption. Limine was chosen: in-tree, CI-tested nixpkgs module with no external flake input, suiting an appliance tracking stable nixpkgs for reliability — and nixpkgs dropped the `lanzaboote-tool` package in 2025 for lack of integration maintenance, with lanzaboote able to lag systemd on unstable. lanzaboote's edge is its audited single signed UKI, but Limine's module force-enables the safe settings under Secure Boot, so the configuration-correctness gap is small.
 
 Revisit if Limine's Secure Boot integration regresses or a future host clearly needs the signed-UKI model; the phased approach keeps Phase 1 bootloader-agnostic.

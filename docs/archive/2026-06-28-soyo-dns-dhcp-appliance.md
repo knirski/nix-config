@@ -1,7 +1,7 @@
 # Soyo DNS/DHCP Appliance Implementation Plan
 
 **Lifecycle: completed.** Preserved as implementation history; the
-[canonical design](../specs/soyo-dns-dhcp-appliance.md) and active runbooks
+[canonical design](../superpowers/specs/soyo-dns-dhcp-appliance.md) and active runbooks
 describe the current system.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

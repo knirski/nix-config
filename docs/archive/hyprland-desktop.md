@@ -2,7 +2,7 @@
 
 > **Status: Superseded.** This records an earlier Hyprland desktop experiment.
 > zbook now runs Sway with Dank Material Shell; see `modules/home/sway.nix` and
-> the [learning path](learning/README.md). Do not use the commands or bindings
+> the [learning path](../learning/README.md). Do not use the commands or bindings
 > below as current operating instructions.
 
 The experiment used [Hyprland](https://hyprland.org), a dynamic Wayland
@@ -100,7 +100,7 @@ mode. These environment variables are set for wlroots compatibility:
 The NVIDIA GSP firmware is disabled (`NVreg_EnableGpuFirmware=0`) to prevent
 crashes on s2idle resume. See `modules/nixos/nvidia.nix` for details.
 
-Also check the [zbook known issues](../AGENTS.md#zbook-known-issues) list for
+Also check the [zbook known issues](../../AGENTS.md#zbook-known-issues) list for
 suspend, dock, and Logitech receiver quirks.
 
 ## Resources
