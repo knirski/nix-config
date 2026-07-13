@@ -1,6 +1,6 @@
 {
   aspects.homeManager.base =
-    { pkgs, ... }:
+    { pkgs, lib, ... }:
     {
       home = {
         stateVersion = "26.05";
@@ -46,7 +46,7 @@
         };
         bash = {
           enable = true;
-          initExtra = ''
+          initExtra = lib.optionalString pkgs.stdenv.isLinux ''
             if [ -r /run/agenix/github-token ]; then
               export GITHUB_TOKEN="$(cat /run/agenix/github-token)"
               export GH_TOKEN="$GITHUB_TOKEN"

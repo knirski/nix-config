@@ -1,11 +1,33 @@
 # AGENTS.md — guidelines and guardrails for this repo
 
-A multi-host NixOS flake.
+A multi-host NixOS/nix-darwin flake.
 
-| Host | Role | Status |
-| ---- | ---- | ------ |
-| **Soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | M1/M2 complete, M3 complete (Secure Boot on), M4 deferred |
-| **zbook** (HP ZBook Studio 16" G10) | Desktop/gaming workstation, 32 GB, NVIDIA RTX 4000 Ada | M4 complete |
+| Host | Role | System | Status |
+| ---- | ---- | ------ | ------ |
+| **Soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | NixOS (stable) | M1/M2 complete, M3 complete (Secure Boot on), M4 deferred |
+| **zbook** (HP ZBook Studio 16" G10) | Workstation/gaming laptop, 32 GB, NVIDIA RTX 4000 Ada | NixOS (unstable) | M4 complete |
+| **macbook** (Apple Silicon) | Professional workstation laptop | nix-darwin (unstable) | Planned, untested |
+| **ubuntu** (Ubuntu 24.04 LTS) | Professional work laptop | Standalone HM (unstable) | Planned, untested |
+
+## Machine Roles
+
+| Role | Hosts | Description |
+| ---- | ----- | ----------- |
+| **LAN appliance** | soyo | Headless server. DNS, DHCP, backups, observability. No GUI. |
+| **Workstation/gaming laptop** | zbook | Full desktop with Sway, NVIDIA, gaming. |
+| **Professional workstation laptop** | macbook, ubuntu | Desktop with tiling WM (Aerospace/Sway), no gaming. Closest possible experience to zbook. |
+
+The existing NixOS role aspects (`server.nix`, `workstation.nix`) set a role marker at `/etc/nix-config/role` for healthchecks. Darwin and standalone HM hosts don't need role markers.
+
+## Aspect Namespace
+
+| Namespace | Purpose | Modules |
+| --------- | ------- | ------- |
+| `aspects.nixos.*` | NixOS system config | `modules/nixos/*.nix` |
+| `aspects.darwin.*` | nix-darwin system config | `modules/darwin/*.nix` |
+| `aspects.homeManager.*` | Home Manager user config | `modules/home/*.nix` |
+
+Host assemblers select aspects by name. The HM aspects are shared across all host types (NixOS, darwin, standalone HM).
 
 **Read first:** [`docs/superpowers/specs/soyo-dns-dhcp-appliance.md`](docs/superpowers/specs/soyo-dns-dhcp-appliance.md)
 is the canonical design — decisions, hardware facts, the M1–M4 roadmap, and an
@@ -113,6 +135,13 @@ and its docs must teach (see "Learning docs" below).
   `secrets/<host>.pub`, set `age.rekey.hostPubkey` in the host assembler to
   that path, run `agenix rekey` to generate per-host rekeyed secrets, then
   commit the new pubkey and rekeyed files.
+- **Darwin hosts:** Use `inputs.nix-darwin.lib.darwinSystem` and
+  `config.aspects.darwin.*`. Host data goes in `hosts/<name>/` (no disko, boot,
+  or persistence — macOS uses APFS natively).
+- **Standalone HM hosts:** Use `inputs.home-manager.lib.homeManagerConfiguration`.
+  Only HM aspects apply (no `aspects.nixos.*` or `aspects.darwin.*`). Set
+  `home.username`, `home.homeDirectory` explicitly. Activate with
+  `home-manager switch --flake .#<host>`.
 
 ## Learning docs (required output)
 

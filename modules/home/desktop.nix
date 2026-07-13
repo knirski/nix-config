@@ -1,16 +1,20 @@
 {
   aspects.homeManager.desktop =
-    { pkgs, ... }:
+    { pkgs, lib, ... }:
     {
-      home.packages = with pkgs; [
-        wl-clipboard
-        imv
-        mpv
-        bitwarden-desktop
-        freetube
-        signal-desktop
-        spotify
-        zed-editor
-      ];
+      home.packages =
+        with pkgs;
+        [
+          mpv
+          bitwarden-desktop
+          spotify
+          zed-editor
+        ]
+        ++ lib.optionals stdenv.isLinux [
+          wl-clipboard
+          imv
+          freetube
+          signal-desktop
+        ];
     };
 }

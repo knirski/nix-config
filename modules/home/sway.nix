@@ -83,7 +83,7 @@
             confirm_os_window_close = 0;
             # Make a mouse selection immediately available to applications.
             copy_on_select = "clipboard";
-            shell = "/run/current-system/sw/bin/zsh";
+            shell = "${pkgs.zsh}/bin/zsh";
             clipboard_control = "write-clipboard write-primary read-clipboard-ask";
             allow_clipboard_controls = true;
           };

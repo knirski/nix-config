@@ -1,3 +1,10 @@
+# NixOS base aspect — role-neutral defaults shared by every NixOS host.
+# Timezone, locale, nix settings, basic packages. Does not select a network
+# backend, swap policy, or graphical environment (see host-role-invariants).
+_:
+let
+  sharedNixpkgsArgs = import ../../lib/mk-nixpkgs-args.nix { };
+in
 {
   aspects.nixos.base =
     { pkgs, ... }:
@@ -15,22 +22,10 @@
       ];
       environment.variables.EDITOR = "nvim";
 
-      # Allow unfree packages globally. Some packages in the nixpkgs
-      # catalogue (e.g. NVIDIA driver, Steam, VS Code, command-code CLI)
-      # are unfree by license — declared so by the authors, not by us.
-      nixpkgs.config = {
-        allowUnfree = true;
-        permittedInsecurePackages = [
-          "electron-39.8.10"
-        ];
-      };
-
-      # Make command-code available everywhere (used in home.base).
-      nixpkgs.overlays = [
-        (final: _: {
-          command-code = final.callPackage ../../modules/_pkgs/command-code.nix { };
-        })
-      ];
+      # Shared nixpkgs config (allowUnfree, permittedInsecurePackages, overlays)
+      # sourced from lib/mk-nixpkgs-args.nix — single source of truth.
+      nixpkgs.config = sharedNixpkgsArgs.config;
+      nixpkgs.overlays = sharedNixpkgsArgs.overlays;
 
       nix.settings = {
         # Pull pre-built closures from the public project cache before building
