@@ -5,6 +5,14 @@
       time.timeZone = "Europe/Warsaw";
       i18n.defaultLocale = "en_US.UTF-8";
       console.keyMap = "pl2";
+      # Fast keyboard repeat on the TTY console (applies to all hosts).
+      # Wayland compositors (Sway) set their own repeat rate, but the console
+      # defaults to a sluggish 250 ms delay / 10 Hz — these boot params fix that.
+      # keyboard.delay=0 → 250 ms; keyboard.rate is in chars/sec.
+      boot.kernelParams = [
+        "keyboard.delay=0"
+        "keyboard.rate=50"
+      ];
       environment.variables.EDITOR = "nvim";
 
       # Allow unfree packages globally. Some packages in the nixpkgs
