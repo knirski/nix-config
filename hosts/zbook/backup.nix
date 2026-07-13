@@ -3,6 +3,8 @@
   lanAppliance.services.backup = {
     enable = true;
     # No explicit hostName — defaults to config.networking.hostName = "zbook"
+    enablePromMetrics = true;
+    isolateResources = true;
 
     restic = {
       repository = "sftp:zbook-backup@czworaczki:/backup/zbook";
@@ -11,6 +13,17 @@
         "/persist"
       ];
       sshKeyFile = "/persist/etc/restic/ssh-key";
+
+      pruneOpts = [
+        "--keep-daily"
+        "7"
+        "--keep-weekly"
+        "4"
+        "--keep-monthly"
+        "6"
+      ];
+
+      checkOpts = [ "--with-cache" ];
     };
 
     btrbk.subvolumes = [

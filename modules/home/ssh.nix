@@ -1,5 +1,5 @@
-_: {
-  aspects.homeManager.ssh = _: {
+{
+  aspects.homeManager.ssh = {
     programs.ssh = {
       enable = true;
       enableDefaultConfig = false;

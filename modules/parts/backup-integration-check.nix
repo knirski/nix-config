@@ -43,6 +43,7 @@
                 enable = true;
                 hostName = "fixture";
                 enablePromMetrics = true;
+                notifyOnFailure = false;
                 restic = {
                   repository = "/var/lib/restic-fixture/repository";
                   passwordFile = "/run/restic-fixture/password";

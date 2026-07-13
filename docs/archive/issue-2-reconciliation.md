@@ -6,8 +6,8 @@
 > installation, secrets and recovery runbooks.
 
 The issue captured the first bootstrap checklist. The canonical replacement is
-[Install Soyo](install-soyo.md), supported by the [secrets](secrets.md) and
-[recovery](recovery.md) runbooks. The comparison below preserves the safety
+[Install Soyo](../install-soyo.md), supported by the [secrets](../secrets.md) and
+[recovery](../recovery.md) runbooks. The comparison below preserves the safety
 intent without repeating exact host inventory.
 
 | Issue section or safety gate | Current replacement | Result |

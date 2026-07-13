@@ -29,14 +29,10 @@ The locked gitleaks check covers private keys and generic credential patterns
 locally and in CI. GitHub push protection remains enabled for its supported
 provider patterns.
 
-## Required-check transition
+## Required status checks
 
-Required status checks are temporarily deferred because the completed local CI
-workflow renames every context currently reported by GitHub. Requiring either
-name set during the transition would block the other.
-
-After the rewritten workflow reaches `main`, add these contexts to ruleset
-`18830833`, using names confirmed by its first successful run:
+The following contexts are required on ruleset `18830833` and must pass before
+a pull request can merge to `main`:
 
 - `Static and repository policy`
 - `Evaluation and pure invariants`
@@ -44,9 +40,9 @@ After the rewritten workflow reaches `main`, add these contexts to ruleset
 - `Build zbook closure`
 - `Publish sanitized topology`
 
-Do not guess the final contexts before that run. Ruleset mistakes can block
-recovery work; retain the administrator break-glass path without weakening
-ordinary branch policy.
+`Strict KVM behavior tests` is intentionally excluded: it requires `/dev/kvm`
+and may not run on all runners. Retain the administrator break-glass path
+without weakening ordinary branch policy.
 
 ## Reporting vulnerabilities
 

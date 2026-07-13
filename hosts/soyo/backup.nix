@@ -34,8 +34,7 @@
 
       # Verify repo integrity monthly (runs after each backup, but with
       # randomized timer most runs skip — an explicit periodic check is better).
-      # Currently disabled; enable once the backup is confirmed working:
-      # checkOpts = [ "--with-cache" ];
+      checkOpts = [ "--with-cache" ];
     };
 
     btrbk.subvolumes = [

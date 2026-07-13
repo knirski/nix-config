@@ -30,6 +30,11 @@
         enableTracing = lib.mkEnableOption "OTLP tracing of backup runs to local Tempo";
         enablePromMetrics = lib.mkEnableOption "Prometheus textfile metrics for backup success/ran status";
         isolateResources = lib.mkEnableOption "resource limits for backup units on a role-constrained host";
+        notifyOnFailure = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Wire OnFailure = ntfy-failure@%N.service so backup failures send a push notification via the maintenance aspect's ntfy-failure@ template. If the maintenance aspect is not enabled, systemd logs a warning on failure but the backup service itself is unaffected.";
+        };
 
         restic = {
           repository = lib.mkOption {
@@ -253,11 +258,14 @@
             # Backups are deliberately subordinate to the host's primary role.
             # The cap is large enough for restic's index while preventing an
             # unusually large repository operation from exhausting Soyo.
-            systemd.services."restic-backups-${hostName}".serviceConfig = lib.mkIf cfg.isolateResources {
-              MemoryMax = "1G";
-              CPUQuota = "50%";
-              Nice = 10;
-              IOWeight = 25;
+            systemd.services."restic-backups-${hostName}" = {
+              serviceConfig = lib.mkIf cfg.isolateResources {
+                MemoryMax = "1G";
+                CPUQuota = "50%";
+                Nice = 10;
+                IOWeight = 25;
+              };
+              unitConfig.OnFailure = lib.mkIf cfg.notifyOnFailure "ntfy-failure@%N.service";
             };
           }
 

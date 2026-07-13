@@ -1,4 +1,4 @@
-_: {
+{
   aspects.homeManager.sway =
     { pkgs, ... }:
     {

@@ -1,7 +1,7 @@
 # Testing baseline
 
 > **Status: Historical evidence.** This is a dated measurement, not the current
-> check inventory. See [testing.md](testing.md) for the active verification
+> check inventory. See [testing.md](../testing.md) for the active verification
 > policy.
 
 Measured on 2026-07-12 at commit

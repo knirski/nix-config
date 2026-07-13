@@ -47,7 +47,7 @@ enforcement belongs to the documentation-check layer.
   and the manual-verification boundary.
 - [Verification layers](learning/verification-layers.md) — a beginner-friendly
   explanation of evaluation, builds, KVM tests, caches and physical drills.
-- [Testing baseline](testing-baseline.md) — recorded repository check inventory
+- [Testing baseline](archive/testing-baseline.md) — recorded repository check inventory
   and timing evidence.
 - [Public repository data policy](security/public-repository.md) — what the
   public overview may disclose and what remains operator-detailed.
@@ -86,13 +86,13 @@ valuable context, but current code, runbooks and canonical specifications take
 precedence. A later status pass may add more precise lifecycle banners without
 removing their history.
 
-- [Initial Soyo implementation plan](superpowers/plans/2026-06-28-soyo-dns-dhcp-appliance.md)
-- [LAN observability implementation plan](superpowers/plans/2026-07-04-lan-observability.md)
-- [CI pipeline implementation plan](superpowers/plans/2026-07-05-ci-pipeline-plan.md)
-- [Gap report](gap-report.md)
-- [Earlier optional-work plan](optional-work-plan.md)
-- [GitHub issue #2 reconciliation](issue-2-reconciliation.md)
-- [Superseded Hyprland desktop experiment](hyprland-desktop.md)
+- [Initial Soyo implementation plan](archive/2026-06-28-soyo-dns-dhcp-appliance.md)
+- [LAN observability implementation plan](archive/2026-07-04-lan-observability.md)
+- [CI pipeline implementation plan](archive/2026-07-05-ci-pipeline-plan.md)
+- [Gap report](archive/gap-report.md)
+- [Earlier optional-work plan](archive/optional-work-plan.md)
+- [GitHub issue #2 reconciliation](archive/issue-2-reconciliation.md)
+- [Superseded Hyprland desktop experiment](archive/hyprland-desktop.md)
 
 ## Navigation rules
 
