@@ -13,7 +13,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 5 | [Design doc](../superpowers/specs/soyo-dns-dhcp-appliance.md) | All | Every architectural decision and why |
 | 6 | `flake.nix` | M1 | The entry point — thin, delegates to flake-parts; `vic/import-tree` auto-imports every module under `modules/` |
 | 7 | `modules/parts/soyo.nix`, `modules/parts/aspect-options.nix` | M1 | How a host is assembled by toggling aspects; `aspect-options.nix` defines the `aspects.nixos` and `aspects.homeManager` option namespaces that make the aspect system work |
-| 8 | `modules/nixos/base.nix` → `ssh.nix` → `server.nix` → `tailscale.nix` → `users.nix`, [Host role models](host-role-models.md) | M1 | The role-neutral base, explicit aspects, typed role registries and boundary checks. `ssh.nix` was extracted from `server.nix` and `workstation.nix` — key-only auth, configurable ports, agent forwarding |
+| 8 | `modules/nixos/base.nix` → `ssh.nix` → `server.nix` → `tailscale.nix` → `users.nix` (suggested reading order), [Host role models](host-role-models.md) | M1 | The role-neutral base, explicit aspects, typed role registries and boundary checks. `ssh.nix` was extracted from `server.nix` and `workstation.nix` — key-only auth, configurable ports, agent forwarding |
 | 9 | `modules/nixos/persistence.nix`, `hosts/soyo/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + the concrete persisted-path inventory, including why boot signing state like `/var/lib/sbctl` belongs in it |
 | 10 | `modules/nixos/blocky.nix`, `hosts/soyo/dns.nix` | M1 | DNS with blocking (Blocky) |
 | 11 | `modules/nixos/dhcp.nix`, `hosts/soyo/dhcp.nix` | M1 | DHCP + reverse DNS (dnsmasq) |
@@ -30,7 +30,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 22 | `modules/nixos/desktop.nix`, `modules/nixos/sway.nix`, `modules/home/desktop.nix`, `modules/home/sway.nix`, `modules/home/ssh.nix` | M4 (shipped) | Role-neutral desktop services plus the Sway session, DMS greetd greeter, shell, and user configuration. `modules/home/ssh.nix` provides per-user SSH client config (GitHub key, host entries) |
 | 23 | `modules/nixos/nvidia.nix` | M4 (shipped) | NVIDIA proprietary driver (RTX 4000 Ada), prime sync, offload modes |
 | 24 | `modules/nixos/gaming.nix` | M4 (shipped) | Steam, gamemode, MangoHud, game-specific tweaks |
-| 25 | `modules/parts/zbook.nix`, `hosts/zbook/` | M4 (shipped) | zbook host assembler — toggles 12 aspects (base, ssh, tailscale, desktop, sway, nvidia, laptop, gaming, workstation, users, persistence, maintenance, backup) onto the same base modules used by Soyo |
+| 25 | `modules/parts/zbook.nix`, `hosts/zbook/` | M4 (shipped) | zbook host assembler — toggles 13 aspects (base, ssh, tailscale, desktop, sway, nvidia, laptop, gaming, workstation, users, persistence, maintenance, backup) onto the same base modules used by Soyo |
 | 26 | Nvidia bug (this section) | M4 | The read-only `hardware.nvidia.enabled` trap |
 | 27 | s2idle over deep S3 (this section) | M4 | HP firmware wake routing: S3 enters but never resumes; s2idle is the native suspend mode |
 | 28 | `modules/nixos/laptop.nix` — `usbcore.quirks` | M4 (shipped) | Kernel-level USB autosuspend disable for Logitech receivers — immutable, immune to powertop |

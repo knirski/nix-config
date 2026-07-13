@@ -15,9 +15,12 @@
       sshKeyFile = "/persist/etc/restic/ssh-key";
 
       pruneOpts = [
-        "--keep-daily 7"
-        "--keep-weekly 4"
-        "--keep-monthly 6"
+        "--keep-daily"
+        "7"
+        "--keep-weekly"
+        "4"
+        "--keep-monthly"
+        "6"
       ];
 
       checkOpts = [ "--with-cache" ];

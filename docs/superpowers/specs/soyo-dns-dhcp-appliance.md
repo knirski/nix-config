@@ -106,7 +106,7 @@ Load-bearing choices at a glance; rationale and rejected alternatives are in the
 - `restic` — encrypted, deduplicated off-host backups to the Synology DS423+ via the first-class `services.restic.backups` NixOS module
 - `btrbk` — scheduled local Btrfs snapshots
 - `nixos-anywhere` — alternative remote provisioning over SSH
-- `deploy-rs` — multi-host remote deployment (deploy checks, magic-rollback); **deferred to M4** — M1/M2 use the first-class native `nixos-rebuild --target-host`, which needs no extra input for a single host
+- `deploy-rs` — multi-host remote deployment (deploy checks, magic-rollback); available for multi-host orchestration — M1/M2 used the first-class native `nixos-rebuild --target-host`, which needs no extra input for a single host
 - `treefmt-nix` — repo-wide formatting
 - `deadnix` — unused-binding analysis
 - `systemd-networkd` — runtime network manager
@@ -908,7 +908,7 @@ Outcome: serves DNS/DHCP on the LAN, restores the declared durable state after r
 - maintenance defaults: `nix.gc`, scrub, journald cap, `smartd`, free-space monitoring
 - reliability: ntfy `OnFailure` notifications; Synology Uptime Kuma probe
 - observability: Blocky metrics, `node_exporter`, dnsmasq exporter, and on-box Grafana+Prometheus+Loki+Tempo+Alloy as resource-isolated guest services
-- headless Home Manager profile; documented native `nixos-rebuild --target-host` deploy workflow (deploy-rs deferred to M4)
+- headless Home Manager profile; documented native `nixos-rebuild --target-host` deploy workflow (deploy-rs available for multi-host orchestration)
 
 Outcome: backed up, observable, recoverable. Validate: restore drill, forced-failure ntfy, probe reports DNS down when powered off.
 
