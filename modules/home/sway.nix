@@ -15,8 +15,8 @@
           input = {
             "*" = {
               xkb_layout = "pl";
-              repeat_delay = 250;
-              repeat_rate = 50;
+              repeat_delay = "250";
+              repeat_rate = "50";
             };
           };
           # DMS owns the regular clipboard and its rich MIME types. PRIMARY
