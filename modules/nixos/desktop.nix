@@ -47,7 +47,7 @@
               name = "HP-LaserJet-Pro-M125nw";
               location = "Home";
               deviceUri = "socket://10.0.0.11";
-              model = "drv:///hpcups.drv/hp-laserjet_pro_mfp_m125nw.ppd";
+              model = "drv:///hp/hpcups.drv/hp-laserjet_pro_mfp_m125nw.ppd";
             }
           ];
         };
