@@ -2,19 +2,6 @@
   aspects.homeManager.sway =
     { pkgs, ... }:
     {
-      home.packages = with pkgs; [
-        fuzzel
-        (writeShellApplication {
-          name = "screenshot-picker";
-          runtimeInputs = [
-            fuzzel
-            grimblast
-            coreutils
-          ];
-          text = builtins.readFile ../../scripts/screenshot-picker.sh;
-        })
-      ];
-
       wayland.windowManager.sway = {
         enable = true;
         xwayland = true;
@@ -81,8 +68,8 @@
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
-            "Print" = "exec screenshot-picker";
-            "Shift+Print" = "exec bash -c 'cd ~/Pictures/Screenshots && grimblast save area'";
+            "Print" = "exec gnome-screenshot --interactive";
+            "Shift+Print" = "exec gnome-screenshot --area";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";

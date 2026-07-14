@@ -15,7 +15,7 @@
           loupe
           freetube
           signal-desktop
-          grimblast
+          gnome-screenshot
         ];
     };
 }
