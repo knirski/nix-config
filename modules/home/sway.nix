@@ -2,6 +2,10 @@
   aspects.homeManager.sway =
     { pkgs, ... }:
     {
+      home.packages = with pkgs; [
+        libnotify
+      ];
+
       wayland.windowManager.sway = {
         enable = true;
         xwayland = true;
@@ -68,10 +72,10 @@
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
-            "Print" = "exec grimblast save screen";
-            "XF86Print" = "exec grimblast save screen";
-            "Shift+Print" = "exec grimblast save area";
-            "Shift+XF86Print" = "exec grimblast save area";
+            "Print" =
+              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save screen && notify-send \"Screenshot: full screen saved\"'";
+            "Shift+Print" =
+              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save area && notify-send \"Screenshot: area saved\"'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";
