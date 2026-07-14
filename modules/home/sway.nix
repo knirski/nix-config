@@ -72,9 +72,9 @@
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
-            "Print" =
+            "Ctrl+Print" =
               "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save screen && notify-send \"Screenshot: full screen saved\"'";
-            "Shift+Print" =
+            "${modifier}+Shift+s" =
               "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save area && notify-send \"Screenshot: area saved\"'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
