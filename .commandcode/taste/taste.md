@@ -9,5 +9,8 @@
 [cmd]: https://commandcode.ai/
 See [taste-(continuously-learned-by-[commandcode][cmd])/taste.md](taste-(continuously-learned-by-[commandcode][cmd])/taste.md)
 
+# secrets
+- Name the master identity public key file in `secrets/` consistently with the SSH key filename (e.g., `krzysiek.age.pub` → `agenix_master.pub`) to distinguish the master encryption key from the SSH login key (`krzysiek-authorized-key.pub`). Confidence: 0.60
+
 # nixos
 See [nixos/taste.md](nixos/taste.md)
