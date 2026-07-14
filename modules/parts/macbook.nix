@@ -24,7 +24,10 @@
               config.aspects.homeManager.ssh
               config.aspects.homeManager.aerospace
             ];
-            users.krzysiek.home.enableNixpkgsReleaseCheck = false;
+            users.krzysiek.home = {
+              stateVersion = "26.11";
+              enableNixpkgsReleaseCheck = false;
+            };
           };
         }
         ../../hosts/macbook/users.nix
