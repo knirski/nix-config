@@ -47,7 +47,7 @@ a pointer for operators browsing the host directory.
   CLI auth during the install.
 
 - Your **SSH private key** (the one that matches
-  `secrets/krzysiek.age.pub`) so `agenix rekey` can decrypt master secrets.
+  `secrets/agenix-master.pub`) so `agenix rekey` can decrypt master secrets.
 
 - Write access to the repo's remote (you will push the new host key).
 
@@ -93,18 +93,18 @@ master-encrypted secrets:
 ```bash
 # Find Soyo's live ISO IP from the output of `ip -4 addr show`.
 # Then, from YOUR WORKSTATION:
-#   scp ~/.ssh/soyo_ed25519 nixos@<soyo-ip>:~
+#   scp ~/.ssh/agenix_master nixos@<soyo-ip>:~
 #
 # Back on Soyo's live ISO:
 mkdir -p -m 700 ~/.ssh
-# The scp'd file lands as soyo_ed25519. Keep it outside the repo and create
+# The scp'd file lands as agenix_master. Keep it outside the repo and create
 # the operator-side symlink for this live environment. This is the master
 # operator key, not Soyo's host key; it is used only for the install-time
 # rekey operation and should not be installed permanently on Soyo.
-mv ~/soyo_ed25519 ~/.ssh/soyo_ed25519 2>/dev/null || echo "Paste manually if scp failed"
-chmod 600 ~/.ssh/soyo_ed25519
+mv ~/agenix_master ~/.ssh/agenix_master 2>/dev/null || echo "Paste manually if scp failed"
+chmod 600 ~/.ssh/agenix_master
 sudo install -d -m 755 /etc/agenix-rekey
-sudo ln -sfn "$HOME/.ssh/soyo_ed25519" /etc/agenix-rekey/master-identity
+sudo ln -sfn "$HOME/.ssh/agenix_master" /etc/agenix-rekey/master-identity
 ```
 
 Verify the key works:
@@ -315,9 +315,9 @@ procedure), re-enroll against PCR 0+2+7 for stronger tamper detection.
 
 On the operator machine from which you deploy, create
 `/etc/agenix-rekey/master-identity` as a symlink to the local SSH private key
-matching `secrets/krzysiek.age.pub`, as described in [docs/secrets.md](secrets.md).
+matching `secrets/agenix-master.pub`, as described in [docs/secrets.md](secrets.md).
 The target machine only needs its own host private key under `/persist`; it does
-not need the operator's `soyo_ed25519` key. No host-assembler edit is needed.
+not need the operator's `agenix_master` key. No host-assembler edit is needed.
 Then run:
 
 ```bash

@@ -70,17 +70,14 @@ You share your public key freely; you guard your private key with your life.
 
 ### SSH keys are already age keys
 
-If you already have an SSH key (`~/.ssh/id_ed25519` or `~/.ssh/id_rsa`), you
-already have an age-compatible keypair.  The tool **ssh-to-age** converts
-an SSH public key into an age public key:
+If you already have an SSH key (`~/.ssh/id_ed25519` or `~/.ssh/id_rsa`), rage
+can use it directly — no conversion needed. Pass the raw SSH public key as a
+recipient (`rage -e -r "ssh-ed25519 AAAA..."`) and the SSH private key as an
+identity (`rage -d -i ~/.ssh/id_ed25519`).
 
-```bash
-ssh-to-age < ~/.ssh/id_ed25519.pub
-# age1abc123def...
-```
-
-The private key stays the same SSH key — rage can decrypt with it directly.
-No extra key to manage.
+The tool **ssh-to-age** converts an SSH public key into the `age1...` format,
+which is only needed if you want a Bech32-encoded age key. This repo uses raw
+SSH pubkeys stored in `secrets/agenix-master.pub` — no conversion step.
 
 ---
 
@@ -99,7 +96,7 @@ so keep this rule in mind:
 - **Where agenix-rekey finds it:** `/etc/agenix-rekey/master-identity` on the
   operator machine. This is a symlink to the real SSH private key, which may
   live anywhere outside the repository and Nix store.
-- **Its public key in the repo:** `secrets/krzysiek.age.pub`.
+- **Its public key in the repo:** `secrets/agenix-master.pub`.
 
 Every master-encrypted `.age` file in `secrets/` can be decrypted only by
 someone holding the matching SSH private key.  This is how we keep secrets
@@ -112,16 +109,16 @@ need to exist on every machine.
 
 ```bash
 sudo install -d -m 755 /etc/agenix-rekey
-sudo ln -sfn "$HOME/.ssh/soyo_ed25519" /etc/agenix-rekey/master-identity
+sudo ln -sfn "$HOME/.ssh/agenix_master" /etc/agenix-rekey/master-identity
 ```
 
-The current operator key is named `soyo_ed25519`, but that filename is only a
+The current operator key is named `agenix_master`, but that filename is only a
 local convention. Point the symlink at whichever private key matches
-`secrets/krzysiek.age.pub`; verify the public half before rekeying:
+`secrets/agenix-master.pub`; verify the public half before rekeying:
 
 ```bash
-diff -u secrets/krzysiek.age.pub \
-  <(ssh-keygen -y -f "$HOME/.ssh/soyo_ed25519" | ssh-to-age)
+diff -u secrets/agenix-master.pub \
+  <(ssh-keygen -y -f "$HOME/.ssh/agenix_master")
 ```
 
 The assembler stores the `/etc` path as an
@@ -175,7 +172,7 @@ this.**  Here is why:
 - **Rotation independence.** If you rotate your personal SSH key (moved to
   a new laptop, YubiKey replaced, suspected compromise), you do not want
   to also break Soyo's ability to boot.  Separate keys let you rotate
-  each one independently: update `krzysiek.age.pub`, rekey, deploy — Soyo
+  each one independently: update `agenix-master.pub`, rekey, deploy — Soyo
   keeps its own key and keeps running.
 
 - **Multi-host scalability.** With N hosts, using your personal key as every
@@ -253,7 +250,7 @@ Layer 1 (in git)                    Layer 2 (in git)
 
 ```text
 secrets/
-├── krzysiek.age.pub        # Master identity public key (plaintext)
+├── agenix-master.pub        # Master identity SSH public key (plaintext)
 ├── krzysiek-authorized-key.pub  # krzysiek's SSH authorized key (plaintext)
 ├── soyo.pub                # Soyo host SSH public key (plaintext; enrolled
 │                           #   during first install)
@@ -300,8 +297,8 @@ encrypted for a specific host's SSH key instead of your master key.
 | `secrets/grafana-secret-key.age` | Grafana session signing key | master identity |
 | `secrets/tailscale-auth-key-soyo.age` | Tailscale pre-auth key for soyo | master identity |
 | `secrets/tailscale-auth-key-zbook.age` | Tailscale pre-auth key for zbook | master identity |
-| `secrets/krzysiek.age.pub` | Master/operator public key (plaintext) | n/a — recipient metadata for the master identity |
-| `secrets/krzysiek-authorized-key.pub` | Operator public key (plaintext) | n/a — consumed by SSH authorized keys and initrd unlock |
+| `secrets/agenix-master.pub` | Master/operator SSH public key (plaintext) | n/a — recipient metadata for the master identity |
+| `secrets/krzysiek-authorized-key.pub` | Operator SSH login key (plaintext) | n/a — consumed by SSH authorized keys and initrd unlock |
 | `secrets/soyo.pub` | Soyo's raw SSH host public key (plaintext) | n/a — recipient metadata for Soyo rekeying |
 | `secrets/zbook.pub` | ZBook's raw SSH host public key (plaintext) | n/a — recipient metadata for ZBook rekeying |
 | `secrets/rekeyed/soyo/...` | same content as above | Soyo's SSH host key |
@@ -517,20 +514,21 @@ be re-encrypted with the new key, and all hosts rekeyed.
 
 ```bash
 # 1. Generate a new SSH key
-ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_new
+ssh-keygen -t ed25519 -f ~/.ssh/agenix_master_new
 
-# 2. Derive the new age pubkey
-ssh-to-age < ~/.ssh/id_ed25519_new.pub > secrets/krzysiek.age.pub
+# 2. Copy the new pubkey into the repo
+cp ~/.ssh/agenix_master_new.pub secrets/agenix-master.pub
 
 # 3. Re-encrypt every master .age file with the new key
+NEW_PUBKEY=$(tr -d '\n' < secrets/agenix-master.pub)
 for f in secrets/*.age; do
-  rage -d -i ~/.ssh/id_ed25519_old "$f" \
-    | rage -e -i ~/.ssh/id_ed25519_new -o "$f.tmp" \
+  rage -d -i ~/.ssh/agenix_master "$f" \
+    | rage -e -r "$NEW_PUBKEY" -o "$f.tmp" \
     && mv "$f.tmp" "$f"
 done
 
 # 4. Retarget the operator-side symlink; no Nix edit is needed
-sudo ln -sfn "$HOME/.ssh/id_ed25519_new" /etc/agenix-rekey/master-identity
+sudo ln -sfn "$HOME/.ssh/agenix_master_new" /etc/agenix-rekey/master-identity
 
 # 5. Rekey for all hosts
 nix develop '.#' -c agenix rekey
@@ -604,14 +602,14 @@ nixos-rebuild switch --flake .#soyo --target-host krzysiek@soyo --sudo
 ## Reference: key files and where they live
 
 The following is the current layout. ZBook is currently the main operator
-machine, so its local `~/.ssh/soyo_ed25519` is the active master private key.
+machine, so its local `~/.ssh/agenix_master` is the active master private key.
 “Local operator machine” still means the machine where you run the rekey
 command; if that changes, configure its local key and symlink accordingly.
 The private keys are never stored in this repository.
 
 | Keypair | Private key location | Public key location | Responsible for |
 | --- | --- | --- | --- |
-| Master/operator | Current main operator machine (ZBook): `~/.ssh/soyo_ed25519` | ZBook: `~/.ssh/soyo_ed25519.pub`; repo: `secrets/krzysiek.age.pub` | Decrypting master `.age` files and running `agenix rekey` |
+| Master/operator | Current main operator machine (ZBook): `~/.ssh/agenix_master` | ZBook: `~/.ssh/agenix_master.pub`; repo: `secrets/agenix-master.pub` | Decrypting master `.age` files and running `agenix rekey` |
 | Operator SSH client for ZBook | Current main operator machine (ZBook): `~/.ssh/zbook_ed25519` | ZBook: `~/.ssh/zbook_ed25519.pub` | SSH client authentication, if selected for ZBook; not an agenix host key |
 | Soyo host | Soyo only: `/persist/etc/ssh/ssh_host_ed25519_key` | Soyo: `/persist/etc/ssh/ssh_host_ed25519_key.pub`; repo: `secrets/soyo.pub` | Decrypting Soyo's rekeyed secrets at boot |
 | ZBook host | ZBook only: `/persist/etc/ssh/ssh_host_ed25519_key` | ZBook: `/persist/etc/ssh/ssh_host_ed25519_key.pub`; repo: `secrets/zbook.pub` | Decrypting ZBook's rekeyed secrets at boot |
@@ -619,7 +617,7 @@ The private keys are never stored in this repository.
 The operator private keys may be copied temporarily to a live environment when
 that environment must run `agenix rekey` during installation. This is a
 deliberate exception for bootstrap, not a reason to install the operator key
-on the target permanently. At present, `~/.ssh/soyo_ed25519` does exist on
+on the target permanently. At present, `~/.ssh/agenix_master` does exist on
 ZBook because ZBook is the main operator machine. Do not infer from that
 current arrangement that the key must exist on a different workstation or on
 a target host.
@@ -627,11 +625,11 @@ a target host.
 | File | Purpose | Created by |
 | ---- | ------- | ----------- |
 | `/etc/agenix-rekey/master-identity` | Operator-side symlink to the master **private** key | `ln -s` on each operator machine |
-| `~/.ssh/soyo_ed25519` | Current local master/operator **private** key | `ssh-keygen` on the operator machine |
-| `~/.ssh/soyo_ed25519.pub` | Current local master/operator public key | same |
+| `~/.ssh/agenix_master` | Current local master/operator **private** key | `ssh-keygen` on the operator machine |
+| `~/.ssh/agenix_master.pub` | Current local master/operator public key | same |
 | `~/.ssh/zbook_ed25519` | Local operator SSH **private** key for ZBook; not the ZBook host key | `ssh-keygen` on the operator machine |
 | `~/.ssh/zbook_ed25519.pub` | Matching local operator SSH public key | same |
-| `secrets/krzysiek.age.pub` | Master age public key, stored in repo | `ssh-to-age < ~/.ssh/soyo_ed25519.pub` (one-time setup) |
+| `secrets/agenix-master.pub` | Master SSH public key, stored in repo | `cp ~/.ssh/agenix_master.pub secrets/agenix-master.pub` (one-time setup) |
 | `secrets/soyo.pub` | Soyo's SSH public key (raw, not age-converted) | `cat /persist/etc/ssh/ssh_host_ed25519_key.pub` during install |
 | `/persist/etc/ssh/ssh_host_ed25519_key` | Soyo's SSH host **private** key | `ssh-keygen` during first install |
 | `/persist/etc/ssh/ssh_host_ed25519_key.pub` | Soyo's SSH host public key | same |
@@ -648,7 +646,7 @@ for convenience, but you can work with `.age` files directly:
 
 ```bash
 # Encrypt a file for the master identity
-rage -e -r "$(ssh-to-age < ~/.ssh/soyo_ed25519.pub)" \
+rage -e -r "$(tr -d '\n' < secrets/agenix-master.pub)" \
   < plaintext.txt > secrets/encrypted.age
 
 # Decrypt with the SSH private key directly
@@ -656,9 +654,8 @@ rage -d -i /etc/agenix-rekey/master-identity secrets/encrypted.age
 ```
 
 This only works when the file was encrypted for a recipient that matches the
-SSH key (i.e. the age public key was derived from that SSH key via
-`ssh-to-age`). The `agenix edit` command handles this correctly; raw `rage -e`
-also works as long as you use `ssh-to-age` to derive the recipient.
+SSH key. The `agenix edit` command handles this correctly; raw `rage -e` also
+works as long as you pass the raw SSH public key from `secrets/agenix-master.pub`.
 
 The `masterIdentities` in both host assemblers point to the stable
 `/etc/agenix-rekey/master-identity` symlink. `agenix rekey` passes its target to
@@ -671,4 +668,4 @@ The `masterIdentities` in both host assemblers point to the stable
 - [age encryption format](https://age-encryption.org)
 - [agenix](https://github.com/ryantm/agenix) — NixOS module for age secrets
 - [agenix-rekey](https://github.com/oddlama/agenix-rekey) — rekeyFile flow
-- [ssh-to-age](https://github.com/Mic92/ssh-to-age) — SSH → age key conversion
+- [ssh-to-age](https://github.com/Mic92/ssh-to-age) — SSH → age key conversion (optional; not used in this repo)
