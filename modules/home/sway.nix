@@ -73,9 +73,9 @@
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
             "Ctrl+Print" =
-              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save screen && notify-send \"Screenshot saved\" 2>/tmp/screenshot-err.log || notify-send \"Screenshot failed: see /tmp/screenshot-err.log\"'";
+              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save screen 2>/tmp/screenshot-err.log && notify-send \"Screenshot saved\" || notify-send \"Screenshot fail: $(cat /tmp/screenshot-err.log 2>/dev/null)\"'";
             "${modifier}+Shift+s" =
-              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save area && notify-send \"Screenshot saved\" 2>/tmp/screenshot-err.log || notify-send \"Screenshot failed: see /tmp/screenshot-err.log\"'";
+              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save area 2>/tmp/screenshot-err.log && notify-send \"Screenshot saved\" || notify-send \"Screenshot fail: $(cat /tmp/screenshot-err.log 2>/dev/null)\"'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";
