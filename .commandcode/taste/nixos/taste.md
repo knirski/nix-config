@@ -1,4 +1,5 @@
 # nixos
+- Remove redundant configuration directives that duplicate already-global settings (e.g., per-host `AddKeysToAgent` when already set globally via `extraConfig`) rather than keeping them for documentation — prefer clean, non-duplicative config files. Confidence: 0.85
 - Keep per-host configuration values (like `stateVersion`) in host-specific assembler files or host config files, not in shared base modules; `stateVersion` is inherently host-specific (different hosts may be on different channels) and does not belong in a shared `base.nix`. Confidence: 0.70
 - Prefer the built-in NixOS `nix.gc.automatic` option for automated Nix store garbage collection over external tools like `nh clean`; `nix.gc` is the official, idiomatic approach. Confidence: 0.75
 - For Hyprland + UWSM integration, prefer idiomatic Home Manager module setup (home-manager) over raw NixOS module configuration; user explicitly wants Home Manager scoped Hyprland+UWSM setup. Confidence: 0.85

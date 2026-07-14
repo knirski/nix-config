@@ -32,3 +32,4 @@
 - Use email "krzysztof.nirski+github@gmail.com" when configuring git identity globally. Confidence: 0.80
 - All git operations should use SSH for authentication (not HTTPS or token-based auth). Confidence: 0.80
 - Configure git identity (userName, userEmail) globally via Nix/home-manager module, not per-repo in local `.git/config`. Confidence: 0.65
+- When creating PR branches for taste file updates, base them off `main` (not off the current feature branch) to keep taste PRs independent of in-flight work. Confidence: 0.75
