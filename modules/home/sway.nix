@@ -73,9 +73,9 @@
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
             "Ctrl+Print" =
-              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save screen 2>/tmp/screenshot-err.log && notify-send \"Screenshot saved\" || notify-send \"Screenshot fail: $(cat /tmp/screenshot-err.log 2>/dev/null)\"'";
+              "exec bash -c 'f=~/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png && mkdir -p \"$(dirname \"$f\")\" && grim \"$f\" && notify-send \"Screenshot saved: $(basename \"$f\")\"'";
             "${modifier}+Shift+s" =
-              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save area 2>/tmp/screenshot-err.log && notify-send \"Screenshot saved\" || notify-send \"Screenshot fail: $(cat /tmp/screenshot-err.log 2>/dev/null)\"'";
+              "exec bash -c 'f=~/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png && mkdir -p \"$(dirname \"$f\")\" && grim -g \"$(slurp)\" \"$f\" && notify-send \"Screenshot saved: $(basename \"$f\")\"'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";

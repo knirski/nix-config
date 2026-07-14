@@ -15,7 +15,8 @@
           loupe
           freetube
           signal-desktop
-          grimblast
+          grim
+          slurp
         ];
     };
 }
