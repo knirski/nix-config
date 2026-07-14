@@ -73,9 +73,9 @@
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
             "Ctrl+Print" =
-              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save screen && notify-send \"Screenshot: full screen saved\"'";
+              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save screen && notify-send \"Screenshot saved\" 2>/tmp/screenshot-err.log || notify-send \"Screenshot failed: see /tmp/screenshot-err.log\"'";
             "${modifier}+Shift+s" =
-              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save area && notify-send \"Screenshot: area saved\"'";
+              "exec bash -c 'mkdir -p ~/Pictures/Screenshots && cd ~/Pictures/Screenshots && grimblast save area && notify-send \"Screenshot saved\" 2>/tmp/screenshot-err.log || notify-send \"Screenshot failed: see /tmp/screenshot-err.log\"'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";
