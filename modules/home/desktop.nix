@@ -12,7 +12,7 @@
         ]
         ++ lib.optionals stdenv.isLinux [
           wl-clipboard
-          imv
+          loupe
           freetube
           signal-desktop
         ];
