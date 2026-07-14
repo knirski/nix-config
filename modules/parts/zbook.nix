@@ -31,17 +31,20 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
-            users.krzysiek.imports = [
-              config.aspects.homeManager.base
-              config.aspects.homeManager.desktop
-              config.aspects.homeManager.ssh
-              config.aspects.homeManager.sway
-              inputs.dms.homeModules.dank-material-shell
-              inputs.dcal.homeModules.dank-calendar
-              inputs.dsearch.homeModules.default
-              inputs.dms-plugins.homeModules.dms-plugin-registry
-            ];
-            users.krzysiek.home.enableNixpkgsReleaseCheck = false;
+            users.krzysiek = {
+              imports = [
+                config.aspects.homeManager.base
+                config.aspects.homeManager.desktop
+                config.aspects.homeManager.ssh
+                config.aspects.homeManager.sway
+                inputs.dms.homeModules.dank-material-shell
+                inputs.dcal.homeModules.dank-calendar
+                inputs.dsearch.homeModules.default
+                inputs.dms-plugins.homeModules.dms-plugin-registry
+              ];
+              home.stateVersion = "26.11";
+              home.enableNixpkgsReleaseCheck = false;
+            };
           };
         }
         ../../hosts/zbook/users.nix

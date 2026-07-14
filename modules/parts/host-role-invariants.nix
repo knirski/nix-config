@@ -28,7 +28,10 @@
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
-                users.fixture.imports = [ config.aspects.homeManager.base ];
+                users.fixture = {
+                  imports = [ config.aspects.homeManager.base ];
+                  home.stateVersion = "26.05";
+                };
               };
             }
           ];

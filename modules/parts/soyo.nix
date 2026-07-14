@@ -30,7 +30,10 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
-            users.krzysiek.imports = [ config.aspects.homeManager.base ];
+            users.krzysiek = {
+              imports = [ config.aspects.homeManager.base ];
+              home.stateVersion = "26.05";
+            };
           };
         }
         ../../hosts/soyo/users.nix

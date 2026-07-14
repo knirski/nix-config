@@ -3,7 +3,6 @@
     { pkgs, ... }:
     {
       home = {
-        stateVersion = "26.05";
         sessionVariables = {
           EDITOR = "nvim";
         };
