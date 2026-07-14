@@ -1,9 +1,12 @@
 {
-  description = "Multi-host NixOS flake for the Soyo LAN appliance and zbook workstation";
+  description = "Multi-host NixOS/nix-darwin flake for the Soyo LAN appliance, zbook workstation, macbook, and ubuntu";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
+    nix-darwin.url = "github:lnl7/nix-darwin";
+    nix-darwin.inputs.nixpkgs.follows = "nixpkgs-unstable";
 
     flake-parts.url = "github:hercules-ci/flake-parts";
     import-tree.url = "github:vic/import-tree";

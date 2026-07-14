@@ -1,7 +1,8 @@
 # Dendritic aspect namespace. Every aspect module contributes to
-# aspects.nixos.<name> and/or aspects.homeManager.<name>, and the host
-# assembler toggles them by name. Not under `flake.*` to avoid triggering
-# `nix flake check` warnings about non-standard flake outputs.
+# aspects.nixos.<name>, aspects.darwin.<name>, and/or
+# aspects.homeManager.<name>, and the host assembler toggles them by name.
+# Not under `flake.*` to avoid triggering `nix flake check` warnings about
+# non-standard flake outputs.
 { lib, ... }:
 {
   options.aspects = {
@@ -9,6 +10,12 @@
       type = lib.types.lazyAttrsOf lib.types.raw;
       default = { };
       description = "Reusable NixOS aspect modules assembled by hosts.";
+    };
+
+    darwin = lib.mkOption {
+      type = lib.types.lazyAttrsOf lib.types.raw;
+      default = { };
+      description = "Reusable nix-darwin aspect modules assembled by hosts.";
     };
 
     homeManager = lib.mkOption {

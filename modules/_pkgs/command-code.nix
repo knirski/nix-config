@@ -77,7 +77,7 @@ buildNpmPackage rec {
     description = "Command Code — coding agent that continuously learns your coding taste";
     homepage = "https://commandcode.ai";
     license = lib.licenses.unfree;
-    platforms = lib.platforms.linux;
+    platforms = lib.platforms.linux ++ lib.platforms.darwin;
     maintainers = with lib.maintainers; [ ];
   };
 }
