@@ -23,6 +23,7 @@
 - When configuring git-hooks.nix hooks, prefer using the framework's built-in predefined hook definitions (e.g., cachix/git-hooks.nix's nixpkgs-fmt, statix, etc.) over custom inline writeShellScriptBin wrappers; predefined hooks are more idiomatic, better maintained, and integrate correctly with pass_filenames and the pre-commit lifecycle. Confidence: 0.60
 
 # general
+- When a command output already shows the same state (e.g., "nothing to commit, working tree clean"), do not re-run the command — the initial output is sufficient and redundant re-runs waste time. Confidence: 0.55
 - Use zsh as the default shell with starship as the shell prompt theme (switched from spaceship to starship). Confidence: 0.75
 - Use oh-my-zsh (or a modern alternative with popular plugins) for zsh plugin management, with the most useful popular plugins enabled. Confidence: 0.70
 
