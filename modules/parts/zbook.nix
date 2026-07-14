@@ -42,8 +42,10 @@
                 inputs.dsearch.homeModules.default
                 inputs.dms-plugins.homeModules.dms-plugin-registry
               ];
-              home.stateVersion = "26.11";
-              home.enableNixpkgsReleaseCheck = false;
+              home = {
+                stateVersion = "26.11";
+                enableNixpkgsReleaseCheck = false;
+              };
             };
           };
         }
