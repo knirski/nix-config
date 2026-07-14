@@ -59,6 +59,8 @@
             "Ctrl+space" = "focus mode_toggle";
             "${modifier}+Shift+minus" = "move scratchpad";
             "${modifier}+minus" = "scratchpad show";
+            "${modifier}+m" = "move scratchpad";
+            "${modifier}+e" = "exec dms ipc call spotlight toggleQuery \":e\"";
             "${modifier}+f" = "fullscreen toggle";
             "Ctrl+${modifier}+l" = "exec dms ipc call lock lock";
             "${modifier}+Tab" = "workspace next";
@@ -66,6 +68,8 @@
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
+            "Print" = "exec bash -c 'cd ~/Pictures/Screenshots && grimblast save output'";
+            "Shift+Print" = "exec bash -c 'cd ~/Pictures/Screenshots && grimblast save area'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";

@@ -15,6 +15,7 @@
           loupe
           freetube
           signal-desktop
+          grimblast
         ];
     };
 }
