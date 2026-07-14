@@ -55,10 +55,10 @@
             "${modifier}+Shift+8" = "move container to workspace number 8";
             "${modifier}+Shift+9" = "move container to workspace number 9";
             "${modifier}+Shift+space" = "floating toggle";
-            "${modifier}+space" = "focus mode_toggle";
+            "${modifier}+space" = "exec dms ipc call spotlight toggle";
+            "Ctrl+space" = "focus mode_toggle";
             "${modifier}+Shift+minus" = "move scratchpad";
             "${modifier}+minus" = "scratchpad show";
-            "${modifier}+d" = "exec dms ipc call spotlight toggle";
             "${modifier}+Shift+d" = "exec dms ipc call lock lock";
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
