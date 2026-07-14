@@ -11,7 +11,7 @@
         '';
         config = rec {
           modifier = "Mod4";
-          terminal = "kitty";
+          terminal = "ghostty";
           input = {
             "*" = {
               xkb_layout = "pl";
@@ -74,18 +74,16 @@
       };
 
       programs = {
-        kitty = {
+        ghostty = {
           enable = true;
+          enableZshIntegration = true;
           settings = {
-            font_family = "JetBrainsMono Nerd Font";
-            font_size = 13.0;
-            background_opacity = "0.95";
-            confirm_os_window_close = 0;
-            # Make a mouse selection immediately available to applications.
-            copy_on_select = "clipboard";
-            shell = "/run/current-system/sw/bin/zsh";
-            clipboard_control = "write-clipboard write-primary read-clipboard-ask";
-            allow_clipboard_controls = true;
+            font-family = "JetBrainsMono Nerd Font";
+            font-size = 13;
+            background-opacity = 0.95;
+            confirm-close-surface = false;
+            copy-on-select = "clipboard";
+            window-decoration = "auto";
           };
         };
 
