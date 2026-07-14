@@ -59,7 +59,10 @@
             "Ctrl+space" = "focus mode_toggle";
             "${modifier}+Shift+minus" = "move scratchpad";
             "${modifier}+minus" = "scratchpad show";
-            "${modifier}+Shift+d" = "exec dms ipc call lock lock";
+            "${modifier}+f" = "fullscreen toggle";
+            "Ctrl+${modifier}+l" = "exec dms ipc call lock lock";
+            "${modifier}+Tab" = "workspace next";
+            "${modifier}+Shift+Tab" = "workspace prev";
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
