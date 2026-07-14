@@ -18,9 +18,17 @@
 #   3. Run:  nix build .#command-code 2>&1 | grep "got:"
 #   4. Copy the printed hash back into `npmDepsHash`.
 #   5. The lockfile in `command-code-lock/` was generated from the original
-#      upstream tarball after stripping devDeps. To regenerate:
+#      upstream tarball after stripping devDeps and bumping OpenTelemetry
+#      dependency ranges (see postPatch below for the exact bumps needed to
+#      fix CVE-2026-54285). To regenerate:
 #        tar xzf <tarball> -C /tmp/cc && cd /tmp/cc/package && \
 #        sed -i '/"devDependencies": {/,/^  }/d' package.json && \
+#        sed -i \
+#          -e 's|"@opentelemetry/exporter-trace-otlp-http": "[^"]*"|"@opentelemetry/exporter-trace-otlp-http": "^0.219.0"|' \
+#          -e 's|"@opentelemetry/resources": "[^"]*"|"@opentelemetry/resources": "^2.8.0"|' \
+#          -e 's|"@opentelemetry/sdk-node": "[^"]*"|"@opentelemetry/sdk-node": "^0.219.0"|' \
+#          -e 's|"@opentelemetry/sdk-trace-node": "[^"]*"|"@opentelemetry/sdk-trace-node": "^2.8.0"|' \
+#          package.json && \
 #        npm install --package-lock-only --ignore-scripts && \
 #        cp package-lock.json modules/pkgs/command-code-lock/
 #   6. Rebuild with `nix build .#command-code` to confirm.
@@ -48,9 +56,16 @@ buildNpmPackage rec {
   postPatch = ''
     cp ${./command-code-lock/package-lock.json} package-lock.json
     sed -i '/^  "devDependencies": {/,/^  }/d' package.json
+    # Bump OpenTelemetry deps to fix CVE-2026-54285 (GHSA-8988-4f7v-96qf)
+    sed -i \
+      -e 's|"@opentelemetry/exporter-trace-otlp-http": "[^"]*"|"@opentelemetry/exporter-trace-otlp-http": "^0.219.0"|' \
+      -e 's|"@opentelemetry/resources": "[^"]*"|"@opentelemetry/resources": "^2.8.0"|' \
+      -e 's|"@opentelemetry/sdk-node": "[^"]*"|"@opentelemetry/sdk-node": "^0.219.0"|' \
+      -e 's|"@opentelemetry/sdk-trace-node": "[^"]*"|"@opentelemetry/sdk-trace-node": "^2.8.0"|' \
+      package.json
   '';
 
-  npmDepsHash = "sha256-bUSZPUWifK0VpkWpJFDgnmbZ9zmCZQC2zw8q2vnpgBY=";
+  npmDepsHash = "sha256-dzoUX+dxh/DZzWMJmDS9v9oBiR+f01o5732lufEtbGE=";
 
   nativeBuildInputs = [
     makeWrapper
