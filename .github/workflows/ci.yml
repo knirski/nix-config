@@ -18,6 +18,30 @@ permissions:
   contents: read
 
 jobs:
+  # Fast lane: runs on every PR including taste-only changes.
+  # Heavy downstream jobs gate on non-taste changes via dorny/paths-filter.
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      non-taste: ${{ steps.filter.outputs.non-taste }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: filter
+        with:
+          filters: |
+            non-taste:
+              - '**/*'
+              - '!.commandcode/taste/**'
+
   static:
     name: Static and repository policy
     runs-on: ubuntu-24.04
@@ -54,6 +78,8 @@ jobs:
 
   evaluation:
     name: Evaluation and pure invariants
+    if: needs.changes.outputs.non-taste == 'true'
+    needs: [static, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -107,7 +133,8 @@ jobs:
 
   build:
     name: Build ${{ matrix.host }} closure
-    needs: [static, evaluation]
+    if: needs.changes.outputs.non-taste == 'true'
+    needs: [static, evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -140,7 +167,8 @@ jobs:
 
   resilience:
     name: Strict KVM behavior tests
-    needs: [static, evaluation]
+    if: needs.changes.outputs.non-taste == 'true'
+    needs: [static, evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -171,7 +199,8 @@ jobs:
 
   topology:
     name: Publish sanitized topology
-    needs: [static, evaluation]
+    if: needs.changes.outputs.non-taste == 'true'
+    needs: [static, evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
