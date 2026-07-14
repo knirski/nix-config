@@ -117,7 +117,8 @@ local convention. Point the symlink at whichever private key matches
 `secrets/agenix-master.pub`; verify the public half before rekeying:
 
 ```bash
-diff -u secrets/agenix-master.pub \
+diff -u \
+  <(awk '{print $1, $2}' secrets/agenix-master.pub) \
   <(ssh-keygen -y -f "$HOME/.ssh/agenix_master")
 ```
 
@@ -255,7 +256,7 @@ secrets/
 ├── soyo.pub                # Soyo host SSH public key (plaintext; enrolled
 │                           #   during first install)
 ├── zbook.pub               # zbook host SSH public key (plaintext)
-├── root-password.age       # Master-encrypted (krzysiek's key)
+├── root-password.age       # Master-encrypted (agenix master key)
 ├── krzysiek-password.age   # Master-encrypted
 ├── soyo-restic-password.age  # Master-encrypted (Soyo restic repo)
 ├── zbook-restic-password.age # Master-encrypted (zbook restic repo)
@@ -520,11 +521,11 @@ ssh-keygen -t ed25519 -f ~/.ssh/agenix_master_new
 cp ~/.ssh/agenix_master_new.pub secrets/agenix-master.pub
 
 # 3. Re-encrypt every master .age file with the new key
-NEW_PUBKEY=$(tr -d '\n' < secrets/agenix-master.pub)
+set -euo pipefail
 for f in secrets/*.age; do
-  rage -d -i ~/.ssh/agenix_master "$f" \
-    | rage -e -r "$NEW_PUBKEY" -o "$f.tmp" \
-    && mv "$f.tmp" "$f"
+  tmp="${f%.age}.tmp.age"
+  rage -d -i ~/.ssh/agenix_master "$f" | rage -e -R secrets/agenix-master.pub -o "$tmp"
+  mv "$tmp" "$f"
 done
 
 # 4. Retarget the operator-side symlink; no Nix edit is needed
@@ -646,7 +647,7 @@ for convenience, but you can work with `.age` files directly:
 
 ```bash
 # Encrypt a file for the master identity
-rage -e -r "$(tr -d '\n' < secrets/agenix-master.pub)" \
+rage -e -R secrets/agenix-master.pub \
   < plaintext.txt > secrets/encrypted.age
 
 # Decrypt with the SSH private key directly
@@ -654,8 +655,8 @@ rage -d -i /etc/agenix-rekey/master-identity secrets/encrypted.age
 ```
 
 This only works when the file was encrypted for a recipient that matches the
-SSH key. The `agenix edit` command handles this correctly; raw `rage -e` also
-works as long as you pass the raw SSH public key from `secrets/agenix-master.pub`.
+SSH key. The `agenix edit` command handles this correctly; raw `rage -e -R`
+also works by reading the SSH public key directly from the file.
 
 The `masterIdentities` in both host assemblers point to the stable
 `/etc/agenix-rekey/master-identity` symlink. `agenix rekey` passes its target to

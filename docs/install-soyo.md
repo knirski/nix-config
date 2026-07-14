@@ -115,6 +115,15 @@ echo "test" | nix run nixpkgs#rage -- -e -i /etc/agenix-rekey/master-identity -o
   && echo "SSH key OK" && rm -f /tmp/.age-test
 ```
 
+After the install-time rekey is complete, remove the temporary copy of the
+master key from the live environment. The live ISO is RAM-backed so the key
+disappears on reboot, but explicit cleanup is good hygiene:
+
+```bash
+rm -f ~/.ssh/agenix_master
+sudo rm -f /etc/agenix-rekey/master-identity
+```
+
 ### GitHub CLI (for git auth)
 
 ```bash
