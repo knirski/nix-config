@@ -16,7 +16,10 @@
           jack.enable = true;
         };
 
-        printing.enable = true;
+        printing = {
+          enable = true;
+          drivers = [ pkgs.hplipWithPlugin ];
+        };
         blueman.enable = true;
         gnome.gnome-keyring.enable = true;
       };
@@ -35,6 +38,23 @@
         firefox
       ];
 
-      hardware.bluetooth.enable = true;
+      hardware = {
+        bluetooth.enable = true;
+        printers = {
+          ensureDefaultPrinter = "HP-LaserJet-Pro-M125nw";
+          ensurePrinters = [
+            {
+              name = "HP-LaserJet-Pro-M125nw";
+              location = "Home";
+              deviceUri = "socket://10.0.0.11";
+              model = "drv:///hpcups.drv/hp-laserjet_pro_mfp_m125nw.ppd";
+            }
+          ];
+        };
+        sane = {
+          enable = true;
+          extraBackends = [ pkgs.hplipWithPlugin ];
+        };
+      };
     };
 }
