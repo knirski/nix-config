@@ -68,8 +68,8 @@
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
-            "Print" = "exec gnome-screenshot --interactive";
-            "Shift+Print" = "exec gnome-screenshot --area";
+            "Print" = "exec bash -c 'cd ~/Pictures/Screenshots && grimblast save screen'";
+            "Shift+Print" = "exec bash -c 'cd ~/Pictures/Screenshots && grimblast save area'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";
