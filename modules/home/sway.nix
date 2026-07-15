@@ -150,9 +150,10 @@
       # is actively playing.  Without this, DMS's acSuspendTimeout fires
       # after 10 min of keyboard/mouse idle even when audio is playing.
       #
-      # Polls every 15 s via playerctl; holds a systemd-inhibit sleep lock
-      # as long as any player reports "Playing" status.  On script exit or
-      # crash the inhibitor is released automatically.
+      # Runs a single long-lived `systemd-inhibit` background process when
+      # playback is detected, and kills it when playback stops.  This avoids
+      # the race window of the per-iteration pattern where the inhibitor
+      # lock is briefly released between polling cycles.
       systemd.user.services.media-sleep-inhibit = {
         Unit = {
           Description = "Inhibit sleep while MPRIS media is playing";
@@ -169,12 +170,29 @@
               ];
               text = ''
                 INTERVAL=15
+                inhibitor_pid=""
+
+                cleanup() {
+                  if [ -n "$inhibitor_pid" ]; then
+                    kill "$inhibitor_pid" 2>/dev/null || true
+                  fi
+                }
+                trap cleanup EXIT
+
                 while true; do
                   if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
-                    systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep "$INTERVAL"
+                    if [ -z "$inhibitor_pid" ]; then
+                      systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
+                      inhibitor_pid=$!
+                    fi
                   else
-                    sleep "$INTERVAL"
+                    if [ -n "$inhibitor_pid" ]; then
+                      kill "$inhibitor_pid" 2>/dev/null || true
+                      wait "$inhibitor_pid" 2>/dev/null || true
+                      inhibitor_pid=""
+                    fi
                   fi
+                  sleep "$INTERVAL"
                 done
               '';
             }
