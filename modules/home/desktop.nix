@@ -17,7 +17,6 @@
           signal-desktop
           grim
           slurp
-          swappy
         ];
     };
 }
