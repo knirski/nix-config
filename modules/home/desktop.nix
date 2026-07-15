@@ -15,6 +15,9 @@
           loupe
           freetube
           signal-desktop
+          grim
+          slurp
+          swappy
         ];
     };
 }

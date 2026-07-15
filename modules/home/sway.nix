@@ -2,6 +2,10 @@
   aspects.homeManager.sway =
     { pkgs, ... }:
     {
+      home.packages = with pkgs; [
+        libnotify
+      ];
+
       wayland.windowManager.sway = {
         enable = true;
         xwayland = true;
@@ -55,14 +59,27 @@
             "${modifier}+Shift+8" = "move container to workspace number 8";
             "${modifier}+Shift+9" = "move container to workspace number 9";
             "${modifier}+Shift+space" = "floating toggle";
-            "${modifier}+space" = "focus mode_toggle";
+            "${modifier}+space" = "exec dms ipc call spotlight toggle";
+            "${modifier}+Ctrl+space" = "focus mode_toggle";
             "${modifier}+Shift+minus" = "move scratchpad";
             "${modifier}+minus" = "scratchpad show";
-            "${modifier}+d" = "exec dms ipc call spotlight toggle";
-            "${modifier}+Shift+d" = "exec dms ipc call lock lock";
+            "${modifier}+m" = "move scratchpad";
+            "${modifier}+e" = "exec dms ipc call spotlight toggleQuery \":e\"";
+            "${modifier}+f" = "fullscreen toggle";
+            "Ctrl+${modifier}+l" = "exec dms ipc call lock lock";
+            "${modifier}+Tab" = "workspace next";
+            "${modifier}+Shift+Tab" = "workspace prev";
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
+            "${modifier}+Print" =
+              "exec bash -c 'cd ~/Pictures/Screenshots && grim - | swappy -f - -o screenshot-$(date +%Y%m%d-%H%M%S).png && notify-send \"Screenshot saved\"'";
+            "${modifier}+Ctrl+Shift+3" =
+              "exec bash -c 'cd ~/Pictures/Screenshots && grim - | swappy -f - -o screenshot-$(date +%Y%m%d-%H%M%S).png && notify-send \"Screenshot saved\"'";
+            "${modifier}+Ctrl+Print" =
+              "exec bash -c 'cd ~/Pictures/Screenshots && grim -g \"$(slurp)\" - | swappy -f - -o screenshot-$(date +%Y%m%d-%H%M%S).png && notify-send \"Screenshot saved\"'";
+            "${modifier}+Ctrl+Shift+4" =
+              "exec bash -c 'cd ~/Pictures/Screenshots && grim -g \"$(slurp)\" - | swappy -f - -o screenshot-$(date +%Y%m%d-%H%M%S).png && notify-send \"Screenshot saved\"'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";
