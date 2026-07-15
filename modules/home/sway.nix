@@ -146,6 +146,24 @@
         Install.WantedBy = [ "graphical-session.target" ];
       };
 
+      # Manual lid-close inhibitor.  Run `disable-lid` in a terminal before
+      # closing the laptop lid to keep the system awake (useful when moving
+      # between rooms while media is playing or a download is running).
+      # Cancel it with Ctrl+C — the inhibitor is released on script exit.
+      home.packages = [
+        (pkgs.writeShellApplication {
+          name = "disable-lid";
+          runtimeInputs = [ pkgs.systemd ];
+          text = ''
+            exec systemd-inhibit \
+              --what=handle-lid-switch \
+              --who="disable-lid" \
+              --why="Manual lid-close override" \
+              sleep infinity
+          '';
+        })
+      ];
+
       gtk = {
         enable = true;
         theme = {
