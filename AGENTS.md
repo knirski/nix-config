@@ -234,3 +234,13 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   suspend attempts with "Input/output error". Fixed by
   `NVreg_EnableGpuFirmware=0` in `modules/nixos/nvidia.nix`. Requires a reboot
   (the crashed module state is stuck until cold boot).
+- **DMS auto-suspend while media playing.** DMS's `acSuspendTimeout: 600`
+  fires after 10 minutes of keyboard/mouse idle regardless of audio playback.
+  Fixed by `media-sleep-inhibit` systemd user service in
+  `modules/home/sway.nix` — polls MPRIS players every 15s via `playerctl`
+  and holds a `systemd-inhibit --what=sleep` lock while media is playing.
+- **NetworkManager "connected" but no internet after s2idle resume.** The
+  data path (DNS resolution, interface state, route table) is often broken
+  after wake — common with USB-C dock Ethernet and s2idle on modern laptops.
+  Fixed by `powerManagement.resumeCommands` in `modules/nixos/laptop.nix`
+  which runs `systemctl try-restart NetworkManager.service` on resume.
