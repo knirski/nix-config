@@ -12,7 +12,6 @@
         extraConfig = ''
           output eDP-1 scale 1
           output DP-6 scale 1
-          for_window [app_id="swappy"] floating enable
         '';
         config = rec {
           modifier = "Mod4";
@@ -28,6 +27,7 @@
           # remains compositor/application-owned for middle-click pasting.
           startup = [ ];
           bars = [ ];
+          for_window."app_id == \"swappy\"" = "floating enable";
           keybindings = {
             "${modifier}+Return" = "exec ${terminal}";
             "${modifier}+Q" = "kill";
