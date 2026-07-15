@@ -29,7 +29,7 @@
               status = "enable";
               scale = 1.0;
               position = "1920,0";
-              mode = "2560x1440@59.951";
+              mode = "2560x1440@69.923";
             }
           ];
         }
