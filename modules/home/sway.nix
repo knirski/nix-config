@@ -5,7 +5,6 @@
       wayland.windowManager.sway = {
         enable = true;
         xwayland = true;
-        extraConfig = "";
         config = rec {
           modifier = "Mod4";
           terminal = "ghostty";
