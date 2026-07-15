@@ -72,12 +72,12 @@
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
-            "Ctrl+Print" =
+            "${modifier}+Print" =
               "exec bash -c 'f=~/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png && mkdir -p \"$(dirname \"$f\")\" && grim - | swappy -f - -o \"$f\" && notify-send \"Screenshot saved: $f\"'";
-            "${modifier}+Shift+s" =
-              "exec bash -c 'f=~/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png && mkdir -p \"$(dirname \"$f\")\" && grim -g \"$(slurp)\" - | swappy -f - -o \"$f\" && notify-send \"Screenshot saved: $f\"'";
             "${modifier}+Ctrl+Shift+3" =
               "exec bash -c 'f=~/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png && mkdir -p \"$(dirname \"$f\")\" && grim - | swappy -f - -o \"$f\" && notify-send \"Screenshot saved: $f\"'";
+            "${modifier}+Ctrl+Print" =
+              "exec bash -c 'f=~/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png && mkdir -p \"$(dirname \"$f\")\" && grim -g \"$(slurp)\" - | swappy -f - -o \"$f\" && notify-send \"Screenshot saved: $f\"'";
             "${modifier}+Ctrl+Shift+4" =
               "exec bash -c 'f=~/Pictures/Screenshots/screenshot-$(date +%Y%m%d-%H%M%S).png && mkdir -p \"$(dirname \"$f\")\" && grim -g \"$(slurp)\" - | swappy -f - -o \"$f\" && notify-send \"Screenshot saved: $f\"'";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
