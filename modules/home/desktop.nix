@@ -2,13 +2,14 @@
   aspects.homeManager.desktop =
     { pkgs, lib, ... }:
     {
+      programs.zed-editor.enable = true;
+
       home.packages =
         with pkgs;
         [
           mpv
           bitwarden-desktop
           spotify
-          zed-editor
         ]
         ++ lib.optionals stdenv.isLinux [
           wl-clipboard
