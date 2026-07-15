@@ -9,10 +9,6 @@
       wayland.windowManager.sway = {
         enable = true;
         xwayland = true;
-        extraConfig = ''
-          output eDP-1 scale 1
-          output DP-6 scale 1
-        '';
         config = rec {
           modifier = "Mod4";
           terminal = "ghostty";

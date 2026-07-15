@@ -37,6 +37,8 @@
                 config.aspects.homeManager.desktop
                 config.aspects.homeManager.ssh
                 config.aspects.homeManager.sway
+                config.aspects.homeManager.kanshi
+                ../../hosts/zbook/kanshi.nix
                 inputs.dms.homeModules.dank-material-shell
                 inputs.dcal.homeModules.dank-calendar
                 inputs.dsearch.homeModules.default
