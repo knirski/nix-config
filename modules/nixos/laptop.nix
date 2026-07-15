@@ -1,6 +1,6 @@
 {
   aspects.nixos.laptop =
-    { lib, ... }:
+    { lib, pkgs, ... }:
     {
       services = {
         power-profiles-daemon.enable = true;
@@ -9,9 +9,20 @@
         fwupd.enable = true;
       };
 
-      # CPU frequency scaling governor (powersave by default on battery)
-      powerManagement.cpuFreqGovernor = "powersave";
-      powerManagement.powertop.enable = true;
+      # CPU frequency governor is managed dynamically by power-profiles-daemon
+      # (controlled by DMS power profile settings), not hardcoded here.
+      # Powertop applies power-saving tunings at boot via --auto-tune;
+      # Logitech receiver USB autosuspend is handled immutably via usbcore.quirks.
+      powerManagement = {
+        powertop.enable = true;
+        # After s2idle resume, NetworkManager often reports "connected" but
+        # the actual data path (DNS resolution, interface state, route table)
+        # is broken — common with USB-C dock Ethernet and s2idle on laptops.
+        # Restarting NetworkManager re-initializes all interfaces cleanly.
+        resumeCommands = ''
+          ${pkgs.systemd}/bin/systemctl try-restart NetworkManager.service
+        '';
+      };
 
       # Intel P-State driver (better power management on 12th/13th gen)
       boot.kernelParams = [

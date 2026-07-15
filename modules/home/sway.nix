@@ -146,6 +146,44 @@
         Install.WantedBy = [ "graphical-session.target" ];
       };
 
+      # Inhibit system sleep while any MPRIS media player (Spotify, etc.)
+      # is actively playing.  Without this, DMS's acSuspendTimeout fires
+      # after 10 min of keyboard/mouse idle even when audio is playing.
+      #
+      # Polls every 15 s via playerctl; holds a systemd-inhibit sleep lock
+      # as long as any player reports "Playing" status.  On script exit or
+      # crash the inhibitor is released automatically.
+      systemd.user.services.media-sleep-inhibit = {
+        Unit = {
+          Description = "Inhibit sleep while MPRIS media is playing";
+          After = [ "graphical-session.target" ];
+          PartOf = [ "graphical-session.target" ];
+        };
+        Service = {
+          ExecStart = "${
+            pkgs.writeShellApplication {
+              name = "media-sleep-inhibit";
+              runtimeInputs = [
+                pkgs.playerctl
+                pkgs.systemd
+              ];
+              text = ''
+                INTERVAL=15
+                while true; do
+                  if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
+                    systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep "$INTERVAL"
+                  else
+                    sleep "$INTERVAL"
+                  fi
+                done
+              '';
+            }
+          }/bin/media-sleep-inhibit";
+          Restart = "on-failure";
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
+
       gtk = {
         enable = true;
         theme = {
