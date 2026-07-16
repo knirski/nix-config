@@ -34,6 +34,17 @@
         goverlay # GUI for mangohud
         protonup-qt # Proton GE manager
         lutris # Game launcher
+        (pkgs.symlinkJoin {
+          name = "heroic-launcher-nvidia";
+          paths = [ pkgs.heroic-launcher ];
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            wrapProgram $out/bin/heroic \
+              --set __NV_PRIME_RENDER_OFFLOAD "1" \
+              --set __GLX_VENDOR_LIBRARY_NAME "nvidia" \
+              --set __VK_LAYER_NV_optimus "NVIDIA_only"
+          '';
+        })
       ];
 
       # Wine/proton support requires 32-bit GL

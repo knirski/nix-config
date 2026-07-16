@@ -1,7 +1,7 @@
 # NixOS base aspect — role-neutral defaults shared by every NixOS host.
 # Timezone, locale, nix settings, basic packages. Does not select a network
 # backend, swap policy, or graphical environment (see host-role-invariants).
-_:
+{ inputs, ... }:
 let
   sharedNixpkgsArgs = import ../../lib/mk-nixpkgs-args.nix { };
 in
@@ -9,6 +9,10 @@ in
   aspects.nixos.base =
     { pkgs, ... }:
     {
+      imports = [
+        inputs.nix-index-database.nixosModules.nix-index
+      ];
+
       time.timeZone = "Europe/Warsaw";
       i18n.defaultLocale = "en_US.UTF-8";
       console.keyMap = "pl2";
@@ -108,9 +112,16 @@ in
         htop
         jq
         just
-        nix-index # nix-locate: find which package provides a missing command
         nix-output-monitor # nom: real-time nixos-rebuild progress with ETA
         sbctl
+        # Nix development and debugging
+        nix-tree # browse Nix store dependency graphs interactively
+        nvd # diff Nix system closures (see what changed between builds)
+        lynis # security auditing tool
       ];
+
+      # Pre-built nix-index database (weekly updated)
+      programs.nix-index-database.enable = true;
+      programs.nix-index-database.comma.enable = true;
     };
 }

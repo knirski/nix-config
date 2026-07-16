@@ -4,6 +4,10 @@
     {
       home.packages = with pkgs; [
         libnotify
+        # Wayland/Sway utilities
+        pavucontrol # PulseAudio volume control GUI
+        nwg-displays # display configuration GUI
+        nwg-look # GTK theme manager
       ];
 
       wayland.windowManager.sway = {
@@ -17,6 +21,12 @@
               xkb_layout = "pl";
               repeat_delay = "250";
               repeat_rate = "50";
+            };
+            "type:touchpad" = {
+              tap = "enabled";
+              natural_scroll = "enabled";
+              dwt = "enabled";
+              pointer_accel = "0.3";
             };
           };
           # DMS owns the regular clipboard and its rich MIME types. PRIMARY
@@ -82,6 +92,71 @@
             "XF86AudioMicMute" = "exec dms ipc call audio micmute";
             "XF86MonBrightnessUp" = "exec dms ipc call brightness increment 5";
             "XF86MonBrightnessDown" = "exec dms ipc call brightness decrement 5";
+          };
+          # Window rules
+          window = {
+            commands = [
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = ".*\\.bitwarden";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = ".*\\.blueman-manager";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = "pavucontrol";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = "nwg-displays";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = "nwg-look";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*File.*Open.*";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*File.*Save.*";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*Preferences.*";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*Settings.*";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*About.*";
+                };
+              }
+            ];
           };
         };
       };
@@ -200,6 +275,12 @@
           Restart = "on-failure";
         };
         Install.WantedBy = [ "graphical-session.target" ];
+      };
+
+      services.wlsunset = {
+        enable = true;
+        latitude = "52.2";
+        longitude = "21.0";
       };
 
       gtk = {

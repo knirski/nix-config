@@ -58,6 +58,7 @@
 
 # nixos
 - When Home Manager deprecation warnings appear during evaluation (e.g., `programs.git.userEmail` → `programs.git.settings.user.email`), migrate to the new option paths to silence the warnings rather than leaving deprecated options in place. Confidence: 0.65
+- For applications with built-in account-based settings sync (Firefox via Firefox Sync, Zed via account sync), use a simple package install (`programs.<name>.enable = true`) without declarative settings — server-side sync conflicts with declarative config, and settings would be overwritten or produce merge conflicts. Confidence: 0.70
 
 
 # deployment

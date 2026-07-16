@@ -7,19 +7,330 @@
           EDITOR = "nvim";
         };
         packages = with pkgs; [
-          fd
-          ripgrep
-          tmux
-          gh
           command-code
-          codex
-          opencode
-          nnn
-          mc
+          # Modern CLI replacements (no HM modules)
+          du-dust
+          sd
+          yq
+          hyperfine
+          ncdu
+          dogdns
+          # Security tools
+          age
+          # Other tools without HM modules
+          procs
+          unrar # for extract() function
         ];
       };
 
       programs = {
+        atuin = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        bat.enable = true;
+        bottom.enable = true;
+        broot = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        btop = {
+          enable = true;
+          settings = {
+            # Catppuccin Mocha theme for consistent look with other tools
+            color_theme = "catppuccin_mocha";
+            theme_background = false;
+            truecolor = true;
+            rounded_corners = true;
+            graph_symbol = "braille"; # Braille characters for smooth graphs
+            shown_boxes = "cpu mem net proc";
+            cpu_graph_upper = "total"; # Show total CPU usage
+            cpu_graph_lower = "total";
+            cpu_invert_lower = true; # Invert lower graph for visual clarity
+            cpu_single_graph = false;
+            show_gpu_info = "on"; # Show GPU temperature (NVIDIA)
+            temp_scale = "celsius";
+            update_ms = 1000; # 1-second refresh rate
+          };
+        };
+        claude-code.enable = true;
+        codex.enable = true;
+        command-not-found.enable = true;
+        delta.enable = true;
+        difftastic.enable = true;
+        docker-cli.enable = true;
+        eza = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        fastfetch = {
+          enable = true;
+          settings = {
+            logo = {
+              type = "small"; # Small logo for compact output
+              padding = {
+                top = 1;
+                right = 2;
+                left = 2;
+              };
+            };
+            display = {
+              separator = " → "; # Arrow separator for clean look
+            };
+            # Show system info in logical groups
+            modules = [
+              "title"
+              "separator"
+              "os"
+              "kernel"
+              "shell"
+              "terminal"
+              "de"
+              "wm"
+              "wmtheme"
+              "separator"
+              "cpu"
+              "gpu"
+              "memory"
+              "disk"
+              "separator"
+              "localip"
+              "battery"
+              "locale"
+              "break"
+              "colors"
+            ];
+          };
+        };
+        fd.enable = true;
+        fzf = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        gh = {
+          enable = true;
+          extensions = with pkgs; [ gh-dash ];
+          settings = {
+            editor = "nvim";
+            git_protocol = "ssh";
+            prompt = "enabled";
+          };
+        };
+        gpg.enable = true;
+        jq.enable = true;
+        lazydocker.enable = true;
+        lazygit = {
+          enable = true;
+          settings = {
+            # Catppuccin Mocha theme colors
+            gui.theme = {
+              activeBorderColor = [
+                "#89b4fa" # Blue
+                "bold"
+              ];
+              inactiveBorderColor = [ "#a6adc8" ]; # Overlay0
+              searchingActiveBorderColor = [
+                "#f9e2af" # Yellow
+                "bold"
+              ];
+              selectedLineBgColor = [ "#313244" ]; # Surface0
+              cherryPickedCommitFgColor = [ "#89dceb" ]; # Teal
+              cherryPickedCommitBgColor = [ "#45475a" ]; # Surface1
+            };
+            git = {
+              paging = {
+                colorArg = "always";
+                pager = "delta --dark --paging=never"; # Use delta for syntax highlighting
+              };
+              commit = {
+                signOff = true; # Add Signed-off-by line
+              };
+            };
+          };
+        };
+        lsd.enable = true;
+        mc.enable = true;
+        mcfly = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        navi = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        nix-your-shell = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        nnn.enable = true;
+        neovim = {
+          enable = true;
+          defaultEditor = true;
+          viAlias = true;
+          vimAlias = true;
+          plugins = with pkgs.vimPlugins; [
+            # LSP support for multiple languages
+            nvim-lspconfig
+            # Treesitter for syntax highlighting and code understanding
+            (nvim-treesitter.withPlugins (p: [
+              p.nix
+              p.lua
+              p.python
+              p.javascript
+              p.typescript
+              p.rust
+              p.go
+              p.bash
+              p.json
+              p.yaml
+              p.toml
+              p.markdown
+            ]))
+            # Autocompletion engine
+            nvim-cmp
+            cmp-nvim-lsp # LSP source for nvim-cmp
+            cmp-buffer # Buffer words source
+            cmp-path # File path source
+            # Fuzzy finder for files, grep, buffers
+            telescope-nvim
+            plenary-nvim
+            # File explorer
+            neo-tree-nvim
+            # Status line
+            lualine-nvim
+            # Git integration
+            gitsigns-nvim
+            # Theme
+            catppuccin-nvim
+          ];
+          extraPackages = with pkgs; [
+            nil
+            lua-language-server
+            pyright
+            typescript-language-server
+            rust-analyzer
+            gopls
+          ];
+          extraLuaConfig = ''
+            -- Basic settings
+            vim.opt.number = true
+            vim.opt.relativenumber = true
+            vim.opt.termguicolors = true
+            vim.opt.signcolumn = "yes"
+            vim.opt.updatetime = 250
+
+            -- Keymaps
+            vim.g.mapleader = " "
+            vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
+            vim.keymap.set("n", "<leader>fg", "<cmd>Telescope live_grep<cr>")
+            vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>")
+            vim.keymap.set("n", "<leader>e", "<cmd>Neotree toggle<cr>")
+
+            -- LSP
+            local lspconfig = require('lspconfig')
+            local capabilities = require('cmp_nvim_lsp').default_capabilities()
+
+            -- Enable LSP servers
+            lspconfig.nil_ls.setup { capabilities = capabilities }  -- Nix
+            lspconfig.lua_ls.setup { capabilities = capabilities }   -- Lua
+            lspconfig.pyright.setup { capabilities = capabilities }  -- Python
+            lspconfig.ts_ls.setup { capabilities = capabilities }    -- TypeScript/JavaScript
+            lspconfig.rust_analyzer.setup { capabilities = capabilities }  -- Rust
+            lspconfig.gopls.setup { capabilities = capabilities }    -- Go
+
+            -- Completion
+            local cmp = require('cmp')
+            cmp.setup({
+              sources = {
+                { name = 'nvim_lsp' },
+                { name = 'buffer' },
+                { name = 'path' },
+              },
+              mapping = cmp.mapping.preset.insert({
+                ['<C-n>'] = cmp.mapping.select_next_item(),
+                ['<C-p>'] = cmp.mapping.select_prev_item(),
+                ['<CR>'] = cmp.mapping.confirm({ select = true }),
+                ['<C-Space>'] = cmp.mapping.complete(),
+              }),
+            })
+
+            -- Theme
+            vim.cmd.colorscheme "catppuccin"
+          '';
+        };
+        opencode.enable = true;
+        ripgrep.enable = true;
+        skim = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        tealdeer.enable = true;
+        thefuck = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        tmux = {
+          enable = true;
+          mouse = true;
+          keyMode = "vi";
+          terminal = "tmux-256color";
+          extraConfig = ''
+            # Use vi-style navigation
+            bind h select-pane -L
+            bind j select-pane -D
+            bind k select-pane -U
+            bind l select-pane -R
+
+            # Split panes with | and -
+            bind | split-window -h
+            bind - split-window -v
+
+            # Clipboard integration
+            set -g set-clipboard on
+
+            # Status bar
+            set -g status-style 'bg=#333333 fg=#5eacd3'
+            set -g status-left-length 50
+            set -g status-right-length 100
+            set -g status-left '#[fg=green]#S '
+            set -g status-right '#[fg=yellow]%Y-%m-%d #[fg=green]%H:%M'
+
+            # Start windows and panes at 1
+            set -g base-index 1
+            setw -g pane-base-index 1
+          '';
+        };
+        yazi = {
+          enable = true;
+          enableZshIntegration = true;
+          settings = {
+            manager = {
+              show_hidden = true;
+              sort_by = "modified";
+              sort_dir_first = true;
+              linemode = "size";
+            };
+            opener = {
+              edit = [
+                {
+                  run = "nvim \"$@\"";
+                  block = true;
+                  desc = "Edit";
+                }
+              ];
+              open = [
+                {
+                  run = "xdg-open \"$@\"";
+                  desc = "Open";
+                }
+              ];
+            };
+          };
+        };
+        zoxide = {
+          enable = true;
+          enableZshIntegration = true;
+        };
         starship = {
           enable = true;
           settings = {
@@ -29,6 +340,107 @@
         };
         zsh = {
           enable = true;
+          autosuggestion.enable = true;
+          syntaxHighlighting.enable = true;
+          history = {
+            size = 100000;
+            save = 100000;
+            path = "$HOME/.zsh_history";
+            ignoreDups = true;
+            ignoreAllDups = true;
+            ignoreSpace = true;
+            expireDuplicatesFirst = true;
+          };
+          shellAliases = {
+            # Navigation
+            ll = "eza -la --icons --git";
+            la = "eza -a --icons";
+            ls = "eza --icons";
+            lt = "eza -la --icons --git --tree --level=2";
+            ".." = "cd ..";
+            "..." = "cd ../..";
+            "...." = "cd ../../..";
+
+            # Git shortcuts
+            g = "git";
+            gst = "git status";
+            gco = "git checkout";
+            gcb = "git checkout -b";
+            gd = "git diff";
+            gds = "git diff --staged";
+            gl = "git pull";
+            gp = "git push";
+            gpf = "git push --force-with-lease";
+            gc = "git commit";
+            gca = "git commit --amend";
+            glog = "git log --oneline --graph --decorate";
+
+            # Nix
+            nrs = "sudo nixos-rebuild switch --flake .";
+            nrt = "sudo nixos-rebuild test --flake .";
+            hms = "home-manager switch --flake .";
+            nfu = "nix flake update";
+            ndv = "nix develop";
+
+            # System
+            df = "duf";
+            du = "dust";
+            ps = "procs";
+            cat = "bat";
+            grep = "ripgrep";
+            find = "fd";
+            top = "btop";
+            htop = "btop";
+            vim = "nvim";
+            vi = "nvim";
+
+            # Docker/Podman
+            d = "docker";
+            dc = "docker compose";
+            dps = "docker ps";
+            dex = "docker exec -it";
+
+            # Quick actions
+            mkdir = "mkdir -p";
+            path = "echo $PATH | tr ':' '\n'";
+            ports = "ss -tulnp";
+          };
+          initExtra = ''
+            # Custom functions (interactive shells only)
+            if [[ $- == *i* ]]; then
+              mkcd() { mkdir -p "$1" && cd "$1"; }
+              extract() {
+                if [ -f "$1" ]; then
+                  case "$1" in
+                    *.tar.bz2) tar xjf "$1" ;;
+                    *.tar.gz) tar xzf "$1" ;;
+                    *.tar.xz) tar xJf "$1" ;;
+                    *.bz2) bunzip2 "$1" ;;
+                    *.rar) unrar x "$1" ;;
+                    *.gz) gunzip "$1" ;;
+                    *.tar) tar xf "$1" ;;
+                    *.tbz2) tar xjf "$1" ;;
+                    *.tgz) tar xzf "$1" ;;
+                    *.zip) unzip "$1" ;;
+                    *.Z) uncompress "$1" ;;
+                    *.7z) 7z x "$1" ;;
+                    *) echo "'$1' cannot be extracted" ;;
+                  esac
+                else
+                  echo "'$1' is not a valid file"
+                fi
+              }
+              portkill() {
+                if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                  ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill
+                elif [[ "$OSTYPE" == "darwin"* ]]; then
+                  lsof -i tcp:"$1" -t | xargs kill
+                fi
+              }
+              weather() { curl -s "wttr.in/$1?format=3"; }
+              cheat() { curl -s "cheat.sh/$1"; }
+            fi
+          '';
           oh-my-zsh = {
             enable = true;
             plugins = [
@@ -57,8 +469,38 @@
         git = {
           enable = true;
           settings = {
-            user.name = "Krzysztof Nirski";
-            user.email = "krzysztof.nirski+github@gmail.com";
+            user = {
+              name = "Krzysztof Nirski";
+              email = "krzysztof.nirski+github@gmail.com";
+              signingkey = "~/.ssh/id_ed25519";
+            };
+            core.editor = "nvim";
+            init.defaultBranch = "main";
+            pull.rebase = true;
+            push.autoSetupRemote = true;
+            merge.conflictstyle = "diff3";
+            diff.colorMoved = "default";
+            # Use delta as pager
+            core.pager = "delta";
+            interactive.diffFilter = "delta --color-only";
+            delta = {
+              navigate = true;
+              light = false;
+              line-numbers = true;
+            };
+            # SSH commit signing
+            commit.gpgsign = true;
+            gpg.format = "ssh";
+            # Useful aliases
+            alias = {
+              lg = "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
+              st = "status";
+              co = "checkout";
+              br = "branch";
+              ci = "commit";
+              unstage = "reset HEAD --";
+              last = "log -1 HEAD";
+            };
           };
         };
         home-manager.enable = true;
@@ -66,6 +508,12 @@
           enable = true;
           nix-direnv.enable = true;
         };
+      };
+
+      services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {
+        enable = true;
+        enableZshIntegration = true;
+        pinentryPackage = pkgs.pinentry-gnome3;
       };
     };
 }

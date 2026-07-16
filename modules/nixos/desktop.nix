@@ -32,10 +32,12 @@
         nerd-fonts.jetbrains-mono
         nerd-fonts.fira-code
         nerd-fonts.symbols-only
+        inter
       ];
 
       environment.systemPackages = with pkgs; [
         firefox
+        simple-scan # scanning GUI
       ];
 
       hardware = {
