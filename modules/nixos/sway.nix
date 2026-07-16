@@ -32,6 +32,7 @@
     programs.dank-material-shell.greeter = {
       enable = true;
       compositor.name = "sway";
+      configHome = "/home/krzysiek";
     };
 
     # DMS supplies the greetd preStart through its upstream module. The pinned
