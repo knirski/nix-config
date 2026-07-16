@@ -212,7 +212,7 @@
             rust-analyzer
             gopls
           ];
-          extraLuaConfig = ''
+          initLua = ''
             -- Basic settings
             vim.opt.number = true
             vim.opt.relativenumber = true
@@ -355,7 +355,7 @@
           shellAliases = {
             # Navigation
             ll = "eza -la --icons --git";
-            la = lib.mkForce "eza -a --icons";
+            la = "eza -a --icons";
             ls = "eza --icons";
             lt = "eza -la --icons --git --tree --level=2";
             ".." = "cd ..";

@@ -28,6 +28,8 @@ enforcement belongs to the documentation-check layer.
 - [Deploy an existing Soyo](../hosts/soyo/DEPLOY.md) — short index to deployment,
   rollback and recovery procedures.
 - [Install zbook](../hosts/zbook/INSTALL.md) — workstation installation notes.
+- [Set up a workstation](workstation-setup.md) — recommended tooling and CLI setup.
+- [Troubleshooting](troubleshooting.md) — common issues and debugging steps.
 - [Update and roll back](update-and-rollback.md) — input updates, deployment
   checks and rollback paths.
 - [Router recommendations](router-recommendation.md) — DHCP cutover and router

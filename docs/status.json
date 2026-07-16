@@ -28,7 +28,9 @@
     "docs/superpowers/specs/soyo-dns-dhcp-appliance.md": { "status": "canonical", "role": "architecture design" },
     "docs/archive/testing-baseline.md": { "status": "historical", "role": "dated verification evidence" },
     "docs/testing.md": { "status": "active", "role": "verification policy" },
+    "docs/troubleshooting.md": { "status": "active", "role": "troubleshooting guide" },
     "docs/update-and-rollback.md": { "status": "active", "role": "operations runbook" },
+    "docs/workstation-setup.md": { "status": "active", "role": "workstation setup guide" },
     "hosts/soyo/DEPLOY.md": { "status": "active", "role": "Soyo deployment index" },
     "hosts/zbook/INSTALL.md": { "status": "active", "role": "zbook installation runbook" }
   }
