@@ -233,17 +233,27 @@
             vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>")
             vim.keymap.set("n", "<leader>e", "<cmd>Neotree toggle<cr>")
 
-            -- LSP
-            local lspconfig = require('lspconfig')
+            -- LSP using the new vim.lsp.config API (nvim-lspconfig 2.10+, Neovim 0.11+)
+            -- See :help lspconfig-nvim-0.11
             local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
-            -- Enable LSP servers
-            lspconfig.nil_ls.setup { capabilities = capabilities }  -- Nix
-            lspconfig.lua_ls.setup { capabilities = capabilities }   -- Lua
-            lspconfig.pyright.setup { capabilities = capabilities }  -- Python
-            lspconfig.ts_ls.setup { capabilities = capabilities }    -- TypeScript/JavaScript
-            lspconfig.rust_analyzer.setup { capabilities = capabilities }  -- Rust
-            lspconfig.gopls.setup { capabilities = capabilities }    -- Go
+            -- Configure LSP servers
+            vim.lsp.config.nil_ls = { capabilities = capabilities }  -- Nix
+            vim.lsp.config.lua_ls = { capabilities = capabilities }   -- Lua
+            vim.lsp.config.pyright = { capabilities = capabilities }  -- Python
+            vim.lsp.config.ts_ls = { capabilities = capabilities }    -- TypeScript/JavaScript
+            vim.lsp.config.rust_analyzer = { capabilities = capabilities }  -- Rust
+            vim.lsp.config.gopls = { capabilities = capabilities }    -- Go
+
+            -- Enable all configured LSP servers
+            vim.lsp.enable({
+              'nil_ls',
+              'lua_ls',
+              'pyright',
+              'ts_ls',
+              'rust_analyzer',
+              'gopls',
+            })
 
             -- Completion
             local cmp = require('cmp')
