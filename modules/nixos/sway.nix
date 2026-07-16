@@ -1,8 +1,27 @@
 {
-  aspects.nixos.sway = _: {
+  aspects.nixos.sway = { pkgs, ... }: {
     programs.sway = {
       enable = true;
       wrapperFeatures.gtk = true;
+    };
+
+    # Polkit authentication agent for GUI privilege escalation
+    security.polkit.enable = true;
+    environment.systemPackages = with pkgs; [
+      polkit_gnome
+    ];
+    systemd.user.services.polkit-gnome-authentication-agent = {
+      description = "polkit-gnome-authentication-agent-1";
+      wantedBy = [ "graphical-session.target" ];
+      wants = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+        Restart = "on-failure";
+        RestartSec = 1;
+        TimeoutStopSec = 10;
+      };
     };
 
     # DMS greetd greeter — identical look to the DMS lock screen.
@@ -23,7 +42,15 @@
       QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
       XDG_SESSION_TYPE = "wayland";
       XDG_CURRENT_DESKTOP = "sway";
+      XDG_CURRENT_PORTAL = "wlr";
       SWAY_UNSUPPORTED_GPU = "1";
+    };
+
+    # XDG Desktop Portals for Wayland
+    xdg.portal = {
+      enable = true;
+      wlr.enable = true;
+      extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
     };
   };
 }

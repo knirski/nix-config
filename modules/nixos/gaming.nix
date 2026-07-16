@@ -9,6 +9,14 @@
           remotePlay.openFirewall = true;
           dedicatedServer.openFirewall = true;
           gamescopeSession.enable = true;
+          # Ensure games use the NVIDIA GPU in offload mode
+          package = pkgs.steam.override {
+            extraEnv = {
+              __NV_PRIME_RENDER_OFFLOAD = "1";
+              __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+              __VK_LAYER_NV_optimus = "NVIDIA_only";
+            };
+          };
         };
 
         # Gamemode — automatic game optimisation
@@ -34,7 +42,14 @@
         goverlay # GUI for mangohud
         protonup-qt # Proton GE manager
         lutris # Game launcher
-        heroic-launcher # Epic/GOG games launcher
+        (heroic-launcher.override {
+          # Ensure Heroic uses the NVIDIA GPU in offload mode
+          extraEnv = {
+            __NV_PRIME_RENDER_OFFLOAD = "1";
+            __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+            __VK_LAYER_NV_optimus = "NVIDIA_only";
+          };
+        })
       ];
 
       # Wine/proton support requires 32-bit GL

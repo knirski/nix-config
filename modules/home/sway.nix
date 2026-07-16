@@ -22,6 +22,12 @@
               repeat_delay = "250";
               repeat_rate = "50";
             };
+            "type:touchpad" = {
+              tap = "enabled";
+              natural_scroll = "enabled";
+              dwt = "enabled";
+              pointer_accel = "0.3";
+            };
           };
           # DMS owns the regular clipboard and its rich MIME types. PRIMARY
           # remains compositor/application-owned for middle-click pasting.
@@ -86,6 +92,71 @@
             "XF86AudioMicMute" = "exec dms ipc call audio micmute";
             "XF86MonBrightnessUp" = "exec dms ipc call brightness increment 5";
             "XF86MonBrightnessDown" = "exec dms ipc call brightness decrement 5";
+          };
+          # Window rules
+          window = {
+            commands = [
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = ".*\\.bitwarden";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = ".*\\.blueman-manager";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = "pavucontrol";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = "nwg-displays";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  app_id = "nwg-look";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*File.*Open.*";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*File.*Save.*";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*Preferences.*";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*Settings.*";
+                };
+              }
+              {
+                command = "floating enable";
+                criteria = {
+                  title = ".*About.*";
+                };
+              }
+            ];
           };
         };
       };

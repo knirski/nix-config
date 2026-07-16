@@ -32,12 +32,14 @@
         nerd-fonts.jetbrains-mono
         nerd-fonts.fira-code
         nerd-fonts.symbols-only
+        inter
       ];
 
       environment.systemPackages = with pkgs; [
         firefox
         distrobox # integrate other distros via containers
         virt-manager # VM management GUI
+        simple-scan # scanning GUI
       ];
 
       hardware = {
