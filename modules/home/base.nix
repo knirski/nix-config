@@ -113,9 +113,11 @@
           # nixpkgs stable (release-26.05) which has fzf 0.72.0.
           # Disabled since nushell is not used.
           enableNushellIntegration = false;
-          # Let mcfly own Ctrl-R for history search. An empty command string
-          # tells fzf not to bind Ctrl-R at all, yielding it to mcfly.
-          historyWidget.command = "";
+          # Mcfly owns Ctrl-R for history search.  In the generated shell init
+          # (zsh and bash), mcfly's init runs after fzf's key-bindings, so
+          # mcfly's `bindkey '^R'` / `bind '\C-r'` naturally overwrites fzf's.
+          # No explicit fzf override is needed - the shell init ordering
+          # guarantees mcfly wins the Ctrl-R binding.
         };
         gh = {
           enable = true;
