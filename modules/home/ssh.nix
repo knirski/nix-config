@@ -25,12 +25,16 @@
           User = "krzysiek";
           IdentityFile = "~/.ssh/soyo_ed25519";
           IdentitiesOnly = true;
+          # ForwardAgent is acceptable on a trusted homelab LAN.
+          # Use `ssh -A` for ad-hoc forwarding if you prefer not to set this.
+          ForwardAgent = true;
         };
 
         zbook = {
           User = "krzysiek";
           IdentityFile = "~/.ssh/zbook_ed25519";
           IdentitiesOnly = true;
+          ForwardAgent = true;
         };
       };
     };

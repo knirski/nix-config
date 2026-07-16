@@ -17,12 +17,6 @@
           dogdns
           # Security tools
           age
-          # AI tools (no HM modules)
-          claude-code
-          codex
-          opencode
-          # Container tools
-          docker-client
           # Other tools without HM modules
           procs
         ];
@@ -57,9 +51,12 @@
             update_ms = 1000;
           };
         };
+        claude-code.enable = true;
+        codex.enable = true;
         command-not-found.enable = true;
         delta.enable = true;
         difftastic.enable = true;
+        docker-cli.enable = true;
         eza = {
           enable = true;
           enableZshIntegration = true;
@@ -257,6 +254,7 @@
             vim.cmd.colorscheme "catppuccin"
           '';
         };
+        opencode.enable = true;
         ripgrep.enable = true;
         skim = {
           enable = true;

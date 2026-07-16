@@ -1,7 +1,7 @@
 # NixOS base aspect — role-neutral defaults shared by every NixOS host.
 # Timezone, locale, nix settings, basic packages. Does not select a network
 # backend, swap policy, or graphical environment (see host-role-invariants).
-_:
+{ inputs, ... }:
 let
   sharedNixpkgsArgs = import ../../lib/mk-nixpkgs-args.nix { };
 in
@@ -9,6 +9,10 @@ in
   aspects.nixos.base =
     { pkgs, ... }:
     {
+      imports = [
+        inputs.nix-index-database.nixosModules.nix-index
+      ];
+
       time.timeZone = "Europe/Warsaw";
       i18n.defaultLocale = "en_US.UTF-8";
       console.keyMap = "pl2";
