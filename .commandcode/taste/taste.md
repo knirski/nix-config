@@ -17,5 +17,8 @@ See [taste-(continuously-learned-by-[commandcode][cmd])/taste.md](taste-(continu
 # secrets
 - Name the master identity public key file in `secrets/` consistently with the SSH key filename (e.g., `krzysiek.age.pub` → `agenix_master.pub`) to distinguish the master encryption key from the SSH login key (`krzysiek-authorized-key.pub`). Confidence: 0.60
 
+# zed
+- For this project: when configuring Zed via Home Manager, keep only `enable` and `extensions` — omit `userSettings` (theme, fonts, auto_update, etc.) because the user uses Zed account sync, which manages those settings server-side and pushes them to all signed-in instances. Confidence: 0.70
+
 # nixos
 See [nixos/taste.md](nixos/taste.md)
