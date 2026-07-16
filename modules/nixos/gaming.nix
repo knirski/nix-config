@@ -35,8 +35,8 @@
         protonup-qt # Proton GE manager
         lutris # Game launcher
         (pkgs.symlinkJoin {
-          name = "heroic-launcher-nvidia";
-          paths = [ pkgs.heroic-launcher ];
+          name = "heroic-nvidia";
+          paths = [ pkgs.heroic ];
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postBuild = ''
             wrapProgram $out/bin/heroic \

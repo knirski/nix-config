@@ -1,5 +1,5 @@
 {
-  aspects.nixos.sway = { pkgs, ... }: {
+  aspects.nixos.sway = { pkgs, lib, ... }: {
     programs.sway = {
       enable = true;
       wrapperFeatures.gtk = true;
@@ -51,12 +51,7 @@
       enable = true;
       wlr.enable = true;
       extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
-      config.sway = {
-        default = [
-          "wlr"
-          "gtk"
-        ];
-      };
+      config.sway.default = lib.mkForce "wlr;gtk";
     };
   };
 }
