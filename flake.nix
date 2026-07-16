@@ -20,9 +20,6 @@
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs-unstable";
 
-    home-manager-stable.url = "github:nix-community/home-manager/release-26.05";
-    home-manager-stable.inputs.nixpkgs.follows = "nixpkgs";
-
     agenix.url = "github:ryantm/agenix";
     agenix.inputs.nixpkgs.follows = "nixpkgs";
     agenix-rekey.url = "github:oddlama/agenix-rekey";

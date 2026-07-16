@@ -27,6 +27,9 @@
         atuin = {
           enable = true;
           enableZshIntegration = true;
+          # Let mcfly own Ctrl-R for interactive search; atuin still syncs
+          # history and works via up-arrow search.
+          flags = [ "--disable-ctrl-r" ];
         };
         bat.enable = true;
         bottom.enable = true;
@@ -106,6 +109,13 @@
         fzf = {
           enable = true;
           enableZshIntegration = true;
+          # Nushell integration requires fzf >= 0.73.0, but soyo uses
+          # nixpkgs stable (release-26.05) which has fzf 0.72.0.
+          # Disabled since nushell is not used.
+          enableNushellIntegration = false;
+          # Let mcfly own Ctrl-R for history search. An empty command string
+          # tells fzf not to bind Ctrl-R at all, yielding it to mcfly.
+          historyWidget.command = "";
         };
         gh = {
           enable = true;
@@ -227,17 +237,27 @@
             vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>")
             vim.keymap.set("n", "<leader>e", "<cmd>Neotree toggle<cr>")
 
-            -- LSP
-            local lspconfig = require('lspconfig')
+            -- LSP using the new vim.lsp.config API (nvim-lspconfig 2.10+, Neovim 0.11+)
+            -- See :help lspconfig-nvim-0.11
             local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
-            -- Enable LSP servers
-            lspconfig.nil_ls.setup { capabilities = capabilities }  -- Nix
-            lspconfig.lua_ls.setup { capabilities = capabilities }   -- Lua
-            lspconfig.pyright.setup { capabilities = capabilities }  -- Python
-            lspconfig.ts_ls.setup { capabilities = capabilities }    -- TypeScript/JavaScript
-            lspconfig.rust_analyzer.setup { capabilities = capabilities }  -- Rust
-            lspconfig.gopls.setup { capabilities = capabilities }    -- Go
+            -- Configure LSP servers
+            vim.lsp.config.nil_ls = { capabilities = capabilities }  -- Nix
+            vim.lsp.config.lua_ls = { capabilities = capabilities }   -- Lua
+            vim.lsp.config.pyright = { capabilities = capabilities }  -- Python
+            vim.lsp.config.ts_ls = { capabilities = capabilities }    -- TypeScript/JavaScript
+            vim.lsp.config.rust_analyzer = { capabilities = capabilities }  -- Rust
+            vim.lsp.config.gopls = { capabilities = capabilities }    -- Go
+
+            -- Enable all configured LSP servers
+            vim.lsp.enable({
+              'nil_ls',
+              'lua_ls',
+              'pyright',
+              'ts_ls',
+              'rust_analyzer',
+              'gopls',
+            })
 
             -- Completion
             local cmp = require('cmp')
