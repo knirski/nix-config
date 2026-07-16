@@ -8,7 +8,7 @@
         };
         packages = with pkgs; [
           command-code
-          gemini-cli
+          antigravity
           # Modern CLI replacements (no HM modules)
           dust
           sd
