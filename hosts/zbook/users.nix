@@ -12,6 +12,7 @@
       "audio"
       "video"
       "libvirtd"
+      "i2c"
     ];
     hashedPasswordFile = config.age.secrets.krzysiek-password.path;
     openssh.authorizedKeys.keys = [
