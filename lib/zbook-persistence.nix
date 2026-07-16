@@ -13,6 +13,7 @@ rec {
     ".codex"
     ".local/state/wireplumber"
     ".local/share/zed"
+    ".local/share/atuin"
     "github"
     "Downloads"
     "Documents"

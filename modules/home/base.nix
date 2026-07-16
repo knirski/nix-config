@@ -31,6 +31,16 @@
           # Let fzf own Ctrl-R for interactive search; atuin still syncs
           # history and works via up-arrow search.
           flags = [ "--disable-ctrl-r" ];
+          # Up-arrow searches only commands run in the current directory,
+          # while Ctrl-R (fzf) searches everything.
+          # Do NOT force-overwrite: Atuin auto-generates a full config.toml
+          # with sync settings and defaults. forceOverwriteSettings would
+          # replace that file with only the two settings declared below,
+          # silently losing any other user or auto-generated configuration.
+          settings = {
+            filter_mode_shell_up_key_binding = "directory";
+            enter_accept = true;
+          };
         };
         bat.enable = true;
         bottom.enable = true;
