@@ -284,7 +284,6 @@
 
             # Clipboard integration
             set -g set-clipboard on
-            set -ag terminal-overrides ',xterm-256color:Ms=\E]52;c;%p2%s\007'
 
             # Status bar
             set -g status-style 'bg=#333333 fg=#5eacd3'
@@ -405,39 +404,39 @@
           };
           initExtra = ''
             # Custom functions (interactive shells only)
-            [[ $- != *i* ]] && return
-
-            mkcd() { mkdir -p "$1" && cd "$1"; }
-            extract() {
-              if [ -f "$1" ]; then
-                case "$1" in
-                  *.tar.bz2) tar xjf "$1" ;;
-                  *.tar.gz) tar xzf "$1" ;;
-                  *.tar.xz) tar xJf "$1" ;;
-                  *.bz2) bunzip2 "$1" ;;
-                  *.rar) unrar x "$1" ;;
-                  *.gz) gunzip "$1" ;;
-                  *.tar) tar xf "$1" ;;
-                  *.tbz2) tar xjf "$1" ;;
-                  *.tgz) tar xzf "$1" ;;
-                  *.zip) unzip "$1" ;;
-                  *.Z) uncompress "$1" ;;
-                  *.7z) 7z x "$1" ;;
-                  *) echo "'$1' cannot be extracted" ;;
-                esac
-              else
-                echo "'$1' is not a valid file"
-              fi
-            }
-            portkill() {
-              if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill
-              elif [[ "$OSTYPE" == "darwin"* ]]; then
-                lsof -i tcp:"$1" -t | xargs kill
-              fi
-            }
-            weather() { curl -s "wttr.in/$1?format=3"; }
-            cheat() { curl -s "cheat.sh/$1"; }
+            if [[ $- == *i* ]]; then
+              mkcd() { mkdir -p "$1" && cd "$1"; }
+              extract() {
+                if [ -f "$1" ]; then
+                  case "$1" in
+                    *.tar.bz2) tar xjf "$1" ;;
+                    *.tar.gz) tar xzf "$1" ;;
+                    *.tar.xz) tar xJf "$1" ;;
+                    *.bz2) bunzip2 "$1" ;;
+                    *.rar) unrar x "$1" ;;
+                    *.gz) gunzip "$1" ;;
+                    *.tar) tar xf "$1" ;;
+                    *.tbz2) tar xjf "$1" ;;
+                    *.tgz) tar xzf "$1" ;;
+                    *.zip) unzip "$1" ;;
+                    *.Z) uncompress "$1" ;;
+                    *.7z) 7z x "$1" ;;
+                    *) echo "'$1' cannot be extracted" ;;
+                  esac
+                else
+                  echo "'$1' is not a valid file"
+                fi
+              }
+              portkill() {
+                if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                  ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill
+                elif [[ "$OSTYPE" == "darwin"* ]]; then
+                  lsof -i tcp:"$1" -t | xargs kill
+                fi
+              }
+              weather() { curl -s "wttr.in/$1?format=3"; }
+              cheat() { curl -s "cheat.sh/$1"; }
+            fi
           '';
           oh-my-zsh = {
             enable = true;
