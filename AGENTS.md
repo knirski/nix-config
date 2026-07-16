@@ -185,11 +185,15 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   Hooks: deadnix, statix, typos, treefmt, end-of-file-fixer, check-merge-conflicts,
   actionlint (GitHub Actions), shellcheck (shell scripts), markdownlint (docs),
   ruff (Python).
-  Before committing: `nix flake check` and also run `gitleaks` locally
-  (`nix run path:.#gitleaks -- detect --source . --no-git --verbose`).
+  Before committing: run `just check` and `just lint` (includes gitleaks).
   A `gitleaks` pre-commit hook (git-hooks.nix, default rule set) also blocks
   plaintext secrets on every commit.
-- Everyday deploy: `nix develop '.#' -c deploy .#soyo` (Soyo) or `deploy .#zbook` (zbook; or `nixos-rebuild switch --flake .#zbook --target-host krzysiek@zbook --sudo` as fallback).
+- Use and define/modify `just` commands for frequent tasks (e.g. deployment,
+  healthchecks). Prefer wrapping complex or repeated shell invocations in
+  `justfile` recipes rather than inlining them in AGENTS.md or relying on
+  memory. Always prefer `just <recipe>` over the equivalent inline command
+  (e.g. `just deploy zbook` instead of `nix develop '.#' -c deploy .#zbook`).
+- Everyday deploy: `just deploy <host>` (auto-detects local vs remote).
 - When waiting for PR checks to complete, use `gh run watch` to stream status
   instead of `sleep` — it shows real-time progress and exits when the run
   finishes.
@@ -197,7 +201,7 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   services, run the automated healthcheck:
 
   ```bash
-  nix run .#healthcheck -- [host] [role] [nic]
+  just healthcheck <host> [role] [nic]
   ```
 
   This checks DNS, services, metrics, timers, secrets, Secure Boot, and more
