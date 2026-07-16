@@ -44,25 +44,16 @@ jobs:
 
   static:
     name: Static and repository policy
+    if: needs.changes.outputs.non-taste == 'true'
+    needs: [changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
-        with:
-          use-flakehub: false
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-nix
       - name: Build static and repository-policy checks
         run: |
           nix build --no-link \
@@ -79,26 +70,17 @@ jobs:
   evaluation:
     name: Evaluation and pure invariants
     if: needs.changes.outputs.non-taste == 'true'
-    needs: [static, changes]
+    needs: [changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-nix
         with:
-          use-flakehub: false
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Materialize tracked agenix-rekey inputs
         run: |
           nix store add-path --name soyo ./secrets/rekeyed/soyo
@@ -130,11 +112,29 @@ jobs:
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \
             .#checks.x86_64-linux.systemd-hardening-invariants
+      - name: Push evaluation artifacts to Cachix
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          nix copy --to 'cachix://knirski-nix-config' \
+            .#checks.x86_64-linux.backup-restic-integration \
+            .#checks.x86_64-linux.dashboard-renderer \
+            .#checks.x86_64-linux.dendritic-options \
+            .#checks.x86_64-linux.deploy-activate \
+            .#checks.x86_64-linux.deploy-schema \
+            .#checks.x86_64-linux.dns-dhcp-config \
+            .#checks.x86_64-linux.host-role-invariants \
+            .#checks.x86_64-linux.impermanence-missing-early-persist \
+            .#checks.x86_64-linux.initrd-recovery-invariants \
+            .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.persistence-invariants \
+            .#checks.x86_64-linux.reservation-validation \
+            .#checks.x86_64-linux.soyo-guest-isolation \
+            .#checks.x86_64-linux.systemd-hardening-invariants
 
   build:
     name: Build ${{ matrix.host }} closure
     if: needs.changes.outputs.non-taste == 'true'
-    needs: [static, evaluation, changes]
+    needs: [evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -145,19 +145,10 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-nix
         with:
-          use-flakehub: false
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - run: nix store gc
       - name: Build complete system closure
         run: |
@@ -168,26 +159,17 @@ jobs:
   resilience:
     name: Strict KVM behavior tests
     if: needs.changes.outputs.non-taste == 'true'
-    needs: [static, evaluation, changes]
+    needs: [evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-nix
         with:
-          use-flakehub: false
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Require hardware virtualization
         run: test -c /dev/kvm && test -r /dev/kvm && test -w /dev/kvm
       - name: Run strict KVM behavior checks
@@ -200,26 +182,17 @@ jobs:
   topology:
     name: Publish sanitized topology
     if: needs.changes.outputs.non-taste == 'true'
-    needs: [static, evaluation, changes]
+    needs: [evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-nix
         with:
-          use-flakehub: false
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          name: knirski-nix-config
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Build sanitized topology overview
         run: |
           topology=$(nix build .#topology-public-overview --no-link --print-out-paths)
