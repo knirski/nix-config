@@ -167,3 +167,11 @@ Common failure causes:
 - Disk full on Synology — prune older snapshots or expand volume
 - Password changed — update the backup user's password on the Synology
 - SSH key expired or removed — regenerate and re-add to Synology authorized_keys
+
+## Podman Data Persistence
+
+Podman stores container data in `~/.local/share/containers` which is under `/persist` and automatically backed up by restic. This ensures all container images, volumes, and configurations survive reboots and can be restored.
+
+## nix-index-database
+
+The pre-built nix-index database is automatically updated weekly and stored in the Nix store. It doesn't need backup as it can be regenerated, but it's available immediately after restore since it's part of the system closure.

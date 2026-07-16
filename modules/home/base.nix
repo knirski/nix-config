@@ -31,7 +31,24 @@
           enable = true;
           enableZshIntegration = true;
         };
-        btop.enable = true;
+        btop = {
+          enable = true;
+          settings = {
+            color_theme = "catppuccin_mocha";
+            theme_background = false;
+            truecolor = true;
+            rounded_corners = true;
+            graph_symbol = "braille";
+            shown_boxes = "cpu mem net proc";
+            cpu_graph_upper = "total";
+            cpu_graph_lower = "total";
+            cpu_invert_lower = true;
+            cpu_single_graph = false;
+            show_gpu_info = "on";
+            temp_scale = "celsius";
+            update_ms = 1000;
+          };
+        };
         claude-code.enable = true;
         codex.enable = true;
         command-not-found.enable = true;
@@ -42,7 +59,44 @@
           enable = true;
           enableZshIntegration = true;
         };
-        fastfetch.enable = true;
+        fastfetch = {
+          enable = true;
+          settings = {
+            logo = {
+              type = "small";
+              padding = {
+                top = 1;
+                right = 2;
+                left = 2;
+              };
+            };
+            display = {
+              separator = " → ";
+            };
+            modules = [
+              "title"
+              "separator"
+              "os"
+              "kernel"
+              "shell"
+              "terminal"
+              "de"
+              "wm"
+              "wmtheme"
+              "separator"
+              "cpu"
+              "gpu"
+              "memory"
+              "disk"
+              "separator"
+              "localip"
+              "battery"
+              "locale"
+              "break"
+              "colors"
+            ];
+          };
+        };
         fd.enable = true;
         fzf = {
           enable = true;
@@ -51,11 +105,43 @@
         gh = {
           enable = true;
           extensions = with pkgs; [ gh-dash ];
+          settings = {
+            editor = "nvim";
+            git_protocol = "ssh";
+            prompt = "enabled";
+          };
         };
         gpg.enable = true;
         jq.enable = true;
         lazydocker.enable = true;
-        lazygit.enable = true;
+        lazygit = {
+          enable = true;
+          settings = {
+            gui.theme = {
+              activeBorderColor = [
+                "#89b4fa"
+                "bold"
+              ];
+              inactiveBorderColor = [ "#a6adc8" ];
+              searchingActiveBorderColor = [
+                "#f9e2af"
+                "bold"
+              ];
+              selectedLineBgColor = [ "#313244" ];
+              cherryPickedCommitFgColor = [ "#89dceb" ];
+              cherryPickedCommitBgColor = [ "#45475a" ];
+            };
+            git = {
+              paging = {
+                colorArg = "always";
+                pager = "delta --dark --paging=never";
+              };
+              commit = {
+                signOff = true;
+              };
+            };
+          };
+        };
         lsd.enable = true;
         mc.enable = true;
         mcfly = {
@@ -206,6 +292,29 @@
         yazi = {
           enable = true;
           enableZshIntegration = true;
+          settings = {
+            manager = {
+              show_hidden = true;
+              sort_by = "modified";
+              sort_dir_first = true;
+              linemode = "size";
+            };
+            opener = {
+              edit = [
+                {
+                  run = "nvim \"$@\"";
+                  block = true;
+                  desc = "Edit";
+                }
+              ];
+              open = [
+                {
+                  run = "xdg-open \"$@\"";
+                  desc = "Open";
+                }
+              ];
+            };
+          };
         };
         zoxide = {
           enable = true;
@@ -222,6 +331,88 @@
           enable = true;
           autosuggestion.enable = true;
           syntaxHighlighting.enable = true;
+          shellAliases = {
+            # Navigation
+            ll = "eza -la --icons --git";
+            la = "eza -a --icons";
+            ls = "eza --icons";
+            lt = "eza -la --icons --git --tree --level=2";
+            ".." = "cd ..";
+            "..." = "cd ../..";
+            "...." = "cd ../../..";
+
+            # Git shortcuts
+            g = "git";
+            gst = "git status";
+            gco = "git checkout";
+            gcb = "git checkout -b";
+            gd = "git diff";
+            gds = "git diff --staged";
+            gl = "git pull";
+            gp = "git push";
+            gpf = "git push --force-with-lease";
+            gc = "git commit";
+            gca = "git commit --amend";
+            glog = "git log --oneline --graph --decorate";
+
+            # Nix
+            nrs = "sudo nixos-rebuild switch --flake .";
+            nrt = "sudo nixos-rebuild test --flake .";
+            hms = "home-manager switch --flake .";
+            nfu = "nix flake update";
+            ndv = "nix develop";
+
+            # System
+            df = "duf";
+            du = "dust";
+            ps = "procs";
+            cat = "bat";
+            grep = "ripgrep";
+            find = "fd";
+            top = "btop";
+            htop = "btop";
+            vim = "nvim";
+            vi = "nvim";
+
+            # Docker/Podman
+            d = "docker";
+            dc = "docker compose";
+            dps = "docker ps";
+            dex = "docker exec -it";
+
+            # Quick actions
+            mkdir = "mkdir -p";
+            path = "echo $PATH | tr ':' '\n'";
+            ports = "ss -tulnp";
+          };
+          initExtra = ''
+            # Custom functions
+            mkcd() { mkdir -p "$1" && cd "$1"; }
+            extract() {
+              if [ -f "$1" ]; then
+                case "$1" in
+                  *.tar.bz2) tar xjf "$1" ;;
+                  *.tar.gz) tar xzf "$1" ;;
+                  *.tar.xz) tar xJf "$1" ;;
+                  *.bz2) bunzip2 "$1" ;;
+                  *.rar) unrar x "$1" ;;
+                  *.gz) gunzip "$1" ;;
+                  *.tar) tar xf "$1" ;;
+                  *.tbz2) tar xjf "$1" ;;
+                  *.tgz) tar xzf "$1" ;;
+                  *.zip) unzip "$1" ;;
+                  *.Z) uncompress "$1" ;;
+                  *.7z) 7z x "$1" ;;
+                  *) echo "'$1' cannot be extracted" ;;
+                esac
+              else
+                echo "'$1' is not a valid file"
+              fi
+            }
+            portkill() { ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill; }
+            weather() { curl -s "wttr.in/$1?format=3"; }
+            cheat() { curl -s "cheat.sh/$1"; }
+          '';
           oh-my-zsh = {
             enable = true;
             plugins = [
