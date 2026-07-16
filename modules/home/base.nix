@@ -8,7 +8,6 @@
         };
         packages = with pkgs; [
           command-code
-          antigravity-cli
           # Modern CLI replacements (no HM modules)
           dust
           sd
@@ -133,10 +132,6 @@
         };
         gh = {
           enable = true;
-          extensions = with pkgs; [
-            gh-dash
-            gh-pr-review
-          ];
           settings = {
             editor = "nvim";
             git_protocol = "ssh";
