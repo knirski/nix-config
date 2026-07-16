@@ -79,7 +79,7 @@ jobs:
   evaluation:
     name: Evaluation and pure invariants
     if: needs.changes.outputs.non-taste == 'true'
-    needs: [static, changes]
+    needs: [changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -134,7 +134,7 @@ jobs:
   build:
     name: Build ${{ matrix.host }} closure
     if: needs.changes.outputs.non-taste == 'true'
-    needs: [static, evaluation, changes]
+    needs: [evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -168,7 +168,7 @@ jobs:
   resilience:
     name: Strict KVM behavior tests
     if: needs.changes.outputs.non-taste == 'true'
-    needs: [static, evaluation, changes]
+    needs: [evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -200,7 +200,7 @@ jobs:
   topology:
     name: Publish sanitized topology
     if: needs.changes.outputs.non-taste == 'true'
-    needs: [static, evaluation, changes]
+    needs: [evaluation, changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
