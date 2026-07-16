@@ -33,6 +33,7 @@
         };
         btop.enable = true;
         codex.enable = true;
+        command-not-found.enable = true;
         delta.enable = true;
         difftastic.enable = true;
         eza = {
@@ -50,11 +51,20 @@
           extensions = with pkgs; [ gh-dash ];
         };
         gpg.enable = true;
+        jq.enable = true;
         lazydocker.enable = true;
         lazygit.enable = true;
         lsd.enable = true;
         mc.enable = true;
+        mcfly = {
+          enable = true;
+          enableZshIntegration = true;
+        };
         navi = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        nix-your-shell = {
           enable = true;
           enableZshIntegration = true;
         };
@@ -67,6 +77,10 @@
           enableZshIntegration = true;
         };
         tealdeer.enable = true;
+        thefuck = {
+          enable = true;
+          enableZshIntegration = true;
+        };
         tmux.enable = true;
         yazi = {
           enable = true;
