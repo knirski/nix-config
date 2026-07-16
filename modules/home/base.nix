@@ -19,6 +19,7 @@
           age
           # Other tools without HM modules
           procs
+          unrar # for extract() function
         ];
       };
 
@@ -403,7 +404,9 @@
             ports = "ss -tulnp";
           };
           initExtra = ''
-            # Custom functions
+            # Custom functions (interactive shells only)
+            [[ $- != *i* ]] && return
+
             mkcd() { mkdir -p "$1" && cd "$1"; }
             extract() {
               if [ -f "$1" ]; then

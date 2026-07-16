@@ -9,7 +9,10 @@
 
       # Neovim clipboard integration (requires wl-clipboard on Wayland)
       home.file.".config/nvim/after/plugin/clipboard.lua".text = ''
-        vim.opt.clipboard = "unnamedplus"
+        -- Only enable system clipboard on desktop sessions
+        if vim.env.DISPLAY or vim.env.WAYLAND_DISPLAY then
+          vim.opt.clipboard = "unnamedplus"
+        end
       '';
 
       # Manual lid-close inhibitor.  Run `disable-lid` in a terminal before
