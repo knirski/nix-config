@@ -31,14 +31,14 @@ runs:
     # When no auth token is provided, configure Cachix for pull-only access.
     # This is safe for PRs from forks (no secret exposure).
     - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-      if: inputs.cachix-auth-token == ''
+      if: ${{ inputs.cachix-auth-token == '' }}
       with:
         name: knirski-nix-config
 
     # With an auth token, push access is enabled so other CI jobs and local
     # developers benefit from pre-built artifacts.
     - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-      if: inputs.cachix-auth-token != ''
+      if: ${{ inputs.cachix-auth-token != '' }}
       with:
         name: knirski-nix-config
         authToken: '${{ inputs.cachix-auth-token }}'
