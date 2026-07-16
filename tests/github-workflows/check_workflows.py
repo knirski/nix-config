@@ -79,6 +79,9 @@ def validate(path: Path) -> list[str]:
 
     for number, line in enumerate(lines, start=1):
         if ANY_ACTION.match(line) and not PINNED_ACTION.match(line):
+            # Local composite actions use a path (./path/to/action) not a SHA.
+            if line.strip().startswith("- uses: ./"):
+                continue
             errors.append(f"line {number}: action must use a full commit SHA")
 
     return errors
