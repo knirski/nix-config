@@ -109,6 +109,10 @@
         fzf = {
           enable = true;
           enableZshIntegration = true;
+          # Nushell integration requires fzf >= 0.73.0, but soyo uses
+          # nixpkgs stable (release-26.05) which has fzf 0.72.0.
+          # Disabled since nushell is not used.
+          enableNushellIntegration = false;
           # Let mcfly own Ctrl-R for history search. An empty command string
           # tells fzf not to bind Ctrl-R at all, yielding it to mcfly.
           historyWidget.command = "";
