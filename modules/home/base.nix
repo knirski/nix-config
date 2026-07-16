@@ -33,10 +33,13 @@
           flags = [ "--disable-ctrl-r" ];
           # Up-arrow searches only commands run in the current directory,
           # while Ctrl-R (fzf) searches everything.
-          # Do NOT force-overwrite: Atuin auto-generates a full config.toml
-          # with sync settings and defaults. forceOverwriteSettings would
-          # replace that file with only the two settings declared below,
-          # silently losing any other user or auto-generated configuration.
+          # forceOverwriteSettings ensures the settings below take effect
+          # even if Atuin already wrote a default config.toml (Atuin
+          # auto-generates one after the first shell command). The trade-off
+          # is that any manually-added sync or server settings in that file
+          # (e.g. from `atuin login`) will be overwritten — re-run `atuin login`
+          # after config changes if you use sync.
+          forceOverwriteSettings = true;
           settings = {
             filter_mode_shell_up_key_binding = "directory";
             enter_accept = true;
