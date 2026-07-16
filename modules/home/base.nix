@@ -17,8 +17,6 @@
           dogdns
           # Security tools
           age
-          # Shell enhancements
-          tldr
         ];
       };
 
@@ -28,13 +26,20 @@
           enableZshIntegration = true;
         };
         bat.enable = true;
+        bottom.enable = true;
+        broot = {
+          enable = true;
+          enableZshIntegration = true;
+        };
         btop.enable = true;
         codex.enable = true;
         delta.enable = true;
+        difftastic.enable = true;
         eza = {
           enable = true;
           enableZshIntegration = true;
         };
+        fastfetch.enable = true;
         fd.enable = true;
         fzf = {
           enable = true;
@@ -45,7 +50,9 @@
           extensions = with pkgs; [ gh-dash ];
         };
         gpg.enable = true;
+        lazydocker.enable = true;
         lazygit.enable = true;
+        lsd.enable = true;
         mc.enable = true;
         navi = {
           enable = true;
@@ -55,7 +62,16 @@
         opencode.enable = true;
         procs.enable = true;
         ripgrep.enable = true;
+        skim = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        tealdeer.enable = true;
         tmux.enable = true;
+        yazi = {
+          enable = true;
+          enableZshIntegration = true;
+        };
         zoxide = {
           enable = true;
           enableZshIntegration = true;
