@@ -17,6 +17,15 @@
           dogdns
           # Security tools
           age
+          # AI tools (no HM modules)
+          claude-code
+          codex
+          opencode
+          # Container tools
+          docker-client
+          # Other tools without HM modules
+          mc
+          procs
         ];
       };
 
@@ -49,12 +58,9 @@
             update_ms = 1000;
           };
         };
-        claude-code.enable = true;
-        codex.enable = true;
         command-not-found.enable = true;
         delta.enable = true;
         difftastic.enable = true;
-        docker-cli.enable = true;
         eza = {
           enable = true;
           enableZshIntegration = true;
@@ -143,7 +149,6 @@
           };
         };
         lsd.enable = true;
-        mc.enable = true;
         mcfly = {
           enable = true;
           enableZshIntegration = true;
@@ -212,7 +217,6 @@
             vim.opt.termguicolors = true
             vim.opt.signcolumn = "yes"
             vim.opt.updatetime = 250
-            vim.opt.clipboard = "unnamedplus"
 
             -- Keymaps
             vim.g.mapleader = " "
@@ -253,8 +257,6 @@
             vim.cmd.colorscheme "catppuccin"
           '';
         };
-        opencode.enable = true;
-        procs.enable = true;
         ripgrep.enable = true;
         skim = {
           enable = true;
@@ -426,7 +428,13 @@
                 echo "'$1' is not a valid file"
               fi
             }
-            portkill() { ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill; }
+            portkill() {
+              if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill
+              elif [[ "$OSTYPE" == "darwin"* ]]; then
+                lsof -i tcp:"$1" -t | xargs kill
+              fi
+            }
             weather() { curl -s "wttr.in/$1?format=3"; }
             cheat() { curl -s "cheat.sh/$1"; }
           '';
@@ -489,7 +497,6 @@
               ci = "commit";
               unstage = "reset HEAD --";
               last = "log -1 HEAD";
-              visual = "!gitk";
             };
           };
         };

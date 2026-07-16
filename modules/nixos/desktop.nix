@@ -37,8 +37,6 @@
 
       environment.systemPackages = with pkgs; [
         firefox
-        distrobox # integrate other distros via containers
-        virt-manager # VM management GUI
         simple-scan # scanning GUI
       ];
 

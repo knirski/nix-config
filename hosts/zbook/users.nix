@@ -11,7 +11,6 @@
       "networkmanager"
       "audio"
       "video"
-      "podman"
       "libvirtd"
     ];
     hashedPasswordFile = config.age.secrets.krzysiek-password.path;

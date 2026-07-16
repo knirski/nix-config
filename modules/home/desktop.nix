@@ -2,7 +2,15 @@
   aspects.homeManager.desktop =
     { pkgs, lib, ... }:
     {
-      programs.zed-editor.enable = true;
+      programs = {
+        zed-editor.enable = true;
+        git.settings.alias.visual = "!gitk";
+      };
+
+      # Neovim clipboard integration (requires wl-clipboard on Wayland)
+      home.file.".config/nvim/after/plugin/clipboard.lua".text = ''
+        vim.opt.clipboard = "unnamedplus"
+      '';
 
       # Manual lid-close inhibitor.  Run `disable-lid` in a terminal before
       # closing the laptop lid to keep the system awake (useful when moving

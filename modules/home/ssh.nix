@@ -25,14 +25,12 @@
           User = "krzysiek";
           IdentityFile = "~/.ssh/soyo_ed25519";
           IdentitiesOnly = true;
-          ForwardAgent = true;
         };
 
         zbook = {
           User = "krzysiek";
           IdentityFile = "~/.ssh/zbook_ed25519";
           IdentitiesOnly = true;
-          ForwardAgent = true;
         };
       };
     };

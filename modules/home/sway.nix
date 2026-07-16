@@ -279,8 +279,8 @@
 
       services.wlsunset = {
         enable = true;
-        latitude = 52.2;
-        longitude = 21.0;
+        latitude = "52.2";
+        longitude = "21.0";
       };
 
       gtk = {
