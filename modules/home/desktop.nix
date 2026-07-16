@@ -4,6 +4,13 @@
     {
       programs = {
         zed-editor.enable = true;
+        gh = {
+          enable = true;
+          extensions = with pkgs; [
+            gh-dash
+            gh-pr-review
+          ];
+        };
         git.settings.alias.visual = "!gitk";
       };
 
@@ -22,6 +29,7 @@
       home.packages =
         with pkgs;
         [
+          antigravity-cli
           mpv
           bitwarden-desktop
           spotify
