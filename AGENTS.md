@@ -190,6 +190,9 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
   A `gitleaks` pre-commit hook (git-hooks.nix, default rule set) also blocks
   plaintext secrets on every commit.
 - Everyday deploy: `nix develop '.#' -c deploy .#soyo` (Soyo) or `deploy .#zbook` (zbook; or `nixos-rebuild switch --flake .#zbook --target-host krzysiek@zbook --sudo` as fallback).
+- When waiting for PR checks to complete, use `gh run watch` to stream status
+  instead of `sleep` — it shows real-time progress and exits when the run
+  finishes.
 - After deploy or after changes that touch boot, unlock, networking, or
   services, run the automated healthcheck:
 
