@@ -4,6 +4,11 @@
     {
       home.packages = with pkgs; [
         libnotify
+        # Wayland/Sway utilities
+        wlsunset # night light/blue light filter
+        pavucontrol # PulseAudio volume control GUI
+        nwg-displays # display configuration GUI
+        nwg-look # GTK theme manager
       ];
 
       wayland.windowManager.sway = {

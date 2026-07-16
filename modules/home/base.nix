@@ -11,15 +11,46 @@
           ripgrep
           tmux
           gh
+          gh-dash
           command-code
           codex
           opencode
           nnn
           mc
+          # Modern CLI replacements
+          lazygit
+          btop
+          eza
+          bat
+          fzf
+          delta
+          zoxide
+          du-dust
+          procs
+          sd
+          yq
+          hyperfine
+          ncdu
+          dogdns
+          # Security tools
+          age
+          gnupg
+          # Shell enhancements
+          atuin
+          navi
+          tldr
         ];
       };
 
       programs = {
+        atuin = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        navi = {
+          enable = true;
+          enableZshIntegration = true;
+        };
         starship = {
           enable = true;
           settings = {
@@ -29,6 +60,8 @@
         };
         zsh = {
           enable = true;
+          autosuggestion.enable = true;
+          syntaxHighlighting.enable = true;
           oh-my-zsh = {
             enable = true;
             plugins = [

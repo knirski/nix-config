@@ -34,6 +34,7 @@
         goverlay # GUI for mangohud
         protonup-qt # Proton GE manager
         lutris # Game launcher
+        heroic-launcher # Epic/GOG games launcher
       ];
 
       # Wine/proton support requires 32-bit GL

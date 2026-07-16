@@ -111,6 +111,11 @@ in
         nix-index # nix-locate: find which package provides a missing command
         nix-output-monitor # nom: real-time nixos-rebuild progress with ETA
         sbctl
+        # Nix development and debugging
+        nix-tree # browse Nix store dependency graphs interactively
+        nvd # diff Nix system closures (see what changed between builds)
+        comma # run programs without installing (uses nix-index)
+        lynis # security auditing tool
       ];
     };
 }

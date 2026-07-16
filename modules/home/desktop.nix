@@ -34,6 +34,12 @@
           grim
           slurp
           swappy
+          # Communication and media
+          thunderbird
+          obs-studio
+          gimp
+          inkscape
+          obsidian
         ];
     };
 }
