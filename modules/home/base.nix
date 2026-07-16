@@ -27,7 +27,7 @@
         atuin = {
           enable = true;
           enableZshIntegration = true;
-          # Let mcfly own Ctrl-R for interactive search; atuin still syncs
+          # Let fzf own Ctrl-R for interactive search; atuin still syncs
           # history and works via up-arrow search.
           flags = [ "--disable-ctrl-r" ];
         };
@@ -113,11 +113,9 @@
           # nixpkgs stable (release-26.05) which has fzf 0.72.0.
           # Disabled since nushell is not used.
           enableNushellIntegration = false;
-          # Mcfly owns Ctrl-R for history search.  In the generated shell init
-          # (zsh and bash), mcfly's init runs after fzf's key-bindings, so
-          # mcfly's `bindkey '^R'` / `bind '\C-r'` naturally overwrites fzf's.
-          # No explicit fzf override is needed - the shell init ordering
-          # guarantees mcfly wins the Ctrl-R binding.
+          # Fzf owns Ctrl-R for history search. The generated shell init
+          # binds Ctrl-R to fzf's history widget, overlaying zsh's built-in
+          # Ctrl-R reverse-search.
         };
         gh = {
           enable = true;
@@ -163,10 +161,6 @@
         # Use eza instead of lsd for file listing
         lsd.enable = false;
         mc.enable = true;
-        mcfly = {
-          enable = true;
-          enableZshIntegration = true;
-        };
         navi = {
           enable = true;
           enableZshIntegration = true;
