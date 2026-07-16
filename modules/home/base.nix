@@ -14,6 +14,8 @@
           command-code
           codex
           opencode
+          nnn
+          mc
         ];
       };
 
