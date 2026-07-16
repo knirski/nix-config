@@ -215,7 +215,7 @@ SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh
 ## Zbook known issues
 
 - **disabling lid-close suspend while on the move.** The `disable-lid` command
-  (`modules/home/sway.nix`) wraps `systemd-inhibit --what=handle-lid-switch
+  (`modules/home/desktop.nix`) wraps `systemd-inhibit --what=handle-lid-switch
   sleep infinity`.  Run it in a terminal before closing the lid to override
   logind's lid-close action.  Cancel with Ctrl+C to restore normal behaviour.
   Useful when carrying the laptop between rooms while media is playing or a
