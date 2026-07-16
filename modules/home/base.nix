@@ -8,7 +8,7 @@
         };
         packages = with pkgs; [
           command-code
-          agy
+          antigravity-cli
           # Modern CLI replacements (no HM modules)
           dust
           sd
