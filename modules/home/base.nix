@@ -119,7 +119,10 @@
         };
         gh = {
           enable = true;
-          extensions = with pkgs; [ gh-dash ];
+          extensions = with pkgs; [
+            gh-dash
+            gh-pr-review
+          ];
           settings = {
             editor = "nvim";
             git_protocol = "ssh";
