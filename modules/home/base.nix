@@ -197,6 +197,14 @@
             # Theme
             catppuccin-nvim
           ];
+          extraPackages = with pkgs; [
+            nil
+            lua-language-server
+            pyright
+            typescript-language-server
+            rust-analyzer
+            gopls
+          ];
           extraLuaConfig = ''
             -- Basic settings
             vim.opt.number = true
@@ -331,6 +339,15 @@
           enable = true;
           autosuggestion.enable = true;
           syntaxHighlighting.enable = true;
+          history = {
+            size = 100000;
+            save = 100000;
+            path = "$HOME/.zsh_history";
+            ignoreDups = true;
+            ignoreAllDups = true;
+            ignoreSpace = true;
+            expireDuplicatesFirst = true;
+          };
           shellAliases = {
             # Navigation
             ll = "eza -la --icons --git";
@@ -446,6 +463,7 @@
               email = "krzysztof.nirski+github@gmail.com";
               signingkey = "~/.ssh/id_ed25519";
             };
+            core.editor = "nvim";
             init.defaultBranch = "main";
             pull.rebase = true;
             push.autoSetupRemote = true;
@@ -485,6 +503,7 @@
       services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {
         enable = true;
         enableZshIntegration = true;
+        pinentryPackage = pkgs.pinentry-gnome3;
       };
     };
 }
