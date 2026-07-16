@@ -1,6 +1,6 @@
 {
   aspects.homeManager.base =
-    { pkgs, lib, ... }:
+    { config, pkgs, lib, ... }:
     {
       home = {
         sessionVariables = {
@@ -21,6 +21,16 @@
           procs
           unrar # for extract() function
         ];
+
+        # oh-my-zsh plugins (docker, docker-compose) try to overwrite their
+        # cached completion files on every shell start. The source files in the
+        # nix store are 0444, and `cp` preserves that mode, leaving the cached
+        # copies read-only. This makes the subsequent overwrite attempt fail
+        # with "Permission denied" on every terminal open.
+        # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/docker/docker.plugin.zsh
+        activation.ensureOhMyZshCacheWritable = lib.hm.dag.entryAfter ["writeBoundary"] ''
+          chmod -R u+w "${config.xdg.cacheHome}/oh-my-zsh"
+        '';
       };
 
       programs = {
@@ -544,5 +554,7 @@
         enableZshIntegration = true;
         pinentry.package = pkgs.pinentry-gnome3;
       };
+
+
     };
 }
