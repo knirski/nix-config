@@ -10,6 +10,7 @@
         ssh
         tailscale
         desktop
+        logitech
         sway
         nvidia
         laptop
