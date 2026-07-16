@@ -6,12 +6,10 @@
     };
 
     # DDC/CI monitor control (input source switching, brightness, etc.)
-    # Load i2c-dev for the ddcutil I2C communication backend, and add
-    # ddcutil's udev rules so users in the `i2c` group can access the
-    # I2C buses without root.  The user is added to the `i2c` group in
-    # the host-level users.nix.
-    boot.kernelModules = [ "i2c-dev" ];
-    services.udev.packages = [ pkgs.ddcutil ];
+    # hardware.i2c loads the i2c-dev kernel module and sets up udev rules
+    # so users in the `i2c` group can access I2C buses without root.
+    # The user is added to the `i2c` group in the host-level users.nix.
+    hardware.i2c.enable = true;
     environment.systemPackages = with pkgs; [
       polkit_gnome
       ddcutil

@@ -92,9 +92,9 @@
             "XF86AudioMicMute" = "exec dms ipc call audio micmute";
             "XF86MonBrightnessUp" = "exec dms ipc call brightness increment 5";
             "XF86MonBrightnessDown" = "exec dms ipc call brightness decrement 5";
-            # DDC/CI monitor input switching (ddcutil is in environment.systemPackages)
-            "${modifier}+Insert" = "exec ddcutil --noprofile setvcp 0x60 0x0f";
-            "${modifier}+Home" = "exec ddcutil --noprofile setvcp 0x60 0x0d";
+            # DDC/CI monitor input switching
+            "${modifier}+Insert" = "exec ${pkgs.ddcutil}/bin/ddcutil --noprofile setvcp 0x60 0x0f";
+            "${modifier}+Home" = "exec ${pkgs.ddcutil}/bin/ddcutil --noprofile setvcp 0x60 0x0d";
           };
           # Window rules
           window = {
