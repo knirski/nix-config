@@ -24,7 +24,6 @@
           # Container tools
           docker-client
           # Other tools without HM modules
-          mc
           procs
         ];
       };
@@ -149,6 +148,7 @@
           };
         };
         lsd.enable = true;
+        mc.enable = true;
         mcfly = {
           enable = true;
           enableZshIntegration = true;

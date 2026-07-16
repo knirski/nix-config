@@ -2,6 +2,7 @@
 - When replying to GitHub PR review comments, post replies as inline comments on individual review threads rather than as a single summary comment on the PR. Confidence: 0.65
 - For taste-only PRs (small changes to `.commandcode/taste/`), use a shorter CI pipeline or skip the full CI pipeline that runs on code changes — such trivial PRs don't need the full build/check suite. Confidence: 0.65
 - When waiting for PR checks to pass, use `gh run watch` instead of `sleep` to poll for completion. Confidence: 0.70
+- Before blindly applying bot-generated PR review comments (from gemini-code-assist, coderabbitai, etc.), critically evaluate each comment for validity — not all automated suggestions are correct or worth applying. Confidence: 0.65
 
 # darwin
 - For macOS tiling window management on nix-darwin hosts, use Aerospace (not yabai/skhd, Rectangle, or other alternatives) — the user wants max similarity with their Sway setup. Confidence: 0.55
