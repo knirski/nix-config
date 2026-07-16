@@ -12,6 +12,7 @@ rec {
     ".commandcode"
     ".codex"
     ".local/state/wireplumber"
+    ".local/share/atuin"
     ".local/share/zed"
     "github"
     "Downloads"
