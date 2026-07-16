@@ -5,7 +5,6 @@
       home.packages = with pkgs; [
         libnotify
         # Wayland/Sway utilities
-        wlsunset # night light/blue light filter
         pavucontrol # PulseAudio volume control GUI
         nwg-displays # display configuration GUI
         nwg-look # GTK theme manager
@@ -205,6 +204,12 @@
           Restart = "on-failure";
         };
         Install.WantedBy = [ "graphical-session.target" ];
+      };
+
+      services.wlsunset = {
+        enable = true;
+        latitude = 52.2;
+        longitude = 21.0;
       };
 
       gtk = {

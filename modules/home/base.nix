@@ -7,26 +7,9 @@
           EDITOR = "nvim";
         };
         packages = with pkgs; [
-          fd
-          ripgrep
-          tmux
-          gh
-          gh-dash
           command-code
-          codex
-          opencode
-          nnn
-          mc
-          # Modern CLI replacements
-          lazygit
-          btop
-          eza
-          bat
-          fzf
-          delta
-          zoxide
+          # Modern CLI replacements (no HM modules)
           du-dust
-          procs
           sd
           yq
           hyperfine
@@ -34,10 +17,7 @@
           dogdns
           # Security tools
           age
-          gnupg
           # Shell enhancements
-          atuin
-          navi
           tldr
         ];
       };
@@ -47,7 +27,36 @@
           enable = true;
           enableZshIntegration = true;
         };
+        bat.enable = true;
+        btop.enable = true;
+        codex.enable = true;
+        delta.enable = true;
+        eza = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        fd.enable = true;
+        fzf = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        gh = {
+          enable = true;
+          extensions = with pkgs; [ gh-dash ];
+        };
+        gpg.enable = true;
+        lazygit.enable = true;
+        mc.enable = true;
         navi = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+        nnn.enable = true;
+        opencode.enable = true;
+        procs.enable = true;
+        ripgrep.enable = true;
+        tmux.enable = true;
+        zoxide = {
           enable = true;
           enableZshIntegration = true;
         };
@@ -99,6 +108,11 @@
           enable = true;
           nix-direnv.enable = true;
         };
+      };
+
+      services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {
+        enable = true;
+        enableZshIntegration = true;
       };
     };
 }
