@@ -21,7 +21,7 @@
           system = "x86_64-linux";
           modules = [
             config.aspects.nixos.base
-            inputs.home-manager-stable.nixosModules.home-manager
+            inputs.home-manager.nixosModules.home-manager
             {
               nixpkgs.hostPlatform = "x86_64-linux";
               system.stateVersion = "26.05";

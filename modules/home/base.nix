@@ -27,6 +27,9 @@
         atuin = {
           enable = true;
           enableZshIntegration = true;
+          # Let mcfly own Ctrl-R for interactive search; atuin still syncs
+          # history and works via up-arrow search.
+          flags = [ "--disable-ctrl-r" ];
         };
         bat.enable = true;
         bottom.enable = true;
@@ -106,6 +109,9 @@
         fzf = {
           enable = true;
           enableZshIntegration = true;
+          # Let mcfly own Ctrl-R for history search. An empty command string
+          # tells fzf not to bind Ctrl-R at all, yielding it to mcfly.
+          historyWidget.command = "";
         };
         gh = {
           enable = true;
