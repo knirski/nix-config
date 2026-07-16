@@ -12,6 +12,8 @@
           ControlMaster = "auto";
           ControlPath = "~/.ssh/sockets/%r@%h-%p";
           ControlPersist = "600";
+          # Security: reject connections to unknown hosts by default
+          StrictHostKeyChecking = "ask";
         };
         # Select the GitHub key explicitly.  The global NixOS
         # AddKeysToAgent yes loads it into the running agent on first use.
@@ -19,6 +21,8 @@
           User = "git";
           IdentityFile = "~/.ssh/zbook_ed25519";
           IdentitiesOnly = true;
+          # GitHub's host keys are well-known
+          StrictHostKeyChecking = "accept-new";
         };
 
         soyo = {

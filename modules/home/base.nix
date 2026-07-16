@@ -37,19 +37,20 @@
         btop = {
           enable = true;
           settings = {
+            # Catppuccin Mocha theme for consistent look with other tools
             color_theme = "catppuccin_mocha";
             theme_background = false;
             truecolor = true;
             rounded_corners = true;
-            graph_symbol = "braille";
+            graph_symbol = "braille"; # Braille characters for smooth graphs
             shown_boxes = "cpu mem net proc";
-            cpu_graph_upper = "total";
+            cpu_graph_upper = "total"; # Show total CPU usage
             cpu_graph_lower = "total";
-            cpu_invert_lower = true;
+            cpu_invert_lower = true; # Invert lower graph for visual clarity
             cpu_single_graph = false;
-            show_gpu_info = "on";
+            show_gpu_info = "on"; # Show GPU temperature (NVIDIA)
             temp_scale = "celsius";
-            update_ms = 1000;
+            update_ms = 1000; # 1-second refresh rate
           };
         };
         claude-code.enable = true;
@@ -66,7 +67,7 @@
           enable = true;
           settings = {
             logo = {
-              type = "small";
+              type = "small"; # Small logo for compact output
               padding = {
                 top = 1;
                 right = 2;
@@ -74,8 +75,9 @@
               };
             };
             display = {
-              separator = " → ";
+              separator = " → "; # Arrow separator for clean look
             };
+            # Show system info in logical groups
             modules = [
               "title"
               "separator"
@@ -120,27 +122,28 @@
         lazygit = {
           enable = true;
           settings = {
+            # Catppuccin Mocha theme colors
             gui.theme = {
               activeBorderColor = [
-                "#89b4fa"
+                "#89b4fa" # Blue
                 "bold"
               ];
-              inactiveBorderColor = [ "#a6adc8" ];
+              inactiveBorderColor = [ "#a6adc8" ]; # Overlay0
               searchingActiveBorderColor = [
-                "#f9e2af"
+                "#f9e2af" # Yellow
                 "bold"
               ];
-              selectedLineBgColor = [ "#313244" ];
-              cherryPickedCommitFgColor = [ "#89dceb" ];
-              cherryPickedCommitBgColor = [ "#45475a" ];
+              selectedLineBgColor = [ "#313244" ]; # Surface0
+              cherryPickedCommitFgColor = [ "#89dceb" ]; # Teal
+              cherryPickedCommitBgColor = [ "#45475a" ]; # Surface1
             };
             git = {
               paging = {
                 colorArg = "always";
-                pager = "delta --dark --paging=never";
+                pager = "delta --dark --paging=never"; # Use delta for syntax highlighting
               };
               commit = {
-                signOff = true;
+                signOff = true; # Add Signed-off-by line
               };
             };
           };
@@ -166,9 +169,9 @@
           viAlias = true;
           vimAlias = true;
           plugins = with pkgs.vimPlugins; [
-            # LSP
+            # LSP support for multiple languages
             nvim-lspconfig
-            # Treesitter
+            # Treesitter for syntax highlighting and code understanding
             (nvim-treesitter.withPlugins (p: [
               p.nix
               p.lua
@@ -183,12 +186,12 @@
               p.toml
               p.markdown
             ]))
-            # Completion
+            # Autocompletion engine
             nvim-cmp
-            cmp-nvim-lsp
-            cmp-buffer
-            cmp-path
-            # Fuzzy finder
+            cmp-nvim-lsp # LSP source for nvim-cmp
+            cmp-buffer # Buffer words source
+            cmp-path # File path source
+            # Fuzzy finder for files, grep, buffers
             telescope-nvim
             plenary-nvim
             # File explorer

@@ -373,6 +373,19 @@ Local Btrfs snapshots:
 - **ntfy**: Push notifications for failures
 - **DMS**: Desktop notifications
 
+## SSH Configuration
+
+- **Multiplexing**: ControlMaster/ControlPath for connection reuse
+- **Agent forwarding**: Enabled for trusted homelab hosts (soyo, zbook)
+- **Host key verification**: StrictHostKeyChecking enabled by default
+- **Key management**: AddKeysToAgent for automatic key loading
+
+### Security Notes
+
+- ForwardAgent is enabled for trusted homelab LAN hosts only
+- Use `ssh -A` for ad-hoc forwarding to untrusted hosts
+- GitHub uses `accept-new` for host key verification
+
 ## Networking
 
 ### Tailscale
