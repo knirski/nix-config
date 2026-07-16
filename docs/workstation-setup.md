@@ -253,7 +253,7 @@ All CLI tools below are available on zbook, macbook, and ubuntu via Home Manager
 | `bat` | Modern cat with syntax highlighting |
 | `fd` | Modern find |
 | `ripgrep` | Modern grep |
-| `fzf` | Fuzzy finder |
+| `fzf` | Fuzzy finder (Ctrl-R history search) |
 | `skim` | Rust fuzzy finder |
 | `zoxide` | Smart cd |
 | `btop` | System monitor |
@@ -274,7 +274,6 @@ All CLI tools below are available on zbook, macbook, and ubuntu via Home Manager
 | `broot` | File manager with fuzzy search |
 | `tmux` | Terminal multiplexer |
 | `atuin` | Shell history sync |
-| `fzf` | Fuzzy finder (Ctrl-R history search) |
 | `pay-respects` (via `f` alias) | Command correction (replaces `thefuck`) |
 | `navi` | Interactive cheat sheets |
 | `tealdeer` | Rust tldr client |
