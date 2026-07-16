@@ -11,6 +11,60 @@ The workstation uses:
 - **Editor**: Neovim (primary), Zed (secondary)
 - **Shell**: Zsh with extensive tooling
 
+## Cross-Platform Availability
+
+This configuration is shared across multiple hosts. Not all tools are available on all platforms:
+
+### zbook (NixOS) - Full Configuration
+
+- **Desktop**: Sway + DMS + all Wayland tools
+- **Gaming**: Steam, Heroic, Lutris, MangoHUD
+- **Virtualization**: Podman, libvirtd, virt-manager, distrobox
+- **System**: All NixOS modules, persistence, backups
+- **All CLI and desktop tools available**
+
+### macbook (nix-darwin) - Planned
+
+- **Desktop**: Aerospace (tiling WM, similar to Sway)
+- **Terminal**: Ghostty, Zsh, same shell config
+- **Editors**: Neovim, Zed
+- **All CLI tools available** (cross-platform packages)
+- **Not available**: Sway, DMS, Wayland tools, gaming, Podman, virt-manager, distrobox
+
+### ubuntu (Standalone Home Manager) - Planned
+
+- **Desktop**: Sway + DMS (via Home Manager)
+- **Terminal**: Ghostty, Zsh, same shell config
+- **Editors**: Neovim, Zed
+- **All CLI tools available** (Home Manager packages)
+- **Not available**: NixOS modules, persistence, backups, gaming, Podman, virt-manager, distrobox
+
+### Tool Availability Matrix
+
+| Category | zbook | macbook | ubuntu |
+|----------|-------|---------|--------|
+| **Shell & CLI** | ✓ | ✓ | ✓ |
+| **Development tools** | ✓ | ✓ | ✓ |
+| **AI tools** | ✓ | ✓ | ✓ |
+| **Editors (nvim, zed)** | ✓ | ✓ | ✓ |
+| **Sway + DMS** | ✓ | ✗ | ✓ |
+| **Aerospace** | ✗ | ✓ | ✗ |
+| **Wayland tools** | ✓ | ✗ | ✓ |
+| **Gaming** | ✓ | ✗ | ✗ |
+| **Podman** | ✓ | ✗ | ✗ |
+| **libvirtd/virt-manager** | ✓ | ✗ | ✗ |
+| **distrobox** | ✓ | ✗ | ✗ |
+| **NixOS modules** | ✓ | ✗ | ✗ |
+| **Persistence** | ✓ | ✗ | ✗ |
+| **Backups (restic/btrbk)** | ✓ | ✗ | ✗ |
+| **NVIDIA offload** | ✓ | ✗ | ✗ |
+| **Polkit agent** | ✓ | ✗ | ✓ |
+| **XDG portals** | ✓ | ✗ | ✓ |
+| **Firefox** | ✓ | ✓ | ✓ |
+| **Bitwarden** | ✓ | ✓ | ✓ |
+| **Signal** | ✓ | ✓ | ✓ |
+| **Obsidian** | ✓ | ✓ | ✓ |
+
 ## Initial Setup
 
 ### 1. Install NixOS
@@ -189,7 +243,9 @@ DMS provides:
 
 ## System Tools
 
-### CLI Tools
+### CLI Tools (Cross-Platform)
+
+All CLI tools below are available on zbook, macbook, and ubuntu via Home Manager modules:
 
 | Tool | Purpose |
 |------|---------|
@@ -227,7 +283,9 @@ DMS provides:
 | `delta` | Syntax-highlighted diff |
 | `tldr` | Simplified man pages |
 
-### Nix Tools
+### Nix Tools (NixOS Only)
+
+These tools are only available on NixOS hosts:
 
 | Tool | Purpose |
 |------|---------|
@@ -238,16 +296,16 @@ DMS provides:
 | `nh` | NixOS helper |
 | `comma` | Run programs without installing |
 
-### Security Tools
+### Security Tools (Cross-Platform)
 
 | Tool | Purpose |
 |------|---------|
 | `age` | Encryption |
 | `gnupg` | Encryption |
-| `lynis` | Security auditing |
+| `lynis` | Security auditing (NixOS only) |
 | `bitwarden-desktop` | Password manager |
 
-### Container Tools
+### Container Tools (NixOS Only)
 
 | Tool | Purpose |
 |------|---------|
@@ -256,7 +314,7 @@ DMS provides:
 | `distrobox` | Integrate other distros |
 | `lazydocker` | Docker TUI |
 
-### Virtualization
+### Virtualization (NixOS Only)
 
 | Tool | Purpose |
 |------|---------|
