@@ -5,10 +5,14 @@
       wrapperFeatures.gtk = true;
     };
 
-    # Polkit authentication agent for GUI privilege escalation
-    security.polkit.enable = true;
+    # DDC/CI monitor control (input source switching, brightness, etc.)
+    # hardware.i2c loads the i2c-dev kernel module and sets up udev rules
+    # so users in the `i2c` group can access I2C buses without root.
+    # The user is added to the `i2c` group in the host-level users.nix.
+    hardware.i2c.enable = true;
     environment.systemPackages = with pkgs; [
       polkit_gnome
+      ddcutil
     ];
     systemd.user.services.polkit-gnome-authentication-agent = {
       description = "polkit-gnome-authentication-agent-1";
