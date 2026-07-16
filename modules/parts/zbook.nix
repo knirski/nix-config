@@ -31,6 +31,7 @@
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
+            backupFileExtension = ".hm-backup";
             users.krzysiek = {
               imports = [
                 config.aspects.homeManager.base

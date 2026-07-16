@@ -275,7 +275,7 @@ All CLI tools below are available on zbook, macbook, and ubuntu via Home Manager
 | `tmux` | Terminal multiplexer |
 | `atuin` | Shell history sync |
 | `mcfly` | Neural network shell history |
-| `thefuck` | Command correction |
+| `pay-respects` (via `f` alias) | Command correction (replaces `thefuck`) |
 | `navi` | Interactive cheat sheets |
 | `tealdeer` | Rust tldr client |
 | `fastfetch` | System info |

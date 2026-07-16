@@ -9,12 +9,12 @@
         packages = with pkgs; [
           command-code
           # Modern CLI replacements (no HM modules)
-          du-dust
+          dust
           sd
           yq
           hyperfine
           ncdu
-          dogdns
+          doggo
           # Security tools
           age
           # Other tools without HM modules
@@ -148,7 +148,8 @@
             };
           };
         };
-        lsd.enable = true;
+        # Use eza instead of lsd for file listing
+        lsd.enable = false;
         mc.enable = true;
         mcfly = {
           enable = true;
@@ -211,7 +212,7 @@
             rust-analyzer
             gopls
           ];
-          extraLuaConfig = ''
+          initLua = ''
             -- Basic settings
             vim.opt.number = true
             vim.opt.relativenumber = true
@@ -265,7 +266,7 @@
           enableZshIntegration = true;
         };
         tealdeer.enable = true;
-        thefuck = {
+        pay-respects = {
           enable = true;
           enableZshIntegration = true;
         };
@@ -405,7 +406,7 @@
             path = "echo $PATH | tr ':' '\n'";
             ports = "ss -tulnp";
           };
-          initExtra = ''
+          initContent = ''
             # Custom functions (interactive shells only)
             if [[ $- == *i* ]]; then
               mkcd() { mkdir -p "$1" && cd "$1"; }
@@ -513,7 +514,7 @@
       services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {
         enable = true;
         enableZshIntegration = true;
-        pinentryPackage = pkgs.pinentry-gnome3;
+        pinentry.package = pkgs.pinentry-gnome3;
       };
     };
 }
