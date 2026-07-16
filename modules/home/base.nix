@@ -8,6 +8,7 @@
         };
         packages = with pkgs; [
           command-code
+          gemini-cli
           # Modern CLI replacements (no HM modules)
           dust
           sd
