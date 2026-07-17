@@ -88,7 +88,7 @@
         };
         claude-code.enable = true;
         codex.enable = true;
-        command-not-found.enable = true;
+        command-not-found.enable = false;
         delta.enable = true;
         difftastic.enable = true;
         docker-cli.enable = true;
@@ -433,7 +433,7 @@
             du = "dust";
             ps = "procs";
             cat = "bat";
-            grep = "ripgrep";
+            grep = "rg";
             find = "fd";
             top = "btop";
             htop = "btop";
