@@ -1,6 +1,11 @@
 {
   aspects.homeManager.base =
-    { config, pkgs, lib, ... }:
+    {
+      config,
+      pkgs,
+      lib,
+      ...
+    }:
     {
       home = {
         sessionVariables = {
@@ -28,7 +33,7 @@
         # copies read-only. This makes the subsequent overwrite attempt fail
         # with "Permission denied" on every terminal open.
         # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/docker/docker.plugin.zsh
-        activation.ensureOhMyZshCacheWritable = lib.hm.dag.entryAfter ["writeBoundary"] ''
+        activation.ensureOhMyZshCacheWritable = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           chmod -R u+w "${config.xdg.cacheHome}/oh-my-zsh"
         '';
       };
@@ -554,7 +559,6 @@
         enableZshIntegration = true;
         pinentry.package = pkgs.pinentry-gnome3;
       };
-
 
     };
 }
