@@ -34,7 +34,9 @@
         # with "Permission denied" on every terminal open.
         # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/docker/docker.plugin.zsh
         activation.ensureOhMyZshCacheWritable = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          chmod -R u+w "${config.xdg.cacheHome}/oh-my-zsh"
+          if [ -d "${config.xdg.cacheHome}/oh-my-zsh" ]; then
+            chmod -R u+w "${config.xdg.cacheHome}/oh-my-zsh"
+          fi
         '';
       };
 
