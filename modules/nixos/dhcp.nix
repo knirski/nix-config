@@ -52,6 +52,7 @@
             "domain-needed" = true;
             "bogus-priv" = true;
             "local-service" = true;
+            "no-resolv" = true;
           };
         };
 
