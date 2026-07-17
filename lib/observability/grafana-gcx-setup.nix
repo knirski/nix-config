@@ -20,6 +20,9 @@ in
     wantedBy = [ "multi-user.target" ];
     serviceConfig = hardening.networkClient // {
       Type = "oneshot";
+      User = "grafana";
+      Group = "grafana";
+      ReadWritePaths = [ "/var/lib/grafana" ];
       RemainAfterExit = true;
       MemoryMax = "64M";
       CPUQuota = "10%";
@@ -36,7 +39,7 @@ in
             ];
             excludeShellChecks = [ "SC2086" ];
             text = ''
-              set -eu
+              set -euo pipefail
               : "''${CREDENTIALS_DIRECTORY:=/dev/null}"
               PASS=$(<"$CREDENTIALS_DIRECTORY"/admin_password)
               AUTH="admin:$PASS"
@@ -95,11 +98,9 @@ in
               token=$(create_token "$sa_id")
 
               # Write token atomically so a concurrent read never sees a
-              # partial write.  grafana:grafana matches the owner of
-              # /var/lib/grafana so the file stays inside the persisted tree.
+              # partial write.  Running as grafana so ownership is automatic.
               tmp=$(mktemp /var/lib/grafana/.gcx-token.XXXXXX)
               printf '%s\n' "$token" > "$tmp"
-              chown grafana:grafana "$tmp"
               chmod 0440 "$tmp"
               mv "$tmp" "$TOKEN_FILE"
 
