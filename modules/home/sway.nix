@@ -16,6 +16,11 @@
         config = rec {
           modifier = "Mod4";
           terminal = "ghostty";
+          seat = {
+            "*" = {
+              xcursor_theme = "Adwaita 24";
+            };
+          };
           input = {
             "*" = {
               xkb_layout = "pl";
@@ -292,12 +297,18 @@
           name = "Adwaita-dark";
           package = pkgs.gnome-themes-extra;
         };
+        cursorTheme = {
+          name = "Adwaita";
+          size = 24;
+        };
       };
 
       dconf.settings = {
         "org/gnome/desktop/interface" = {
           color-scheme = "prefer-dark";
           gtk-theme = "Adwaita-dark";
+          cursor-theme = "Adwaita";
+          cursor-size = 24;
         };
       };
     };
