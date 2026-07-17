@@ -21,6 +21,11 @@
           services.systemd-networkd-wait-online.enable = lib.mkForce false;
         };
 
+        # Blacklist i915 on headless servers. No display is attached, so loading
+        # the GPU driver is pointless and triggers harmless but noisy kernel
+        # WARN_ON backtraces (adlp_tc_phy_connect on Alder Lake N).
+        boot.blacklistedKernelModules = [ "i915" ];
+
         services = {
           # earlyoom: proactive OOM killer. If a service (e.g. Grafana, Loki) leaks
           # memory, the kernel OOM can freeze the box. earlyoom kills the culprit
