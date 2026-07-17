@@ -41,6 +41,11 @@
           keybindings = {
             "${modifier}+Return" = "exec ${terminal}";
             "${modifier}+Q" = "kill";
+            # Toggle idle inhibit (prevent auto-lock/suspend during builds,
+            # presentations, SSH sessions, etc.). DMS's built-in idle manager
+            # only tracks local user input — it doesn't know about background
+            # activity. Press again to re-enable idle.
+            "${modifier}+i" = "exec dms ipc call inhibit toggle";
             "${modifier}+h" = "focus left";
             "${modifier}+j" = "focus down";
             "${modifier}+k" = "focus up";
