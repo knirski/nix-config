@@ -66,6 +66,7 @@
           directory = ".ssh";
           mode = "0700";
         }
+        ".agents"
         ".local/share/atuin"
         ".local/share/direnv"
         ".local/state/home-manager"
