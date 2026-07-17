@@ -88,7 +88,7 @@
         && (serviceConfig.TimeoutStartSec or null) == policy.timeout
         &&
           (serviceConfig.RestrictAddressFamilies or [ ]) == expectedFamilies {
-            network = policy.network;
+            inherit (policy) network;
             netlink = policy.netlink or false;
           }
         && (serviceConfig.ReadWritePaths or [ ]) == policy.writes;
