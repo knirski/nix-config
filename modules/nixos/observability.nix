@@ -193,6 +193,9 @@
       grafanaAlertSetup = import ../../lib/observability/grafana-alert-setup.nix {
         inherit lib config pkgs;
       };
+      grafanaGcxSetup = import ../../lib/observability/grafana-gcx-setup.nix {
+        inherit lib config pkgs;
+      };
       tempoTraces = import ../../lib/observability/tempo-traces.nix {
         inherit lib pkgs;
       };
@@ -625,6 +628,7 @@
                 };
               }
               grafanaAlertSetup
+              grafanaGcxSetup
               tempoTraces
             ]
           ))
