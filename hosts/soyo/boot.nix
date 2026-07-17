@@ -26,6 +26,12 @@
     };
   };
 
+  # Blacklist i915 on this headless server. No display is attached, so loading
+  # the GPU driver is pointless and triggers harmless but noisy kernel WARN_ON
+  # backtraces (adlp_tc_phy_connect on Alder Lake N). This is host-specific:
+  # other headless servers may need i915 for hardware transcoding (VA-API).
+  boot.blacklistedKernelModules = [ "i915" ];
+
   zramSwap.enable = true;
   security.tpm2.enable = true;
 
