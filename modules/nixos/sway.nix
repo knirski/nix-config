@@ -5,15 +5,21 @@
       wrapperFeatures.gtk = true;
     };
 
+    # Cursor theme for Wayland clients. Sets both the Sway seat defaults
+    # and the GTK cursor theme so all toolkits (GTK, Qt, Electron via
+    # XCURSOR_THEME) use the same cursor set.
+    environment.systemPackages = with pkgs; [
+      adwaita-icon-theme
+      polkit_gnome
+      ddcutil
+    ];
+
     # DDC/CI monitor control (input source switching, brightness, etc.)
     # hardware.i2c loads the i2c-dev kernel module and sets up udev rules
     # so users in the `i2c` group can access I2C buses without root.
     # The user is added to the `i2c` group in the host-level users.nix.
     hardware.i2c.enable = true;
-    environment.systemPackages = with pkgs; [
-      polkit_gnome
-      ddcutil
-    ];
+
     systemd.user.services.polkit-gnome-authentication-agent = {
       description = "polkit-gnome-authentication-agent-1";
       wantedBy = [ "graphical-session.target" ];
@@ -47,7 +53,15 @@
       XDG_SESSION_TYPE = "wayland";
       XDG_CURRENT_DESKTOP = "sway";
       XDG_CURRENT_PORTAL = "wlr";
+      XCURSOR_THEME = "Adwaita";
+      XCURSOR_SIZE = "24";
       SWAY_UNSUPPORTED_GPU = "1";
+
+      # Force software cursors on NVIDIA.  The proprietary driver's hardware
+      # cursor plane is unreliable under wlroots — software cursors are
+      # smoother and avoid judder/stutter.  Same fix commonly applied for
+      # Hyprland on NVIDIA (see AGENTS.md).
+      WLR_NO_HARDWARE_CURSORS = "1";
     };
 
     # XDG Desktop Portals for Wayland
