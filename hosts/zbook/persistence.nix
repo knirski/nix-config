@@ -23,6 +23,12 @@ in
       # Without this, the key vanishes on reboot and unattended backups fail.
       "/etc/restic"
       "/var/log"
+      {
+        directory = "/var/lib/dms-greeter";
+        user = "greeter";
+        group = "greeter";
+        mode = "0750";
+      }
     ];
     files = [
       {
