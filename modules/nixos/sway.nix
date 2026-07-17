@@ -43,7 +43,10 @@
       enable = true;
       compositor.name = "sway";
     };
-    users.users.greeter.extraGroups = [ "video" "render" ];
+    users.users.greeter.extraGroups = [
+      "video"
+      "render"
+    ];
 
     # DMS supplies the greetd preStart through its upstream module. The pinned
     # implementation currently triggers SC2155, SC2162, and SC2035; none of
