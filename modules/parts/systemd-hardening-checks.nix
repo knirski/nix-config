@@ -55,8 +55,21 @@
           timeout = "1m";
         };
       };
-      expectedFamilies = { network, netlink ? false }:
-        (if network then [ "AF_UNIX" "AF_INET" "AF_INET6" ] else [ "AF_UNIX" ])
+      expectedFamilies =
+        {
+          network,
+          netlink ? false,
+        }:
+        (
+          if network then
+            [
+              "AF_UNIX"
+              "AF_INET"
+              "AF_INET6"
+            ]
+          else
+            [ "AF_UNIX" ]
+        )
         ++ lib.optional netlink "AF_NETLINK";
       commonValid =
         policy: serviceConfig:
@@ -73,7 +86,11 @@
         && (serviceConfig.MemoryDenyWriteExecute or false)
         && (serviceConfig.Restart or null) == "no"
         && (serviceConfig.TimeoutStartSec or null) == policy.timeout
-        && (serviceConfig.RestrictAddressFamilies or [ ]) == expectedFamilies { network = policy.network; netlink = policy.netlink or false; }
+        &&
+          (serviceConfig.RestrictAddressFamilies or [ ]) == expectedFamilies {
+            network = policy.network;
+            netlink = policy.netlink or false;
+          }
         && (serviceConfig.ReadWritePaths or [ ]) == policy.writes;
       failures = lib.mapAttrsToList (
         name: policy:
