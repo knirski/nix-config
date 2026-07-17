@@ -7,11 +7,7 @@
 # Idempotent: if the service account and token already exist, skips creation.
 #
 # Depends on grafana.service and the admin password secret (via LoadCredential).
-{
-  config,
-  pkgs,
-  lib,
-}:
+{ config, pkgs, ... }:
 
 let
   hardening = import ../systemd-hardening.nix;
