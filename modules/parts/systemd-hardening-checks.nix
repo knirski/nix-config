@@ -30,6 +30,7 @@
         };
         lan-inventory-exporter = {
           network = false;
+          netlink = true;
           writes = [ "/var/lib/prometheus/textfiles" ];
           timeout = "1m";
         };
@@ -55,15 +56,21 @@
         };
       };
       expectedFamilies =
-        network:
-        if network then
-          [
-            "AF_UNIX"
-            "AF_INET"
-            "AF_INET6"
-          ]
-        else
-          [ "AF_UNIX" ];
+        {
+          network,
+          netlink ? false,
+        }:
+        (
+          if network then
+            [
+              "AF_UNIX"
+              "AF_INET"
+              "AF_INET6"
+            ]
+          else
+            [ "AF_UNIX" ]
+        )
+        ++ lib.optional netlink "AF_NETLINK";
       commonValid =
         policy: serviceConfig:
         (serviceConfig.NoNewPrivileges or false)
@@ -79,7 +86,11 @@
         && (serviceConfig.MemoryDenyWriteExecute or false)
         && (serviceConfig.Restart or null) == "no"
         && (serviceConfig.TimeoutStartSec or null) == policy.timeout
-        && (serviceConfig.RestrictAddressFamilies or [ ]) == expectedFamilies policy.network
+        &&
+          (serviceConfig.RestrictAddressFamilies or [ ]) == expectedFamilies {
+            inherit (policy) network;
+            netlink = policy.netlink or false;
+          }
         && (serviceConfig.ReadWritePaths or [ ]) == policy.writes;
       failures = lib.mapAttrsToList (
         name: policy:
@@ -114,6 +125,7 @@
           mutation:
           commonValid {
             network = false;
+            netlink = false;
             writes = [ ];
             timeout = "30s";
           } (mutation.mutate safeFixture)
