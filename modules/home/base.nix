@@ -8,6 +8,7 @@
         };
         packages = with pkgs; [
           command-code
+          gcx
           # Modern CLI replacements (no HM modules)
           dust
           sd
