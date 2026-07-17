@@ -20,7 +20,7 @@ stdenvNoCC.mkDerivation rec {
 
   src = fetchurl {
     url = "https://github.com/grafana/gcx/releases/download/v${version}/gcx_${version}_linux_amd64.tar.gz";
-    hash = "sha256-1wbr69qlpissng5xxl0hkadqfp7wncarlnmg4v2a8bqkp2cjjl1w";
+    hash = "sha256-PFApmbgTL6TEJq9amhWz/FyHm5oQ0N7Ls1rHS3EyefE=";
   };
 
   sourceRoot = ".";
