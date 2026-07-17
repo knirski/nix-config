@@ -35,10 +35,18 @@
     };
 
     # DMS greetd greeter — identical look to the DMS lock screen.
+    # The greeter runs before the user logs in as the system `greeter` user.
+    # Without access to /dev/dri devices, Sway falls back to software
+    # rendering (Pixman/llvmpipe), which is too slow for the animated DMS
+    # greeter — choppy/framey UI is the symptom.
     programs.dank-material-shell.greeter = {
       enable = true;
       compositor.name = "sway";
     };
+    users.users.greeter.extraGroups = [
+      "video"
+      "render"
+    ];
 
     # DMS supplies the greetd preStart through its upstream module. The pinned
     # implementation currently triggers SC2155, SC2162, and SC2035; none of
