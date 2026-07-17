@@ -397,6 +397,8 @@
                     ReadWritePaths = [ "/var/lib/prometheus/textfiles" ];
                     TimeoutStartSec = "1m";
                     Restart = "no";
+                    # ip neigh show needs AF_NETLINK to query the kernel ARP table.
+                    RestrictAddressFamilies = [ "AF_UNIX" "AF_NETLINK" ];
                   };
                 };
               };
