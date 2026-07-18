@@ -3,7 +3,7 @@ auto_review = true
 auto_describe = true
 
 [pr_reviewer]
-num_max_findings = 5
+num_max_findings = 10
 require_tests_review = true
 require_security_review = true
 
