@@ -4,6 +4,7 @@
 rec {
   durable = [
     ".ssh"
+    ".agents"
     ".local/share/keyrings"
     ".local/state/home-manager"
     ".local/state/DankMaterialShell"
