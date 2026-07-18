@@ -115,7 +115,7 @@ jobs:
       - name: Push evaluation artifacts to Cachix
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          nix copy --to 'cachix://knirski-nix-config' \
+          nix copy --to 'https://knirski-nix-config.cachix.org' \
             .#checks.x86_64-linux.backup-restic-integration \
             .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
