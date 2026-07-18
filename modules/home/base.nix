@@ -38,20 +38,15 @@
         atuin = {
           enable = true;
           enableZshIntegration = true;
-          # Let fzf own Ctrl-R for interactive search; atuin still syncs
-          # history and works via up-arrow search.
-          flags = [ "--disable-ctrl-r" ];
-          # Up-arrow searches only commands run in the current directory,
-          # while Ctrl-R (fzf) searches everything.
-          # forceOverwriteSettings ensures the settings below take effect
-          # even if Atuin already wrote a default config.toml (Atuin
-          # auto-generates one after the first shell command). The trade-off
-          # is that any manually-added sync or server settings in that file
-          # (e.g. from `atuin login`) will be overwritten — re-run `atuin login`
-          # after config changes if you use sync.
+          # Disable all atuin keybindings: arrow up belongs to
+          # history-substring-search, Ctrl+R to fzf. Atuin still
+          # captures commands in the background for sync.
+          flags = [
+            "--disable-ctrl-r"
+            "--disable-up-arrow"
+          ];
           forceOverwriteSettings = true;
           settings = {
-            filter_mode_shell_up_key_binding = "directory";
             enter_accept = true;
           };
         };
@@ -508,6 +503,7 @@
               "dirhistory"
               "extract"
               "history"
+              "history-substring-search"
               "z"
               "colored-man-pages"
             ];
