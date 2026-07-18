@@ -32,17 +32,6 @@
           nushell # used by all agents for script execution
         ];
 
-        # oh-my-zsh plugins (docker, docker-compose) try to overwrite their
-        # cached completion files on every shell start. The source files in the
-        # nix store are 0444, and `cp` preserves that mode, leaving the cached
-        # copies read-only. This makes the subsequent overwrite attempt fail
-        # with "Permission denied" on every terminal open.
-        # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/docker/docker.plugin.zsh
-        activation.ensureOhMyZshCacheWritable = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          if [ -d "${config.xdg.cacheHome}/oh-my-zsh" ]; then
-            chmod -R u+w "${config.xdg.cacheHome}/oh-my-zsh"
-          fi
-        '';
       };
 
       programs = {
@@ -402,6 +391,7 @@
             ignoreSpace = true;
             expireDuplicatesFirst = true;
           };
+
           shellAliases = {
             # Navigation
             ll = "eza -la --icons --git";
@@ -456,7 +446,22 @@
             path = "echo $PATH | tr ':' '\n'";
             ports = "ss -tulnp";
           };
+          # oh-my-zsh plugins (docker, docker-compose) try to overwrite their
+          # cached completion files on every shell start. The source files in the
+          # nix store are 0444, and `cp` preserves that mode, leaving the cached
+          # copies read-only. This makes the subsequent overwrite attempt fail
+          # with "Permission denied" on every terminal open.
+          # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/docker/docker.plugin.zsh
+          #
+          # Fix: ensure the cache dir is writable on every shell start before
+          # oh-my-zsh loads its plugins.
           initContent = ''
+            __ohmyzsh_cache="${config.xdg.cacheHome}/oh-my-zsh"
+            if [ -d "$__ohmyzsh_cache" ]; then
+              chmod -R u+w "$__ohmyzsh_cache"
+            fi
+            unset __ohmyzsh_cache
+
             # Custom functions (interactive shells only)
             if [[ $- == *i* ]]; then
               mkcd() { mkdir -p "$1" && cd "$1"; }
