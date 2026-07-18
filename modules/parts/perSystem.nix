@@ -68,7 +68,7 @@
           statix.enable = true;
           typos = {
             enable = true;
-            excludes = [ ".*\.age$" ];
+            excludes = [ ".*\\.age$" ];
             settings.config = {
               default = {
                 "extend-words" = {
