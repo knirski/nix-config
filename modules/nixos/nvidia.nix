@@ -25,8 +25,8 @@
         };
         syncMode = lib.mkOption {
           type = lib.types.enum [
-            "sync"
             "offload"
+            "sync"
           ];
           default = "offload";
           description = ''
