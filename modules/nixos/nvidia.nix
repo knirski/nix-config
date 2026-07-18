@@ -93,7 +93,13 @@
         # If nvidia-suspend hangs (as seen with rw-semaphore contention in
         # driver 610.43.03), kill it after 10s so the suspend aborts cleanly.
         # Normal completes take <2s.
-        systemd.services.nvidia-suspend.serviceConfig.TimeoutSec = 10;
+        systemd.services.nvidia-suspend.serviceConfig = {
+          TimeoutSec = 10;
+          # mixed: SIGTERM main process, then SIGKILL remaining cgroup
+          # processes after timeout. Explicit is safer than relying on
+          # the default (control-group) for a stuck kernel-thread hang.
+          KillMode = "mixed";
+        };
       };
     };
 }
