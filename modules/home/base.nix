@@ -14,6 +14,9 @@
         packages = with pkgs; [
           command-code
           gcx
+          # Nix language servers for Zed
+          nil
+          nixd
           # Modern CLI replacements (no HM modules)
           dust
           sd
