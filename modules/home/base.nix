@@ -32,7 +32,6 @@
           nushell # used by all agents for script execution
         ];
 
-
       };
 
       programs = {
