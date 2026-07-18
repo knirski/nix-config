@@ -12,6 +12,9 @@ on:
       - reopened
       - ready_for_review
 
+permissions:
+  contents: read
+
 concurrency:
   group: pr-agent-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
   cancel-in-progress: true

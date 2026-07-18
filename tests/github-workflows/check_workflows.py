@@ -27,7 +27,7 @@ def has_trigger(value: object, trigger: str) -> bool:
     return False
 
 
-def permission_errors(value: object, scope: str, require_contents: bool) -> list[str]:
+def permission_errors(value: object, scope: str, require_contents: bool, *, allow_write: bool = False) -> list[str]:
     errors: list[str] = []
     if isinstance(value, str):
         if value == "write-all":
@@ -39,7 +39,7 @@ def permission_errors(value: object, scope: str, require_contents: bool) -> list
         return [f"{scope} permissions must be a mapping or read-all"]
     if require_contents and value.get("contents") != "read":
         errors.append(f"{scope} permissions must include contents: read")
-    if any(permission == "write" for permission in value.values()):
+    if not allow_write and any(permission == "write" for permission in value.values()):
         errors.append(f"{scope} write permission is forbidden")
     return errors
 
@@ -75,7 +75,16 @@ def validate(path: Path) -> list[str]:
                 errors.append(f"job {job_name!r} must be a mapping")
                 continue
             if "permissions" in job:
-                errors.extend(permission_errors(job["permissions"], "job-level", False))
+                # Pre-approved workflows that need write permissions for
+                # legitimate purposes (e.g. automated PR reviews). Keep
+                # this set minimal — review additions carefully.
+                allow_write_job = path.name in {"pr-agent.yml"}
+                errors.extend(
+                    permission_errors(
+                        job["permissions"], "job-level", False,
+                        allow_write=allow_write_job,
+                    )
+                )
 
     for number, line in enumerate(lines, start=1):
         if ANY_ACTION.match(line) and not PINNED_ACTION.match(line):
