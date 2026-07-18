@@ -48,7 +48,7 @@
         };
       }
       {
-        name = "root";
+        name = ".";
         snapshotDir = "/snapshots/root";
         retention = {
           daily = 7;
