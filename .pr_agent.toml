@@ -16,7 +16,3 @@ require_security_review = true
 
 [pr_description]
 publish_description_as_comment = "persistent"
-
-[pr_code_suggestions]
-committable_code_suggestions = true
-dual_publishing_score_threshold = 5
