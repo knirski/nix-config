@@ -1,0 +1,11 @@
+[github_action_config]
+auto_review = true
+auto_describe = true
+
+[pr_reviewer]
+num_max_findings = 5
+require_tests_review = true
+require_security_review = true
+
+[pr_description]
+publish_description_as_comment = "persistent"
