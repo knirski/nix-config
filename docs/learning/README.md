@@ -12,7 +12,7 @@ A guided entry point for this repository's code and the Nix/NixOS concepts it us
 | 4 | [flake-parts](https://flake.parts) | M1 | Modular flake outputs, perSystem |
 | 5 | [Design doc](../superpowers/specs/soyo-dns-dhcp-appliance.md) | All | Every architectural decision and why |
 | 6 | [Project assessment](project-assessment.md) | All | Comprehensive review: architecture, invariants, testing pyramid, operational procedures, technical debt, and learning project evaluation |
-| 7 | `flake.nix` | M1 | The entry point — thin, delegates to flake-parts; `vic/import-tree` auto-imports every module under `modules/` |
+| 7 | `flake.nix` | M1 | The entry point — thin, delegates to flake-parts; `inputs.import-tree` auto-imports every module under `modules/` |
 | 8 | `modules/parts/soyo.nix`, `modules/parts/aspect-options.nix` | M1 | How a host is assembled by toggling aspects; `aspect-options.nix` defines the `aspects.nixos` and `aspects.homeManager` option namespaces that make the aspect system work |
 | 9 | `modules/nixos/base.nix` → `ssh.nix` → `server.nix` → `tailscale.nix` → `users.nix` (suggested reading order), [Host role models](host-role-models.md) | M1 | The role-neutral base, explicit aspects, typed role registries and boundary checks. `ssh.nix` was extracted from `server.nix` and `workstation.nix` — key-only auth, configurable ports, agent forwarding |
 | 10 | `modules/nixos/persistence.nix`, `hosts/soyo/persistence.nix` | M1 | Impermanence via blank-snapshot rollback + the concrete persisted-path inventory, including why boot signing state like `/var/lib/sbctl` belongs in it |
