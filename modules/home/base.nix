@@ -37,9 +37,15 @@
       programs = {
         atuin = {
           enable = true;
-          # Sync-only mode: no shell integration. Arrow up is owned by
-          # history-substring-search (oh-my-zsh plugin), Ctrl+R by fzf.
-          enableZshIntegration = false;
+          enableZshIntegration = true;
+          # Disable all atuin keybindings: arrow up belongs to
+          # history-substring-search, Ctrl+R to fzf. Atuin still
+          # captures commands in the background for sync.
+          flags = [ "--disable-ctrl-r" "--disable-up-arrow" ];
+          forceOverwriteSettings = true;
+          settings = {
+            enter_accept = true;
+          };
         };
         bat.enable = true;
         bottom.enable = true;
