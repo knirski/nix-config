@@ -288,10 +288,21 @@
                         }
                         // lib.optionalAttrs (vol.retention != { }) {
                           snapshot_preserve_min = "2d";
-                        }
-                        // lib.listToAttrs (
-                          lib.mapAttrsToList (k: v: lib.nameValuePair "snapshot_preserve_${k}" (toString v)) vol.retention
-                        );
+                          snapshot_preserve = lib.concatStringsSep " " (
+                            lib.mapAttrsToList (
+                              k: v:
+                              "${toString v}${
+                                {
+                                  daily = "d";
+                                  weekly = "w";
+                                  monthly = "m";
+                                  yearly = "y";
+                                }
+                                .${k}
+                              }"
+                            ) vol.retention
+                          );
+                        };
                       }) cfg.btrbk.subvolumes
                     );
                   };

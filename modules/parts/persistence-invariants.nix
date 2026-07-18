@@ -94,11 +94,9 @@
         soyo = {
           sources = [
             "persist:/snapshots/persist"
-            "root:/snapshots/root"
           ];
           subvolumes = [
             "persist:/snapshots/persist"
-            "root:/snapshots/root"
           ];
         };
         zbook = {
