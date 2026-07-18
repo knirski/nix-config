@@ -405,9 +405,9 @@
           shellAliases = {
             # Navigation
             ll = "eza -la --icons=auto --git";
-                        la = "eza -a --icons=auto";
-                        ls = "eza --icons=auto";
-                        lt = "eza -la --icons=auto --git --tree --level=2";
+            la = "eza -a --icons=auto";
+            ls = "eza --icons=auto";
+            lt = "eza -la --icons=auto --git --tree --level=2";
             ".." = "cd ..";
             "..." = "cd ../..";
             "...." = "cd ../../..";
