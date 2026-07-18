@@ -41,7 +41,10 @@
           # Disable all atuin keybindings: arrow up belongs to
           # history-substring-search, Ctrl+R to fzf. Atuin still
           # captures commands in the background for sync.
-          flags = [ "--disable-ctrl-r" "--disable-up-arrow" ];
+          flags = [
+            "--disable-ctrl-r"
+            "--disable-up-arrow"
+          ];
           forceOverwriteSettings = true;
           settings = {
             enter_accept = true;
