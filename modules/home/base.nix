@@ -29,6 +29,7 @@
           # Other tools without HM modules
           procs
           unrar # for extract() function
+          nushell # used by all agents for script execution
         ];
 
         # oh-my-zsh plugins (docker, docker-compose) try to overwrite their
@@ -145,7 +146,7 @@
           enableZshIntegration = true;
           # Nushell integration requires fzf >= 0.73.0, but soyo uses
           # nixpkgs stable (release-26.05) which has fzf 0.72.0.
-          # Disabled since nushell is not used.
+          # Nushell is installed for agent tooling, not as an interactive shell.
           enableNushellIntegration = false;
           # Fzf owns Ctrl-R for history search. The generated shell init
           # binds Ctrl-R to fzf's history widget, overlaying zsh's built-in
