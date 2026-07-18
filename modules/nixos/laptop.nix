@@ -18,9 +18,16 @@
         # After s2idle resume, NetworkManager often reports "connected" but
         # the actual data path (DNS resolution, interface state, route table)
         # is broken — common with USB-C dock Ethernet and s2idle on laptops.
-        # Restarting NetworkManager re-initializes all interfaces cleanly.
+        #
+        # Previously this restarted NetworkManager entirely, but DMS (Dank
+        # Material Shell) connects to NM via D-Bus and has no reconnection
+        # logic — once NM restarts, DMS's signal subscriptions are permanently
+        # lost and it shows "not connected" even when WiFi is working.
+        # Instead, reload NM connections and flush DNS, which is sufficient
+        # to fix the stale data path without breaking D-Bus consumers.
         resumeCommands = ''
-          ${pkgs.systemd}/bin/systemctl try-restart NetworkManager.service
+          ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true
+          ${pkgs.systemd}/bin/resolvectl flush-caches 2>/dev/null || true
         '';
       };
 
