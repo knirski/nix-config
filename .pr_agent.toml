@@ -7,12 +7,9 @@ custom_model_max_tokens = 131072
 auto_review = true
 auto_describe = true
 auto_improve = true
+verbose = false
 pr_actions = ["opened", "reopened", "ready_for_review"]
 
-[pr_reviewer]
-num_max_findings = 10
-require_tests_review = true
-require_security_review = true
-
-[pr_description]
-publish_description_as_comment = "persistent"
+[pr_code_suggestions]
+commitable_code_suggestions = true
+dual_publishing_score_threshold = 5
