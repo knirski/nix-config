@@ -63,6 +63,7 @@
             "${modifier}+7" = "workspace number 7";
             "${modifier}+8" = "workspace number 8";
             "${modifier}+9" = "workspace number 9";
+            "${modifier}+0" = "workspace number 10";
             "${modifier}+Shift+Left" = "move workspace to output left";
             "${modifier}+Shift+Right" = "move workspace to output right";
             "${modifier}+Shift+1" = "move container to workspace number 1";
@@ -74,6 +75,7 @@
             "${modifier}+Shift+7" = "move container to workspace number 7";
             "${modifier}+Shift+8" = "move container to workspace number 8";
             "${modifier}+Shift+9" = "move container to workspace number 9";
+            "${modifier}+Shift+0" = "move container to workspace number 10";
             "${modifier}+Shift+space" = "floating toggle";
             "${modifier}+space" = "exec dms ipc call spotlight toggle";
             "${modifier}+Ctrl+space" = "focus mode_toggle";
