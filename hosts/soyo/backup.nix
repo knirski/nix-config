@@ -47,15 +47,6 @@
           monthly = 6;
         };
       }
-      {
-        name = ".";
-        snapshotDir = "/snapshots/root";
-        retention = {
-          daily = 7;
-          weekly = 4;
-          monthly = 3;
-        };
-      }
     ];
   };
 }
