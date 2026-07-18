@@ -8,6 +8,7 @@ HDA = "HDA"
 Hed = "Hed"
 FACTER = "FACTER"
 sxl = "sxl"
+commitable = "commitable"
 
 [files]
 extend-exclude = ["*.age", "hosts/*/facter.json"]
