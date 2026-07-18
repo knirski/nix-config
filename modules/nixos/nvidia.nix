@@ -25,14 +25,14 @@
         };
         syncMode = lib.mkOption {
           type = lib.types.enum [
-            "sync"
             "offload"
+            "sync"
           ];
-          default = "sync";
+          default = "offload";
           description = ''
             PRIME mode:
-            - sync: NVIDIA renders everything, frames copied to Intel. Best for gaming.
             - offload: Intel renders by default, on-demand NVIDIA offload. Better battery life.
+            - sync: NVIDIA renders everything, frames copied to Intel. Best for gaming.
           '';
         };
       };
