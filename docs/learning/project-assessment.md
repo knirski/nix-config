@@ -37,7 +37,7 @@ This is a **production-grade, learning-oriented NixOS/nix-darwin flake** managin
 
 ### 1.2 Host Structure
 
-```
+```text
 hosts/<name>/
   ├── facter.json          # Hardware facts (nixos-facter) — NEVER hand-edit
   ├── disko.nix            # Disk layout (NixOS only)
@@ -67,7 +67,7 @@ hosts/<name>/
 
 ### 2.1 DNS/DHCP Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    CLIENT REQUEST                            │
 └─────────────────────────────┬───────────────────────────────┘
@@ -127,7 +127,7 @@ hosts/<name>/
 
 ### 2.4 Secrets (agenix-rekey)
 
-```
+```text
 secrets/
 ├── *.age                    # Master-encrypted (operator key)
 └── rekeyed/<host>/
@@ -172,7 +172,7 @@ secrets/
 
 ### 4.1 Test Pyramid Implementation
 
-```
+```text
                         ┌─────────────────────┐
                         │  MANUAL DRILLS      │  ← Reboot, TPM unlock, break-glass,
                         │  (Documented only)  │     initrd SSH, direct-link, DHCP client,
