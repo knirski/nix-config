@@ -43,6 +43,10 @@ enforcement belongs to the documentation-check layer.
 
 ## Understand
 
+### Project assessment
+
+- [Project assessment](learning/project-assessment.md) — comprehensive repository review: architecture, invariants, testing pyramid, operational procedures, technical debt, and learning project evaluation.
+
 ### Correctness and security
 
 - [Testing and verification](testing.md) — evidence layers, automated checks
