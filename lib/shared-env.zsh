@@ -50,8 +50,10 @@ _load_shared_env() {
   local mtime
   if zmodload zsh/stat 2>/dev/null; then
     zstat -A mtime +mtime "$file" 2>/dev/null || return
+  elif mtime=$(stat -c %Y "$file" 2>/dev/null); then
+    : # GNU stat (Linux)
   else
-    mtime=$(stat -c %Y "$file" 2>/dev/null) || return
+    mtime=$(stat -f %m "$file" 2>/dev/null) || return  # BSD stat (macOS)
   fi
 
   if [[ $mtime != "$_zsh_shared_env_mtime" ]]; then
