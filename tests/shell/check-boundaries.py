@@ -22,6 +22,7 @@ EXPECTED_TEST_HARNESSES = {
     "tests/scripts/recover-secrets.bats",
     "tests/scripts/set-tailscale-keys.bats",
     "tests/scripts/test-helper.bash",
+    "tests/shell/shared-env.bats",
 }
 
 
