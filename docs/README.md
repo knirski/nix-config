@@ -19,6 +19,8 @@ enforcement belongs to the documentation-check layer.
   toward aspects, thin hosts and declarative recovery.
 - [Host role models](learning/host-role-models.md) — alternatives for defining,
   assembling and checking host responsibilities.
+- [Shared environment variables](learning/shared-env.md) — broadcast env vars
+  across all active terminal sessions.
 
 ## Operate
 
