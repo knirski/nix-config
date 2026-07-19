@@ -77,6 +77,7 @@ setup() {
 
 @test "shared-env creates parent directory" {
   run zsh -c "
+    export SHARED_ENV_FILE=\"\$BATS_TEST_TMPDIR/nested/dir/shared-env\"
     source $SHARED_ENV_ZSH
     shared-env FOO bar
     [[ -f \$SHARED_ENV_FILE ]]
@@ -140,7 +141,8 @@ setup() {
     shared-env BROWSER firefox
     shared-env-rm PAGER
     shared-env EDITOR vim
-    source $SHARED_ENV_ZSH
+    # Source the generated file to validate its syntax
+    source \$SHARED_ENV_FILE
   "
   [ "$status" -eq 0 ]
 }

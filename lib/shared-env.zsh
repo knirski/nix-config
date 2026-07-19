@@ -25,21 +25,24 @@ typeset -g _zsh_shared_env_mtime=0
 shared-env() {
   local name=$1 value=$2
   local file=$SHARED_ENV_FILE
+  local tmp="$file.$$.tmp"
   mkdir -p "${file:h}"
   {
     # Keep existing entries except the one we're updating.
     [[ -f "$file" ]] && grep -v "^export $name=" "$file" 2>/dev/null || true
     # Write the new entry with zsh-safe quoting.
+    # shellcheck disable=SC2296
     printf 'export %s=%s\n' "$name" "${(q)value}"
-  } > "$file.tmp" && mv "$file.tmp" "$file"
+  } > "$tmp" && mv "$tmp" "$file"
 }
 
 # Remove a variable from the shared store.
 shared-env-rm() {
   local name=$1 file=$SHARED_ENV_FILE
+  local tmp="$file.$$.tmp"
   [[ -f "$file" ]] || return 0
-  grep -v "^export $name=" "$file" > "$file.tmp" 2>/dev/null || true
-  mv "$file.tmp" "$file"
+  grep -v "^export $name=" "$file" > "$tmp" 2>/dev/null || true
+  mv "$tmp" "$file"
 }
 
 # precmd hook: source the shared file only when it actually changed.
@@ -48,7 +51,7 @@ _load_shared_env() {
   [[ -f "$file" ]] || return
 
   local mtime
-  if zmodload zsh/stat 2>/dev/null; then
+  if zmodload -F zsh/stat b:zstat 2>/dev/null; then
     zstat -A mtime +mtime "$file" 2>/dev/null || return
   elif mtime=$(stat -c %Y "$file" 2>/dev/null); then
     : # GNU stat (Linux)
