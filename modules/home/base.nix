@@ -452,7 +452,7 @@
           # oh-my-zsh loads its plugins.
           initContent =
             let
-              sharedEnv = builtins.readFile ./lib/shared-env.zsh;
+              sharedEnv = builtins.readFile ../../lib/shared-env.zsh;
             in
             ''
               __ohmyzsh_cache="${config.xdg.cacheHome}/oh-my-zsh"
