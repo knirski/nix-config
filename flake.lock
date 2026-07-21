@@ -47,7 +47,44 @@
         "type": "github"
       }
     },
+    "dank-greeter": {
+      "inputs": {
+        "dank-qml-common": "dank-qml-common",
+        "nixpkgs": [
+          "nixpkgs-unstable"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784646053,
+        "narHash": "sha256-PB2NGnpbVBXk2hU9lt+UrXNTF+SAP5xmD1dpdog+1mg=",
+        "owner": "AvengeMedia",
+        "repo": "dank-greeter",
+        "rev": "5717f21a4bf8e36d453026c51c6eda6cffc85678",
+        "type": "github"
+      },
+      "original": {
+        "owner": "AvengeMedia",
+        "repo": "dank-greeter",
+        "type": "github"
+      }
+    },
     "dank-qml-common": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784433462,
+        "narHash": "sha256-8MdKtu/tSYrCenhtmgYW+lcv9JhGPTE3BnSE6WuqO1U=",
+        "owner": "AvengeMedia",
+        "repo": "dank-qml-common",
+        "rev": "8d36f668d73e7a4391ea9ead3939c5de137aa1f0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "AvengeMedia",
+        "repo": "dank-qml-common",
+        "type": "github"
+      }
+    },
+    "dank-qml-common_2": {
       "flake": false,
       "locked": {
         "lastModified": 1784074596,
@@ -63,7 +100,7 @@
         "type": "github"
       }
     },
-    "dank-qml-common_2": {
+    "dank-qml-common_3": {
       "flake": false,
       "locked": {
         "lastModified": 1784591373,
@@ -103,7 +140,7 @@
     },
     "dcal": {
       "inputs": {
-        "dank-qml-common": "dank-qml-common",
+        "dank-qml-common": "dank-qml-common_2",
         "nixpkgs": [
           "nixpkgs-unstable"
         ]
@@ -207,7 +244,7 @@
     },
     "dms": {
       "inputs": {
-        "dank-qml-common": "dank-qml-common_2",
+        "dank-qml-common": "dank-qml-common_3",
         "flake-compat": "flake-compat_3",
         "nixpkgs": [
           "nixpkgs-unstable"
@@ -667,6 +704,7 @@
       "inputs": {
         "agenix": "agenix",
         "agenix-rekey": "agenix-rekey",
+        "dank-greeter": "dank-greeter",
         "dcal": "dcal",
         "deploy-rs": "deploy-rs",
         "dgop": "dgop",
