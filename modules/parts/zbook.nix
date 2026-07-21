@@ -26,7 +26,7 @@
         inputs.agenix.nixosModules.default
         inputs.agenix-rekey.nixosModules.default
         inputs.dms.nixosModules.dank-material-shell
-        inputs.dms.nixosModules.greeter
+        inputs.dank-greeter.nixosModules.default
         inputs.home-manager.nixosModules.home-manager
         {
           home-manager = {

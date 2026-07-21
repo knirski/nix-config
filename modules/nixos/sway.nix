@@ -34,12 +34,12 @@
       };
     };
 
-    # DMS greetd greeter — identical look to the DMS lock screen.
-    # The greeter runs before the user logs in as the system `greeter` user.
-    # Without access to /dev/dri devices, Sway falls back to software
-    # rendering (Pixman/llvmpipe), which is too slow for the animated DMS
-    # greeter — choppy/framey UI is the symptom.
-    programs.dank-material-shell.greeter = {
+    # DMS greetd greeter (from the dank-greeter repo) — identical look to
+    # the DMS lock screen. The greeter runs before the user logs in as the
+    # system `greeter` user. Without access to /dev/dri devices, Sway falls
+    # back to software rendering (Pixman/llvmpipe), which is too slow for the
+    # animated DMS greeter — choppy/framey UI is the symptom.
+    programs.dms-greeter = {
       enable = true;
       compositor.name = "sway";
     };
