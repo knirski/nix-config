@@ -29,12 +29,16 @@
       # Linux only — macOS manages lid behavior via pmset.
       home.packages =
         with pkgs;
-        [
-          antigravity-cli
-          mpv
-          bitwarden-desktop
-          spotify
-        ]
+        (
+          [
+            antigravity-cli
+            mpv
+            spotify
+          ]
+          ++ lib.optionals stdenv.isLinux [
+            bitwarden-desktop
+          ]
+        )
         ++ lib.optionals stdenv.isLinux [
           (writeShellApplication {
             name = "disable-lid";
