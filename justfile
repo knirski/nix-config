@@ -48,17 +48,19 @@ build-macbook:
 #   macbook → darwin-rebuild switch
 #   others  → nixos-rebuild (local) or deploy-rs (remote)
 deploy host="soyo":
-    @case "{{host}}" in
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{host}}" in
       ubuntu)
         home-manager switch --flake .#ubuntu ;;
       macbook)
         darwin-rebuild switch --flake .#macbook ;;
       *)
-        CURRENT="$$(hostname -s)" && \
-        if [ "{{host}}" = "$$CURRENT" ]; then \
-          sudo nixos-rebuild switch --flake .#{{host}}; \
-        else \
-          nix develop '.#' -c deploy .#{{host}}; \
+        CURRENT="$(hostname -s)"
+        if [ "{{host}}" = "$CURRENT" ]; then
+          sudo nixos-rebuild switch --flake .#{{host}}
+        else
+          nix develop '.#' -c deploy .#{{host}}
         fi ;;
     esac
 
