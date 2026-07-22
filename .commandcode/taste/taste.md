@@ -23,3 +23,10 @@ See [taste-(continuously-learned-by-[commandcode][cmd])/taste.md](taste-(continu
 
 # nixos
 See [nixos/taste.md](nixos/taste.md)
+
+# nix
+- `lazyAttrsOf lib.types.raw` accepts function values — a module returning a plain function (not declaring options via `options.aspects.darwin.base = ...`) works when assigned to a `raw`-typed option slot. This is why `modules/darwin/base.nix`'s `_: { aspects.darwin.base = { pkgs, ... }: { ... }; }` evaluates correctly despite not explicitly registering the option namespace. Confidence: 0.70
+
+# cross-platform
+- When adding new hosts with different platforms (macOS/darwin, Linux), guard Linux-only packages in shared Home Manager modules behind `lib.optionals stdenv.isLinux [...]` — common offenders: `systemd` as a runtime dependency, x86_64-linux-only binaries (static Go binaries from GitHub releases), Electron apps (bitwarden-desktop, signal-desktop), and platform-specific desktop packages. Include a comment explaining why the guard is needed. Confidence: 0.70
+- The canonical Sway+DMS desktop experience is the baseline target for all Linux hosts (including standalone HM on Ubuntu), not just NixOS hosts. Use `aspects.homeManager.sway` on Linux hosts; Aerospace is the macOS-specific alternative only. Confidence: 0.65
