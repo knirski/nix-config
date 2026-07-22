@@ -1,6 +1,64 @@
 # Troubleshooting Guide
 
-Common issues and solutions for the zbook workstation.
+Common issues and solutions for all hosts. macOS (macbook) and Ubuntu-specific
+items are called out where they differ.
+
+## Reading a Failed Check
+
+The repository gate is `just check` (locally) or `nix flake check` (CI). When a
+check fails, the output tells you which tier broke. Each tier has a different
+diagnostic approach.
+
+### Tiers and how to read failures
+
+1. **Static (lint):** `pre-commit`, `docs-correctness`, `github-workflow-policy`,
+   `public-repository-data`, `script-contracts`, `shell-boundaries`,
+   `topology-freshness`. These run first. Failure output shows the exact line
+   that tripped the rule. Fix and re-run.
+
+2. **Evaluation and pure invariants:** `nix flake check --no-build`. Failures
+   here mean a module option is wrong, a name doesn't exist, or an assertion
+   (`host-role-invariants`, `soyo-guest-isolation`, `dendritic-options`,
+   `systemd-hardening-invariants`) didn't pass. Look for `error:` or `assert`
+   in the output. Narrow to one check:
+
+   ```bash
+   nix build path:.#checks.x86_64-linux.dendritic-options --no-link
+   ```
+
+3. **Build:** `just build soyo` / `just build zbook`. The host closure
+   failed to compile. The trace shows the failing derivation — usual suspects:
+   hash mismatch, missing input, evaluation error that only appears with
+   `--show-trace`.
+
+4. **KVM behaviour tests:** `backup-unit-vm`, `dns-dhcp-vm`, `impermanence-vm`.
+   Require `/dev/kvm`. Failure logs come from inside the VM — scroll past QEMU
+   boot messages to find `FAIL` or `error` lines.
+
+### Common patterns
+
+- **`error: path '...' does not exist`** → A referenced file was moved or
+  renamed. Run `nix run .#docs-check -- --repo .` to check doc links.
+- **`assert ... failed`** → An evaluation invariant (host-role,
+  guest-isolation, dendritic-options) found a misconfiguration. Read the
+  invariant's check module in `modules/parts/`.
+- **`hash mismatch`** → `nix flake update` to refresh `flake.lock`.
+- **CI fails locally but passes remotely** → Likely `/dev/kvm` is missing
+  (KVM tier), or `secrets/rekeyed/` hasn't been materialised (evaluation tier
+  needs `nix store add-path --name soyo ./secrets/rekeyed/soyo`).
+
+### Re-running a single check
+
+```bash
+# Build without linking (fast)
+nix build path:.#checks.x86_64-linux.host-role-invariants --no-link
+
+# See what the derivation would be (no build)
+nix eval --raw path:.#checks.x86_64-linux.host-role-invariants.drvPath
+
+# Read the cached build log
+nix log path:.#checks.x86_64-linux.host-role-invariants
+```
 
 ## NVIDIA Issues
 

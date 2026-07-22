@@ -128,9 +128,97 @@ The appliance DHCP and workstation Sway aspects own these scoped exceptions.
 Repository-authored policy remains covered by evaluation and VM tests. Prefer
 removing each exception once its pinned upstream module passes strict checking.
 
-## Evidence limits
+## Named checks
 
-VM checks cover isolated software behavior, including DNS/DHCP, backup, and
-impermanence. They do not prove physical TPM measurements, Secure Boot firmware
-behavior, real LAN recovery, or restore operations against production data.
-Those remain explicit operator-led drills in the relevant runbooks.
+Every `checks.x86_64-linux.<name>` is defined in a `modules/parts/` module.
+This table is the canonical index — when adding a check, add a row here.
+
+| Check | What it asserts | Source | Type |
+| ----- | --------------- | ------ | ---- |
+| `backup-restic-integration` | restic can initialise a repo, backup, and check a snapshot | `backup-integration-check.nix` | Pure eval + shell script |
+| `backup-unit-vm` | KVM VM: backup creates repo snapshots, readiness gates work | `backup-integration-check.nix` | KVM |
+| `clipboard-protocols` | Primary clipboard data-paste in Wayland | `clipboard-protocol-check.nix` | KVM |
+| `dendritic-options` | Every `lanAppliance.services.*` option declared by the hosts that toggle it | `perSystem.nix` | Pure eval |
+| `deploy-activate` | deploy-rs activation scripts don't error | `deploy.nix` (deploy-rs) | Pure eval |
+| `deploy-schema` | deploy-rs node schema is valid | `deploy.nix` (deploy-rs) | Pure eval |
+| `dns-dhcp-config` | Generated Blocky + dnsmasq config is valid; reservations match | `dns-dhcp-checks.nix` | Pure eval |
+| `dns-dhcp-vm` | KVM VM: two nodes perform forward/reverse DNS, DHCP lease, restart | `dns-dhcp-vm-check.nix` | KVM |
+| `docs-correctness` | Internal markdown links resolve; anchors exist; lifecycle is accurate; no orphans | `docs-checks.nix` | Pure eval |
+| `github-workflow-policy` | Workflow YAML uses pinned actions, least-privilege permissions, no mutable tags | `github-security-checks.nix` | Pure eval |
+| `host-role-invariants` | Soyo has appliance role + no GUI; zbook has workstation role + GUI; base has no role bias | `host-role-invariants.nix` | Pure eval |
+| `impermanence-vm` | KVM VM: root wipes on boot; only persisted state survives | `impermanence-vm-check.nix` | KVM |
+| `impermanence-missing-early-persist` | Unpersisted early-boot paths fail with an error | `impermanence-vm-check.nix` | Pure eval |
+| `initrd-recovery-invariants` | Initrd SSH unlock, TPM, and break-glass paths have all required options | `initrd-invariants.nix` | Pure eval |
+| `lan-inventory` | Python unit tests for  LAN inventory collector | `perSystem.nix` | Pure eval + Python |
+| `maintenance-paths` | Required tmpfiles rule exists for free-space check path | `perSystem.nix` | Pure eval |
+| `persistence-invariants` | Every persisted path exists in the host config; mode/owner are sane | `persistence-invariants.nix` | Pure eval |
+| `pre-commit` | Lint: deadnix, statix, typos, end-of-file-fixer, merge-conflicts, actionlint, shellcheck, ruff, markdownlint | `perSystem.nix` | Git hook |
+| `public-repository-data` | No secrets, hostnames, or private IPs in public SVGs | `public-repo-checks.nix` | Pure eval |
+| `reservation-validation` | Reservations have valid MACs, IPs, and no duplicates | `reservation-checks.nix` | Pure eval |
+| `script-contracts` | Operator commands (healthcheck, recover-secrets, set-tailscale-keys) handle valid/invalid/dry-run/interrupted args correctly | `script-tests.nix` | Shell (Bats) |
+| `shell-boundaries` | No `writeShellScript` calls; generated unit fragments have strict checking | `shell-checks.nix` | Pure eval |
+| `soyo-guest-isolation` | Guest services on Soyo have MemoryMax, CPUQuota, Nice applied | `soyo-guest-isolation.nix` | Pure eval |
+| `systemd-hardening-invariants` | Applicable systemd services have basic hardening (ProtectSystem, PrivateTmp, etc.) | `systemd-hardening-checks.nix` | Pure eval |
+| `topology-freshness` | Committed `docs/topology/overview.svg` matches the current stable state | `topology-checks.nix` | Pure eval |
+| `dashboard-renderer` | Python unit tests for the observability dashboard renderer | `perSystem.nix` | Pure eval + Python |
+| `formatting` | treefmt — Nix, Python, shell, markdown formatting check | `perSystem.nix` | Pure eval |
+
+### KVM tests
+
+The three KVM-requiring checks (`dns-dhcp-vm`, `backup-unit-vm`, `impermanence-vm`)
+run in a sandbox QEMU with `qemu.forceAccel` enabled. They require
+`/dev/kvm` to be readable and writable.
+
+### Shell contract tests
+
+`script-contracts` uses Bats with command doubles. Each operator command is
+tested against: help, valid dry-run, successful operation, failed probes
+(exit 1), invalid arguments (exit 2), and interruption (exit 130 cleanup).
+
+## Adding a check
+
+Every new check follows the same pattern:
+
+1. Create the assertion module in `modules/parts/<name>.nix` as a flake-parts
+   module that registers `checks.<system>.<name>` under `perSystem`.
+2. For a **pure eval check** (fast, /dev/kvm not needed): use
+   `pkgs.runCommand` with inline Nix assertions. Example:
+   ```nix
+   checks.my-check = pkgs.runCommand "my-check" {
+     inherit ok; # a boolean computed in Nix
+     passAsFile = [ "failures" ];
+     inherit failures;
+   } ''
+     if [ "$ok" != "1" ]; then
+       echo "Failures:" >&2; cat "$failuresPath" >&2; exit 1
+     fi
+     touch "$out"
+   '';
+   ```
+3. For a **shell script check**: use `pkgs.writeShellApplication` as the
+   executable and `pkgs.runCommand` as the check derivation. Wire up Bats
+   if the test involves argument parsing.
+4. For a **KVM behaviour test**: use the shared `runKvmTest` from
+   `lib/testing/run-kvm-test.nix` which enforces `qemu.forceAccel`.
+5. Wire the check into CI: add the check name to the appropriate step in
+   `.github/workflows/ci.yml` (static tier for lint/policy, evaluation for
+   pure asserts, resilience for KVM tests). Add it to `just test-resilience`
+   if KVM.
+6. Add a row to the **Named checks** table above.
+
+### Registering the check in CI
+
+Edit `.github/workflows/ci.yml`:
+
+- **Static tier** — add to the `nix build --no-link` list in the `static` job
+  for checks that run quickly without building a host closure.
+- **Evaluation tier** — add to the `nix build --no-link` list in the
+  `evaluation` job for eval-only checks (most new checks go here).
+- **Resilience tier** — add to the KVM list in the `resilience` job.
+- **Build tier** — not for individual checks; the host closure build covers
+  compilation.
+
+The ci.yml steps list every check by name. If the new check is expensive or
+has unusual prerequisites (e.g. `dev/kvm`), confirm which tier fits.
+
+## Evidence limits

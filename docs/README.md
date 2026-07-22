@@ -30,11 +30,17 @@ enforcement belongs to the documentation-check layer.
 - [Deploy an existing Soyo](../hosts/soyo/DEPLOY.md) — short index to deployment,
   rollback and recovery procedures.
 - [Install zbook](../hosts/zbook/INSTALL.md) — workstation installation notes.
+- [Deploy an existing zbook](../hosts/zbook/DEPLOY.md) — short index to
+  deployment, rollback and recovery procedures.
+- [Install macbook](install-macbook.md) — macbook (nix-darwin) installation runbook.
+- [macbook deploy index](../hosts/macbook/INSTALL.md) — macbook deploy pointer.
+- [Install ubuntu](install-ubuntu.md) — Ubuntu (standalone Home Manager)
+  installation and activation.
 - [Set up a workstation](workstation-setup.md) — recommended tooling and CLI setup.
 - [Troubleshooting](troubleshooting.md) — common issues and debugging steps.
 - [Update and roll back](update-and-rollback.md) — input updates, deployment
   checks and rollback paths.
-- [Router recommendations](router-recommendation.md) — DHCP cutover and router
+- [Router recommendations](architecture/router-recommendation.md) — DHCP cutover and router
   capability considerations.
 
 ### Protect and recover
@@ -79,6 +85,15 @@ enforcement belongs to the documentation-check layer.
 - [Root README](../README.md) — project scope, safe quick start and architecture.
 - [Current correctness and resilience plan](superpowers/plans/2026-07-12-correctness-resilience-docs.md)
   — the active implementation work and task acceptance criteria.
+- [Repository gaps and improvements](superpowers/specs/repository-gaps-and-improvements.md)
+  — comprehensive gap analysis for hosts, CI, tests, documentation.
+
+### Architecture and topology
+
+- [Architecture documents index](architecture/README.md) — cross-host design docs.
+- [Topology diagram guide](topology/README.md) — how the public topology is
+  generated, shape legend, and what's deliberately omitted.
+- [macOS documentation index](darwin/README.md) — macbook and nix-darwin docs.
 
 Useful entry points in the code:
 

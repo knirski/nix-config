@@ -15,7 +15,7 @@
     "docs/learning/verification-layers.md": { "status": "active", "role": "verification learning guide" },
     "docs/archive/optional-work-plan.md": { "status": "superseded", "role": "completed planning record", "replacement": "docs/superpowers/plans/2026-07-12-correctness-resilience-docs.md" },
     "docs/recovery.md": { "status": "active", "role": "recovery runbook" },
-    "docs/router-recommendation.md": { "status": "active", "role": "network design advisory" },
+    "docs/architecture/router-recommendation.md": { "status": "active", "role": "network design advisory" },
     "docs/secrets.md": { "status": "canonical", "role": "secrets workflow" },
     "docs/security/github-settings.md": { "status": "active", "role": "GitHub administrator checklist" },
     "docs/security/public-repository.md": { "status": "canonical", "role": "public data policy" },
@@ -33,7 +33,15 @@
     "docs/troubleshooting.md": { "status": "active", "role": "troubleshooting guide" },
     "docs/update-and-rollback.md": { "status": "active", "role": "operations runbook" },
     "docs/workstation-setup.md": { "status": "active", "role": "workstation setup guide" },
+    "docs/architecture/README.md": { "status": "active", "role": "architecture documents index" },
+    "docs/topology/README.md": { "status": "active", "role": "topology diagram guide" },
+    "docs/darwin/README.md": { "status": "active", "role": "macOS documentation index" },
     "hosts/soyo/DEPLOY.md": { "status": "active", "role": "Soyo deployment index" },
-    "hosts/zbook/INSTALL.md": { "status": "active", "role": "zbook installation runbook" }
+    "hosts/zbook/INSTALL.md": { "status": "active", "role": "zbook installation runbook" },
+    "hosts/zbook/DEPLOY.md": { "status": "active", "role": "zbook deployment index" },
+    "hosts/macbook/INSTALL.md": { "status": "active", "role": "macbook installation index" },
+    "docs/install-macbook.md": { "status": "active", "role": "macbook installation runbook" },
+    "docs/install-ubuntu.md": { "status": "active", "role": "ubuntu installation runbook" },
+    "docs/superpowers/specs/repository-gaps-and-improvements.md": { "status": "active", "role": "gaps and improvements plan" }
   }
 }

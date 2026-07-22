@@ -1,7 +1,6 @@
 # Installing NixOS on zbook
 
-> **Status: Active.** The current graphical session is Sway with Dank Material
-> Shell. Historical COSMIC-specific behavior is labeled below.
+> **Status: Active.** The current graphical session is Sway with Dank Material Shell.
 
 This guide walks through installing NixOS on the HP ZBook Studio 16" G10
 as the sole operating system, replacing the existing dual-boot (Windows + Ubuntu).
@@ -115,25 +114,6 @@ sudo reboot
 ```
 
 After reboot, verify with `nvidia-smi`. The desktop should be smooth.
-
-### Historical: COSMIC DRM-master workaround
-
-An earlier COSMIC configuration could
-lose DRM master on `/dev/dri/card1` during suspend. The log shows:
-
-```text
-nvidia-suspend.service starts → nvidia-sleep.sh does chvt 63
-cosmic-comp gets udev event → hits DRM EACCES on card1
-```
-
-The former `modules/nixos/cosmic.nix` used SIGSTOP/SIGCONT hooks around the
-NVIDIA VT switch. That module and workaround were deliberately removed when
-zbook left COSMIC. The current Sway configuration does not claim to implement
-those hooks; investigate current journals rather than restoring them blindly.
-
-Note: this host uses **s2idle** (S0ix), not deep S3 — the HP firmware
-advertises S3 but cannot route wake events back from it. See
-`docs/learning/README.md` for the full investigation.
 
 ### Suspend: USB-C dock causes immediate wake
 

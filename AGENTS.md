@@ -145,6 +145,8 @@ and its docs must teach (see "Learning docs" below).
   Only HM aspects apply (no `aspects.nixos.*` or `aspects.darwin.*`). Set
   `home.username`, `home.homeDirectory` explicitly. Activate with
   `home-manager switch --flake .#<host>`.
+  Standalone HM hosts do not need a `hosts/<name>/` directory — the assembler
+  module (`modules/parts/<name>.nix`) encodes the host data directly.
 
 ## Learning docs (required output)
 

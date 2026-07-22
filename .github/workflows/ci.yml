@@ -156,6 +156,49 @@ jobs:
             .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel \
             --keep-going --no-link --print-out-paths
 
+  build-ubuntu:
+    name: Build ubuntu HM activation package
+    if: needs.changes.outputs.non-taste == 'true'
+    needs: [evaluation, changes]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-nix
+        with:
+          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - run: nix store gc
+      - name: Build Home Manager activation package
+        run: |
+          nix build \
+            .#homeConfigurations.ubuntu.activationPackage \
+            --keep-going --no-link --print-out-paths
+
+  build-macbook:
+    name: Build macbook darwin closure
+    # macbook requires aarch64-darwin, which can only be evaluated on macOS.
+    if: needs.changes.outputs.non-taste == 'true'
+    needs: [evaluation, changes]
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: ./.github/actions/setup-nix
+        with:
+          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - run: nix store gc
+      - name: Build complete darwin closure
+        run: |
+          nix build \
+            .#darwinConfigurations.macbook.config.system.build.toplevel \
+            --keep-going --no-link --print-out-paths
+
   resilience:
     name: Strict KVM behavior tests
     if: needs.changes.outputs.non-taste == 'true'

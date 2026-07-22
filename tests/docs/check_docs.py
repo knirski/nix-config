@@ -16,7 +16,7 @@ from urllib.parse import unquote
 ALLOWED_STATUSES = {"canonical", "active", "completed", "superseded", "historical"}
 NAVIGATION_ROOTS = {"README.md", "docs/README.md", "AGENTS.md"}
 PRIMARY_INDEX = "docs/README.md"
-MANAGED_HOST_DOCS = {"hosts/soyo/DEPLOY.md", "hosts/zbook/INSTALL.md"}
+MANAGED_HOST_DOCS = {"hosts/soyo/DEPLOY.md", "hosts/zbook/INSTALL.md", "hosts/zbook/DEPLOY.md", "hosts/macbook/INSTALL.md"}
 LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)|!\[[^\]]*\]\(([^)]+)\)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 

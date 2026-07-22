@@ -15,7 +15,7 @@ The workstation uses:
 
 This configuration is shared across multiple hosts. Not all tools are available on all platforms:
 
-### zbook (NixOS) - Full Configuration
+### zbook (NixOS) — Full Configuration
 
 - **Desktop**: Sway + DMS + all Wayland tools
 - **Gaming**: Steam, Heroic, Lutris, MangoHUD
@@ -23,7 +23,7 @@ This configuration is shared across multiple hosts. Not all tools are available 
 - **System**: All NixOS modules, persistence, backups
 - **All CLI and desktop tools available**
 
-### macbook (nix-darwin) - Planned
+### macbook (nix-darwin) — Assembler + CI evaluation only; hardware deploy pending
 
 - **Desktop**: Aerospace (tiling WM, similar to Sway)
 - **Terminal**: Ghostty, Zsh, same shell config
@@ -31,7 +31,7 @@ This configuration is shared across multiple hosts. Not all tools are available 
 - **All CLI tools available** (cross-platform packages)
 - **Not available**: Sway, DMS, Wayland tools, gaming, Podman, virt-manager, distrobox
 
-### ubuntu (Standalone Home Manager) - Planned
+### ubuntu (Standalone Home Manager) — Assembler + CI evaluation only; hardware deploy pending
 
 - **Desktop**: Sway + DMS (via Home Manager)
 - **Terminal**: Ghostty, Zsh, same shell config
