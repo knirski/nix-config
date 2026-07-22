@@ -183,6 +183,7 @@ Every new check follows the same pattern:
    module that registers `checks.<system>.<name>` under `perSystem`.
 2. For a **pure eval check** (fast, /dev/kvm not needed): use
    `pkgs.runCommand` with inline Nix assertions. Example:
+
    ```nix
    checks.my-check = pkgs.runCommand "my-check" {
      inherit ok; # a boolean computed in Nix
@@ -195,6 +196,7 @@ Every new check follows the same pattern:
      touch "$out"
    '';
    ```
+
 3. For a **shell script check**: use `pkgs.writeShellApplication` as the
    executable and `pkgs.runCommand` as the check derivation. Wire up Bats
    if the test involves argument parsing.
@@ -222,3 +224,22 @@ The ci.yml steps list every check by name. If the new check is expensive or
 has unusual prerequisites (e.g. `dev/kvm`), confirm which tier fits.
 
 ## Evidence limits
+
+VM checks cover isolated software behaviour, including DNS/DHCP, backup, and
+impermanence. They do not prove physical TPM measurements, Secure Boot firmware
+behaviour, real LAN recovery, or restore operations against production data.
+Those remain explicit operator-led drills in the relevant runbooks.
+
+Automated checks (pure evaluation, VM, shell contract) are the first line of
+confidence. Anything that depends on hardware, physical access, or production
+state is explicitly listed as a manual-only verification in `AGENTS.md` and the
+host-specific runbooks.
+VM checks cover isolated software behaviour, including DNS/DHCP, backup, and
+impermanence. They do not prove physical TPM measurements, Secure Boot firmware
+behaviour, real LAN recovery, or restore operations against production data.
+Those remain explicit operator-led drills in the relevant runbooks.
+
+Automated checks (pure evaluation, VM, shell contract) are the first line of
+confidence. Anything that depends on hardware, physical access, or production
+state is explicitly listed as a manual-only verification in `AGENTS.md` and the
+host-specific runbooks.

@@ -15,6 +15,12 @@ install Nix, bootstrap secrets, first `darwin-rebuild`, and validate.
 - Administrative access (`sudo`).
 - A GitHub personal access token (classic, with `repo` scope) for `gh` auth.
 - Your SSH private key matching `secrets/agenix-master.pub` for agenix rekeying.
+  Set up the master identity symlink:
+  ```bash
+  sudo install -d -m 755 /etc/agenix-rekey
+  sudo ln -sfn "$HOME/.ssh/agenix_master" /etc/agenix-rekey/master-identity
+  ```
+  See [`docs/secrets.md`](secrets.md) for details.
 - This repository cloned on the target machine.
 
 ## Step 1: Install Nix
@@ -68,6 +74,11 @@ Copy this value; it will be needed in the next step.
 
 ## Step 4: Enroll the macbook in agenix and rekey secrets
 
+> **⚠️ Blocked — agenix wiring is disabled in `modules/parts/macbook.nix`.**
+> The age/rekey configuration is commented out until the macbook gets hardware.
+> Once uncommented, follow the steps below; until then, secrets are not
+> required for evaluation-only CI builds.
+
 Create the macbook public key file:
 
 ```bash
@@ -85,7 +96,7 @@ Commit the new host key and rekeyed secrets:
 
 ```bash
 git add secrets/macbook.pub secrets/rekeyed/macbook/
-git commit -m "feat: enroll macbook agenix recipient and rekey secrets"
+git commit -m "feat(secrets): enroll macbook agenix recipient and rekey secrets"
 ```
 
 ## Step 5: First darwin-rebuild
@@ -111,7 +122,7 @@ sudo reboot
 
 After reboot, verify:
 
-- **Hostname**: `scutil --get ComputerName` → `macbook`
+- **Hostname**: `scutil --get HostName` → `macbook`
 - **Zsh**: `echo $SHELL` → `/run/current-system/sw/bin/zsh`
 - **Git**: `git --version`
 - **macOS defaults**: Dock is hidden; fast key repeat enabled

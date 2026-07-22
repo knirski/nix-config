@@ -26,13 +26,20 @@
       # closing the laptop lid to keep the system awake (useful when moving
       # between rooms while media is playing or a download is running).
       # Cancel it with Ctrl+C — the inhibitor is released on script exit.
+      # Linux only — macOS manages lid behavior via pmset.
       home.packages =
         with pkgs;
-        [
-          antigravity-cli
-          mpv
-          bitwarden-desktop
-          spotify
+        (
+          [
+            antigravity-cli
+            mpv
+            spotify
+          ]
+          ++ lib.optionals stdenv.isLinux [
+            bitwarden-desktop
+          ]
+        )
+        ++ lib.optionals stdenv.isLinux [
           (writeShellApplication {
             name = "disable-lid";
             runtimeInputs = [ systemd ];
