@@ -24,6 +24,7 @@
           hyperfine
           ncdu
           doggo
+          duf # df replacement
           # Security tools
           age
           # Other tools without HM modules
