@@ -68,6 +68,11 @@ Copy this value; it will be needed in the next step.
 
 ## Step 4: Enroll the macbook in agenix and rekey secrets
 
+> **⚠️ Blocked — agenix wiring is disabled in `modules/parts/macbook.nix`.**
+> The age/rekey configuration is commented out until the macbook gets hardware.
+> Once uncommented, follow the steps below; until then, secrets are not
+> required for evaluation-only CI builds.
+
 Create the macbook public key file:
 
 ```bash
@@ -85,7 +90,7 @@ Commit the new host key and rekeyed secrets:
 
 ```bash
 git add secrets/macbook.pub secrets/rekeyed/macbook/
-git commit -m "feat: enroll macbook agenix recipient and rekey secrets"
+git commit -m "feat(secrets): enroll macbook agenix recipient and rekey secrets"
 ```
 
 ## Step 5: First darwin-rebuild
