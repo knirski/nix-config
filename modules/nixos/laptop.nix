@@ -9,6 +9,26 @@
         fwupd.enable = true;
       };
 
+      # When the Thunderbolt dock is unplugged and reconnected, the RTL8153
+      # Ethernet interface gets a new USB path. NetworkManager may not
+      # properly re-match its connection profile or re-evaluate routing/DNS,
+      # leaving the system with "connected" but no usable data path.
+      #
+      # This dispatcher script fires on any "up" event for physical ethernet
+      # interfaces (en*) and reloads NM profiles + flushes DNS — same fix
+      # as the s2idle resumeCommands below, but triggered on hotplug too.
+      networking.networkmanager.dispatcherScripts = [
+        {
+          source = pkgs.writeShellScript "nm-dock-hotplug-fix" ''
+            if [ "$2" = "up" ] && [[ "$1" == en* ]]; then
+              ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true
+              ${pkgs.systemd}/bin/resolvectl flush-caches 2>/dev/null || true
+            fi
+          '';
+          type = "basic";
+        }
+      ];
+
       # CPU frequency governor is managed dynamically by power-profiles-daemon
       # (controlled by DMS power profile settings), not hardcoded here.
       # Powertop applies power-saving tunings at boot via --auto-tune;
