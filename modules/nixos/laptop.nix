@@ -19,12 +19,21 @@
       # as the s2idle resumeCommands below, but triggered on hotplug too.
       networking.networkmanager.dispatcherScripts = [
         {
-          source = pkgs.writeShellScript "nm-dock-hotplug-fix" ''
-            if [ "$2" = "up" ] && [[ "$1" == en* ]]; then
-              ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true
-              ${pkgs.systemd}/bin/resolvectl flush-caches 2>/dev/null || true
-            fi
-          '';
+          source = "${
+            pkgs.writeShellApplication {
+              name = "nm-dock-hotplug-fix";
+              runtimeInputs = [
+                pkgs.networkmanager
+                pkgs.systemd
+              ];
+              text = ''
+                if [ "$2" = "up" ] && [[ "$1" == en* ]]; then
+                  nmcli connection reload 2>/dev/null || true
+                  resolvectl flush-caches 2>/dev/null || true
+                fi
+              '';
+            }
+          }/bin/nm-dock-hotplug-fix";
           type = "basic";
         }
       ];
