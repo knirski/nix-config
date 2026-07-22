@@ -11,27 +11,33 @@
         sessionVariables = {
           EDITOR = "nvim";
         };
-        packages = with pkgs; [
-          command-code
-          gcx
-          # Nix language servers for Zed
-          nil
-          nixd
-          # Modern CLI replacements (no HM modules)
-          dust
-          sd
-          yq
-          hyperfine
-          ncdu
-          doggo
-          duf # df replacement
-          # Security tools
-          age
-          # Other tools without HM modules
-          procs
-          unrar # for extract() function
-          nushell # used by all agents for script execution
-        ];
+        packages =
+          with pkgs;
+          [
+            command-code
+          ]
+          ++ lib.optionals stdenv.isLinux [
+            gcx
+          ]
+          ++ [
+            # Nix language servers for Zed
+            nil
+            nixd
+            # Modern CLI replacements (no HM modules)
+            dust
+            sd
+            yq
+            hyperfine
+            ncdu
+            doggo
+            duf # df replacement
+            # Security tools
+            age
+            # Other tools without HM modules
+            procs
+            unrar # for extract() function
+            nushell # used by all agents for script execution
+          ];
 
       };
 
