@@ -28,7 +28,7 @@
               ];
               text = ''
                 if [ "$2" = "up" ] && [[ "$1" == en* ]]; then
-                  nmcli connection reload 2>/dev/null || true
+                  nmcli device reapply "$1" 2>/dev/null || true
                   resolvectl flush-caches 2>/dev/null || true
                 fi
               '';
