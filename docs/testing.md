@@ -222,3 +222,22 @@ The ci.yml steps list every check by name. If the new check is expensive or
 has unusual prerequisites (e.g. `dev/kvm`), confirm which tier fits.
 
 ## Evidence limits
+
+VM checks cover isolated software behaviour, including DNS/DHCP, backup, and
+impermanence. They do not prove physical TPM measurements, Secure Boot firmware
+behaviour, real LAN recovery, or restore operations against production data.
+Those remain explicit operator-led drills in the relevant runbooks.
+
+Automated checks (pure evaluation, VM, shell contract) are the first line of
+confidence. Anything that depends on hardware, physical access, or production
+state is explicitly listed as a manual-only verification in `AGENTS.md` and the
+host-specific runbooks.
+VM checks cover isolated software behaviour, including DNS/DHCP, backup, and
+impermanence. They do not prove physical TPM measurements, Secure Boot firmware
+behaviour, real LAN recovery, or restore operations against production data.
+Those remain explicit operator-led drills in the relevant runbooks.
+
+Automated checks (pure evaluation, VM, shell contract) are the first line of
+confidence. Anything that depends on hardware, physical access, or production
+state is explicitly listed as a manual-only verification in `AGENTS.md` and the
+host-specific runbooks.
