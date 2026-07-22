@@ -183,6 +183,7 @@ Every new check follows the same pattern:
    module that registers `checks.<system>.<name>` under `perSystem`.
 2. For a **pure eval check** (fast, /dev/kvm not needed): use
    `pkgs.runCommand` with inline Nix assertions. Example:
+
    ```nix
    checks.my-check = pkgs.runCommand "my-check" {
      inherit ok; # a boolean computed in Nix
@@ -195,6 +196,7 @@ Every new check follows the same pattern:
      touch "$out"
    '';
    ```
+
 3. For a **shell script check**: use `pkgs.writeShellApplication` as the
    executable and `pkgs.runCommand` as the check derivation. Wire up Bats
    if the test involves argument parsing.

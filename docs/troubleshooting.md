@@ -42,7 +42,10 @@ diagnostic approach.
 - **`assert ... failed`** → An evaluation invariant (host-role,
   guest-isolation, dendritic-options) found a misconfiguration. Read the
   invariant's check module in `modules/parts/`.
-- **`hash mismatch`** → `nix flake update` to refresh `flake.lock`.
+- **`hash mismatch`** → Inspect the failing fetcher's expected vs actual hash
+  first. The error message includes both. If the source changed upstream,
+  update the hash in the derivation. Only run `nix flake update` when
+  the diagnosis specifically identifies a stale lock entry.
 - **CI fails locally but passes remotely** → Likely `/dev/kvm` is missing
   (KVM tier), or `secrets/rekeyed/` hasn't been materialised (evaluation tier
   needs `nix store add-path --name soyo ./secrets/rekeyed/soyo`).

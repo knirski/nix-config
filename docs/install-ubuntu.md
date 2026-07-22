@@ -16,6 +16,12 @@ aspects.
 - Administrative access (`sudo`).
 - A GitHub personal access token (classic, with `repo` scope) for `gh` auth.
 - Your SSH private key matching `secrets/agenix-master.pub` for agenix rekeying.
+  Set up the master identity symlink:
+  ```bash
+  sudo install -d -m 755 /etc/agenix-rekey
+  sudo ln -sfn "$HOME/.ssh/agenix_master" /etc/agenix-rekey/master-identity
+  ```
+  See [`docs/secrets.md`](secrets.md) for details.
 - This repository cloned on the target machine.
 
 ## Step 1: Install Nix

@@ -22,39 +22,25 @@ called out.
 
 ### C1. Register `aspects.darwin.*` namespace the way `aspects.nixos.*` works
 
-**Problem.** `modules/parts/aspect-options.nix` declares
-`aspects.darwin = lib.mkOption { … default = {}; }` — a single, monolithic
-attrs slot, not a per-aspect slot. `modules/parts/macbook.nix` does
-`with config.aspects.darwin; [ base ]`, but no module contributes a named
-attr to that set. `modules/darwin/base.nix` is a function returning a plain
-value, not declaring `aspects.darwin.base = { ... }: { ... }`. So the host
-assembler pulls either nothing or undefined. This breaks (or silently
-neuters) every darwin host.
+**Problem.** The darwin aspect namespace (`aspects.darwin.*`) was initially
+suspected of not working because `modules/darwin/base.nix` uses a function
+returning a plain value. However, `aspect-options.nix` uses
+`lazyAttrsOf lib.types.raw`, which accepts functions as values, so the
+existing wiring actually works (`nix eval` confirms `darwinConfigurations.macbook`
+evaluates correctly). Two gaps remain from the original analysis:
+
+- **No invariant assertion** that every name in
+  `with config.aspects.darwin; […]` resolves to a defined value.
+- **No `dendritic-options` coverage** for darwin and HM hosts (see M1).
 
 **Fix.**
 
-1. Refactor `modules/darwin/base.nix` to declare the option (mirror the
-   shape of `modules/nixos/base.nix`):
-
-   ```nix
-   { ... }:
-   {
-     aspects.darwin.base = { pkgs, ... }: { … };
-   }
-   ```
-2. Add an explicit assertion in `modules/parts/macbook.nix` (or a new
+1. Add an explicit assertion in `modules/parts/macbook.nix` (or a new
    `modules/parts/host-assembler-invariants.nix`) that every name in
-   `with config.aspects.darwin; […]` resolves to a defined value, not an
-   empty set. Fail loudly at eval time.
-3. Add `dendritic-options` coverage under
-   `modules/parts/perSystem.nix` (extend `hostOpts` to include macbook and
-   ubuntu). See also M1.
-
-**Verification.** `nix flake check` evaluates `darwinConfigurations.macbook`
-on a Linux runner (nix-darwin evaluates cross-platform with nixpkgs-unstable
-followed). If the option namespace wiring is wrong, that check fails.
-
----
+   `with config.aspects.darwin; […]` resolves to a defined value. Fail loudly
+   at eval time.
+2. Add `dendritic-options` coverage under `modules/parts/perSystem.nix`
+   (extend `hostOpts` to include macbook and ubuntu). See also M1.
 
 ### C2. CI doesn't build `darwinConfigurations.macbook` or `homeConfigurations.ubuntu`
 
