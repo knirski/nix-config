@@ -5,6 +5,10 @@
     kernelParams = [
       "nvidia_drm.modeset=1"
     ];
+    crashDump = {
+      enable = true;
+      reservedMemory = "256M";
+    };
     loader = {
       limine = {
         enable = true;
