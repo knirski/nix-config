@@ -3,7 +3,7 @@
 Date: 2026-07-12
 
 Status: superseded on 2026-07-22 by the
-[Repository Assessment Remediation Plan](2026-07-22-repository-assessment-remediation.md)
+[Repository Assessment Remediation Plan](2026-07-23-repository-assessment-remediation.md)
 
 This file is a frozen planning record. Its completed work remains useful
 historical context, but its remaining task list is no longer authoritative.
