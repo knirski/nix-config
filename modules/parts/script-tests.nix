@@ -17,6 +17,7 @@ _: {
       fakeDig = fake "dig" ../../tests/scripts/fixtures/fake-dig.bash;
       fakeRage = fake "rage" ../../tests/scripts/fixtures/fake-rage.bash;
       fakeNix = fake "nix" ../../tests/scripts/fixtures/fake-nix.bash;
+      fakeSystemctl = fake "systemctl" ../../tests/scripts/fixtures/fake-systemctl.bash;
       testSubject =
         name: runtimeInputs: source:
         pkgs.writeShellApplication {
@@ -67,6 +68,11 @@ _: {
             export FAKE_DIG=${pkgs.lib.getExe fakeDig}
             export FAKE_RAGE=${pkgs.lib.getExe fakeRage}
             export FAKE_NIX=${pkgs.lib.getExe fakeNix}
+            export FAKE_SYSTEMCTL=${pkgs.lib.getExe fakeSystemctl}
+            # Raw (unpackaged) script source, used by the SSH-free
+            # backup-freshness-probe unit tests to extract and execute the
+            # real embedded shell logic directly (no SSH, no fake-ssh).
+            export HEALTHCHECK_SRC=${../../scripts/healthcheck.sh}
             export HEALTHCHECK_SSH="$FAKE_SSH"
             export HEALTHCHECK_DIG="$FAKE_DIG"
             export RECOVER_SECRETS_RAGE="$FAKE_RAGE"

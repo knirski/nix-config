@@ -141,25 +141,46 @@ run_sudo() { "$SSH_BIN" "${SSH_OPTS[@]}" "krzysiek@$HOST" sudo "$@"; }
 # a full extra day.
 BACKUP_MAX_AGE_HOURS=48
 
-# Probes a oneshot backup service's last completed run over SSH using only
-# machine-readable `systemctl show -p ... --value` properties (never
-# decorative `systemctl status` text), and prints exactly one of:
-#   NEVER_RAN    -- the unit has not completed a run yet (no exit timestamp)
+# Builds the POSIX-shell probe snippet that determines backup freshness for
+# a given systemd oneshot unit. This is the literal logic executed on the
+# remote host over SSH by check_backup_freshness below; it is also invoked
+# directly -- via `bash -c`, with `systemctl` stubbed and a real `date`, no
+# SSH involved at all -- by the SSH-free unit tests in
+# tests/scripts/backup-freshness-probe.bats, to exercise the actual
+# NEVER_RAN/FAILED/STALE/FRESH branching and timestamp arithmetic.
+#
+# Uses InactiveEnterTimestamp (the last transition into the inactive/failed
+# state), not ExecMainExitTimestamp. Confirmed against the real, live
+# restic-backups-zbook.service and btrbk-zbook.service on this machine:
+# restic-backups-<host>.service (modules/nixos/backup.nix) has multiple
+# ExecStart= lines (backup/unlock/forget/check) plus an ExecStartPre=, and
+# for units shaped this way ExecMainPID/ExecMainStartTimestamp/
+# ExecMainExitTimestamp stay at their unset defaults even after the unit has
+# run and finished -- `systemctl show restic-backups-zbook.service -p
+# Result,ExecMainExitTimestamp,InactiveEnterTimestamp --value` showed
+# `success` / (empty) / a populated timestamp despite the unit having just
+# run. btrbk-<host>.service (single ExecStart=, no ExecStartPre=) does not
+# have this problem, but InactiveEnterTimestamp is populated and correct for
+# both unit shapes, and stays empty exactly when the unit has never
+# completed a run -- preserving the original NEVER_RAN semantics.
+#
+# Prints exactly one of:
+#   NEVER_RAN    -- the unit has not completed a run yet (no timestamp)
 #   FAILED:...   -- the last run's Result/ExecMainStatus was not success/0
 #   STALE:<age>h -- last successful run is older than BACKUP_MAX_AGE_HOURS
 #   FRESH:<age>h -- last successful run is within the threshold
 # A last-run timestamp that fails to parse is treated as age=0-epoch (i.e.
 # maximally stale), never as a silent pass.
-check_backup_freshness() {
-  local desc="$1" service="$2"
-  local remote_cmd
-  # These $-references are evaluated on the remote host by the remote shell,
-  # not expanded locally.
+freshness_probe_snippet() {
+  local service="$1"
+  # These $-references are evaluated by the shell that runs the snippet
+  # (the remote host over SSH in production, or the local `bash -c` in
+  # tests), not expanded here.
   # shellcheck disable=SC2016
-  remote_cmd='
+  printf '%s' '
 result=$(systemctl show '"$service"' -p Result --value 2>/dev/null)
 code=$(systemctl show '"$service"' -p ExecMainStatus --value 2>/dev/null)
-ts=$(systemctl show '"$service"' -p ExecMainExitTimestamp --value 2>/dev/null)
+ts=$(systemctl show '"$service"' -p InactiveEnterTimestamp --value 2>/dev/null)
 if [ -z "$ts" ] || [ "$ts" = "n/a" ]; then
   echo NEVER_RAN
 elif [ "$result" != success ] || [ "$code" != 0 ]; then
@@ -175,7 +196,11 @@ else
   fi
 fi
 '
-  check_val "$desc" "FRESH" run_ssh "$remote_cmd"
+}
+
+check_backup_freshness() {
+  local desc="$1" service="$2"
+  check_val "$desc" "FRESH" run_ssh "$(freshness_probe_snippet "$service")"
 }
 
 # Requires every active target in the given Prometheus job to report

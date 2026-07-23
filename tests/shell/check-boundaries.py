@@ -14,10 +14,12 @@ EXPECTED_SOURCES = {
     "tests/backup/restic-integration.sh",
 }
 EXPECTED_TEST_HARNESSES = {
+    "tests/scripts/backup-freshness-probe.bats",
     "tests/scripts/fixtures/fake-dig.bash",
     "tests/scripts/fixtures/fake-nix.bash",
     "tests/scripts/fixtures/fake-rage.bash",
     "tests/scripts/fixtures/fake-ssh.bash",
+    "tests/scripts/fixtures/fake-systemctl.bash",
     "tests/scripts/healthcheck.bats",
     "tests/scripts/recover-secrets.bats",
     "tests/scripts/set-tailscale-keys.bats",
