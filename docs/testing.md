@@ -160,6 +160,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `dns-dhcp-vm` | KVM VM: two nodes perform forward/reverse DNS, DHCP lease, restart | `dns-dhcp-vm-check.nix` | KVM |
 | `docs-correctness` | Internal markdown links resolve; anchors exist; lifecycle is accurate; no orphans | `docs-checks.nix` | Pure eval |
 | `failure-notification-invariants` | Reviewed operational units (scrub, `nix-gc`, free-space check, restic, btrbk, `grafana-alert-setup`, `nix-store-optimise`) all wire `OnFailure=ntfy-failure@%N.service`; `ntfy-failure@` itself never does; generated ntfy-failure@/smartd notify scripts carry title, unit/device identity, and read credentials from a file at runtime | `failure-notification-checks.nix` | Pure eval |
+| `fmt-scope-contract` | treefmt enables exactly `nixfmt` and none of `ruff-format`/`black`/`shfmt`/`mdformat`/`prettier`, matching `just fmt`'s doc comment and the `formatting` row below; fails with an actionable message if a future edit silently widens treefmt's scope | `perSystem.nix` | Pure eval |
 | `github-workflow-policy` | Workflow YAML uses pinned actions, least-privilege permissions, no mutable tags | `github-security-checks.nix` | Pure eval |
 | `home-manager-channel-invariants` | Each host's evaluated Home Manager release actually tracks the Nixpkgs channel its assembler intends | `home-manager-channel-checks.nix` | Pure eval |
 | `host-role-invariants` | Soyo has appliance role + no GUI; zbook has workstation role + GUI; base has no role bias | `host-role-invariants.nix` | Pure eval |
@@ -180,8 +181,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `systemd-hardening-invariants` | Applicable systemd services have basic hardening (ProtectSystem, PrivateTmp, etc.) | `systemd-hardening-checks.nix` | Pure eval |
 | `topology-freshness` | Committed `docs/topology/overview.svg` matches the current stable state | `topology-checks.nix` | Pure eval |
 | `dashboard-renderer` | Python unit tests for the observability dashboard renderer | `perSystem.nix` | Pure eval + Python |
-| `formatting` | treefmt — Nix, Python, shell, markdown formatting check | `perSystem.nix` | Pure eval |
-| `treefmt` | Same treefmt derivation as `formatting`, exposed under the attribute name `git-hooks.nix` also expects; CI builds `formatting` and gets this one for free (identical output path) | `perSystem.nix` | Pure eval |
+| `formatting` | treefmt formatting check — Nix only (`nixfmt`); Python/shell/Markdown are lint-checked by the `ruff`/`shellcheck`/`markdownlint` pre-commit hooks instead, not auto-formatted. treefmt-nix's own auto-generated `checks.treefmt` is disabled (`flakeCheck = false`) so this is the repo's only treefmt check | `perSystem.nix` | Pure eval |
 
 ### KVM tests
 

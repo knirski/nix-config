@@ -5,12 +5,11 @@
 default:
     @just --list
 
-# Format all Nix/Python/shell/markdown with treefmt. No special prerequisites.
+# Format Nix files via treefmt (nixfmt); Python/shell/Markdown are lint-checked (not formatted) by `just lint`. No special prerequisites.
 fmt:
-    nix run path:.#formatter
+    nix fmt
 
-# Check formatting + static analysis (deadnix, statix, typos, shellcheck, ...).
-# Prerequisites: none (pure Nix build).
+# Static analysis: all pre-commit hooks (deadnix, statix, typos, shellcheck, ruff, markdownlint, treefmt, ...), gitleaks, and command-code freshness. No special prerequisites (pure Nix build).
 lint:
     nix build path:.#checks.x86_64-linux.pre-commit --no-link
     # Unlike the staged pre-commit hook, a manual lint scans the whole tree.
@@ -20,14 +19,12 @@ lint:
     python3 tests/security/check_command_code_freshness.py \
       modules/_pkgs/command-code-lock/last-reviewed.json
 
-# Evaluate the whole flake (lints + builds every output incl. deploy checks).
-# Prerequisites: /dev/kvm readable and writable.
+# Evaluate the whole flake and build every checks.x86_64-linux.* derivation (lints, invariants, KVM tests) via `nix flake check`; does NOT build host closures -- see `build`/`build-ubuntu`/`build-macbook`. Requires /dev/kvm readable and writable.
 check:
     @test -r /dev/kvm && test -w /dev/kvm || { echo "error: complete checks require readable and writable /dev/kvm" >&2; exit 1; }
     nix flake check path:.
 
-# Run the four KVM-backed resilience tests required before merging changes.
-# Prerequisites: /dev/kvm readable and writable.
+# Run the four KVM-backed resilience tests required before merging changes. Requires /dev/kvm readable and writable.
 test-resilience:
     nix build --no-link \
       path:.#checks.x86_64-linux.backup-unit-vm \
@@ -39,8 +36,7 @@ test-resilience:
 build host="soyo":
     nix build path:.#nixosConfigurations.{{host}}.config.system.build.toplevel
 
-# Build the Ubuntu Home Manager activation package (standalone HM).
-# Prerequisites: x86_64-linux Nix builder.
+# Build the Ubuntu Home Manager activation package (standalone HM); requires an x86_64-linux Nix builder.
 build-ubuntu:
     nix build path:.#homeConfigurations.ubuntu.activationPackage
 
@@ -48,10 +44,7 @@ build-ubuntu:
 build-macbook:
     nix build path:.#darwinConfigurations.macbook.config.system.build.toplevel
 
-# Deploy to a host. Auto-detects the host type:
-#   ubuntu  → home-manager switch
-#   macbook → darwin-rebuild switch
-#   others  → nixos-rebuild (local) or deploy-rs (remote)
+# Deploy to a host: home-manager switch (ubuntu), darwin-rebuild switch (macbook), or nixos-rebuild/deploy-rs for others (local vs remote auto-detected).
 deploy host="soyo":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -69,9 +62,7 @@ deploy host="soyo":
         fi ;;
     esac
 
-# Run the on-host health check over SSH.
-#   just healthcheck            # soyo, role/nic auto-detected
-#   just healthcheck zbook    # explicit host
+# Run the on-host health check over SSH (e.g. `just healthcheck zbook`); host/role/nic default to soyo with auto-detection.
 healthcheck host="soyo" role="" nic="":
     nix run .#healthcheck -- {{host}} {{role}} {{nic}}
 
@@ -83,9 +74,7 @@ recover-secrets *args:
 set-tailscale-keys *args:
     nix run .#set-tailscale-keys -- {{args}}
 
-# Fetch a command-code version, regenerate its vendored lockfile, and print
-# the fetchurl/npmDepsHash values to paste into command-code.nix by hand.
-# Never edits command-code.nix or flake.lock, never commits.
+# Fetch a command-code version, regenerate its vendored lockfile, and print fetchurl/npmDepsHash values to paste into command-code.nix by hand; never edits command-code.nix/flake.lock, never commits.
 update-command-code version:
     nix run .#update-command-code -- {{version}}
 
@@ -97,8 +86,7 @@ test:
 test-shared-env:
     bats tests/shell/shared-env.bats
 
-# Re-key all agenix secrets for every host after a key change.
-# Prerequisites: agenix master identity configured at /etc/agenix-rekey/master-identity.
+# Re-key all agenix secrets for every host after a key change. Requires the agenix master identity at /etc/agenix-rekey/master-identity.
 rekey:
     nix develop '.#' -c agenix rekey
 
@@ -106,8 +94,7 @@ rekey:
 topology:
     topology=$(nix build path:.#topology-public-overview --no-link --print-out-paths); cp -f "$topology/overview.svg" docs/topology/overview.svg
 
-# Build detailed operator diagrams locally and print their store path.
-# Requires nix-topology inputs; output is not committed to the repo.
+# Build detailed operator diagrams locally and print their store path; requires nix-topology inputs, output is not committed to the repo.
 topology-operator-detailed:
     nix run path:.#topology-operator-detailed
 

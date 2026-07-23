@@ -140,6 +140,12 @@
       treefmt.config = {
         projectRootFile = "flake.nix";
         programs.nixfmt.enable = true;
+        # treefmt-nix's flakeModule would otherwise add its own
+        # `checks.treefmt` built from the raw, uncleaned `self` (unlike our
+        # `checks.formatting` below, which filters VCS metadata first -- see
+        # that check's comment). Disabling it here avoids ever building that
+        # unfiltered duplicate; `formatting` is this repo's one treefmt check.
+        flakeCheck = false;
       };
       formatter = config.treefmt.build.wrapper;
 
@@ -198,8 +204,43 @@
         # `path:.` includes local VCS metadata, unlike the normal Git flake
         # source used by CI. Filter it before treefmt so a generated hook under
         # `.git/` can never become formatting input or a sandbox dependency.
-        treefmt = pkgs.lib.mkForce (config.treefmt.build.check (pkgs.lib.cleanSource inputs.self));
+        # This is the repo's only treefmt check derivation: treefmt-nix's own
+        # auto-generated `checks.treefmt` is disabled above (`flakeCheck =
+        # false`) so it can't reappear as an unfiltered duplicate.
         formatting = config.treefmt.build.check (pkgs.lib.cleanSource inputs.self);
+
+        # Contract check for the justfile `fmt` recipe's doc comment and
+        # docs/testing.md's `formatting` row, both of which document treefmt
+        # as Nix-only: Python/shell/Markdown are lint-checked by pre-commit's
+        # ruff/shellcheck/markdownlint hooks, never auto-formatted. If a
+        # future edit enables another treefmt formatter (e.g. ruff-format,
+        # shfmt, mdformat), this fails so the docs get updated in the same
+        # change instead of silently drifting from what `just fmt` now does.
+        fmt-scope-contract =
+          let
+            # Only the formatters plausible for this repo's languages (Nix,
+            # Python, shell, Markdown) -- deliberately not `builtins.attrNames
+            # config.treefmt.programs`, which would force-evaluate every
+            # formatter module treefmt-nix ships (including ones with
+            # deprecated renamed options) just to list their names.
+            watched = [
+              "nixfmt"
+              "ruff-format"
+              "black"
+              "shfmt"
+              "mdformat"
+              "prettier"
+            ];
+            enabledFormatters = builtins.filter (name: config.treefmt.programs.${name}.enable) watched;
+            expected = [ "nixfmt" ];
+            ok = enabledFormatters == expected;
+          in
+          assert pkgs.lib.assertMsg ok ''
+            treefmt now enables ${pkgs.lib.concatStringsSep ", " enabledFormatters}, expected exactly ${pkgs.lib.concatStringsSep ", " expected}.
+            `just fmt`'s doc comment and docs/testing.md's `formatting` row both claim treefmt is Nix-only; update them (and this check's `expected` list) if this is an intentional, reviewed change.
+          '';
+          pkgs.runCommand "fmt-scope-contract" { } "touch $out";
+
         lan-inventory =
           pkgs.runCommand "lan-inventory-test"
             {

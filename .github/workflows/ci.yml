@@ -59,6 +59,7 @@ jobs:
           nix build --no-link \
             .#checks.x86_64-linux.pre-commit \
             .#checks.x86_64-linux.docs-correctness \
+            .#checks.x86_64-linux.fmt-scope-contract \
             .#checks.x86_64-linux.formatting \
             .#checks.x86_64-linux.github-workflow-policy \
             .#checks.x86_64-linux.kvm-gate-drift \
