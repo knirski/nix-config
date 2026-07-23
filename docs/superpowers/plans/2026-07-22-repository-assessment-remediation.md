@@ -2,6 +2,8 @@
 
 Date: 2026-07-22
 
+Last revalidated: 2026-07-23 against `origin/main` at `e4296e7`
+
 Status: active; implementation has not started
 
 ## Goal
@@ -39,7 +41,7 @@ decisions.
 | Tailscale authentication orders against a nonexistent unit | C1 |
 | Grafana queries metric names that the producer never emits | C2 |
 | Soyo mixes stable Nixpkgs with unstable Home Manager | C3 |
-| Clipboard KVM test fails and is absent from the explicit CI KVM set | C4 |
+| Clipboard KVM test is flaky and absent from the explicit CI KVM set | C4 |
 | Maintenance and SMART failures are not fully reported | O1 |
 | Limine generations are unbounded | O2 |
 | Healthcheck does not prove backup freshness or all-probe health | O3 |
@@ -94,14 +96,16 @@ against it:
 - The Ubuntu Home Manager activation package builds.
 - Fresh KVM builds pass `backup-unit-vm`, `dns-dhcp-vm`, and
   `impermanence-vm`.
-- A forced fresh KVM build of `clipboard-protocols` fails in the PRIMARY
-  selection scenario.
+- Repeated forced KVM rebuilds of `clipboard-protocols` alternate between pass
+  and failure in the PRIMARY-selection scenario, proving nondeterministic
+  ownership, readiness, or process-lifetime behavior.
 - The macbook configuration evaluates on Linux; its actual Darwin closure is a
   macOS CI responsibility until target hardware is available.
 
-Do not treat a cached derivation as evidence that a formerly failing behavior
-has been repaired. For C4 and other regression repairs, force one fresh build
-or change the test derivation in a reviewable way.
+Do not treat a cached derivation as evidence that a failing or flaky behavior
+has been repaired. For C4, a single fresh pass or failure is insufficient:
+stress the selection lifecycle inside the VM and repeat the complete derivation
+after the repair.
 
 ## Execution order
 
@@ -288,8 +292,9 @@ Likely files:
 
 Steps:
 
-1. Reproduce the PRIMARY-selection failure with a fresh KVM build and retain
-   the failing subtest name and compositor/client logs.
+1. Reproduce both the passing and failing outcomes across repeated fresh KVM
+   builds. Retain the failing subtest name and compositor/client logs, and
+   compare them with a passing run before changing synchronization.
 2. Inspect the actual MIME offers for regular and PRIMARY selections. Do not
    assume `text/plain` when the client offers only a charset-qualified type.
 3. Check `wl-copy` process lifetime and daemonization. Use foreground mode or
@@ -301,11 +306,14 @@ Steps:
 6. Add `clipboard-protocols` to `just test-resilience` and the CI resilience
    job. Update every “three KVM tests” statement to derive or state the actual
    four-test set.
-7. Run the repaired test twice from a fresh derivation to detect timing flakes.
+7. Stress at least 20 consecutive regular/PRIMARY ownership cycles inside one
+   VM without retrying failed content assertions. Then run the complete repaired
+   derivation five times with `--rebuild` to detect cross-VM timing flakes.
 
 Acceptance:
 
-- All four clipboard scenarios pass under KVM twice.
+- All four clipboard scenarios pass, the PRIMARY stress loop completes all 20
+  cycles, and five consecutive fresh derivation builds succeed.
 - Replacing the PRIMARY read with the regular selection, or changing the
   expected PRIMARY value, fails the test.
 - The explicit local and CI KVM sets contain every KVM-classified flake check.
@@ -917,7 +925,8 @@ nix build --no-link --keep-going \
 Additional acceptance:
 
 - No Home Manager/Nixpkgs mismatch warning remains.
-- No check passes solely because the broken pre-fix derivation is cached.
+- No check passes solely because the flaky pre-fix derivation is cached or
+  because only one favorable timing run was observed.
 - `git status --short` contains only intended source, documentation, and the
   command-generated `flake.lock` changes.
 - Gitleaks reports no plaintext credentials.
