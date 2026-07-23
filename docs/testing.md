@@ -60,9 +60,10 @@ beginner-oriented explanation of why evaluation, builds, VM behavior and
 physical recovery drills remain separate forms of evidence.
 
 Cachix is configured read-only for pull requests, so they can substitute
-previously published paths without receiving credentials. Every job passes a
-`cachix-auth-token` input to the local `setup-nix` action, but that input is
-itself an expression gated on `github.event_name == 'push' && github.ref ==
+previously published paths without receiving credentials. Every job that
+needs Cachix substitution passes a `cachix-auth-token` input to the local
+`setup-nix` action, but that input is itself an expression gated on
+`github.event_name == 'push' && github.ref ==
 'refs/heads/main'`: only a push to `main` resolves it to the real
 `CACHIX_AUTH_TOKEN` secret and enables the authenticated, upload-capable
 Cachix step. Every other trigger — including same-repo and fork pull

@@ -37,7 +37,7 @@ STEP_START = re.compile(r"^\s*-\s")
 # tolerance). This replaces a blanket "this whole file may write anything"
 # exemption -- keep entries minimal and review additions carefully.
 JOB_WRITE_ALLOWLIST: dict[str, dict[str, str]] = {
-    "pr-agent.yml": {"pull-requests": "write"},
+    "pr-agent.yml": {"issues": "write", "pull-requests": "write"},
 }
 
 

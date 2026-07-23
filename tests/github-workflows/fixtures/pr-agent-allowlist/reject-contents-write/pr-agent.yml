@@ -1,7 +1,8 @@
 # Basename must be exactly "pr-agent.yml" to exercise
-# JOB_WRITE_ALLOWLIST["pr-agent.yml"], which allows only pull-requests:
-# write. Proves the allowlist is exact, not a blanket "any write is fine
-# for this filename" -- contents: write must still be rejected here.
+# JOB_WRITE_ALLOWLIST["pr-agent.yml"], which allows only issues: write and
+# pull-requests: write. Proves the allowlist is exact, not a blanket "any
+# write is fine for this filename" -- contents: write must still be
+# rejected here.
 name: Fixture PR Agent
 on:
   pull_request:

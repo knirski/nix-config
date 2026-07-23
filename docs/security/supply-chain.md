@@ -17,10 +17,10 @@ expression correctness. Structural policy is parsed as YAML, while immutable
 fixtures cover scalar, flow-mapping, comment, quoting and trigger variants.
 These checks complement each other.
 
-Cachix is a performance layer, not an authority boundary. Every CI job passes
-a `cachix-auth-token` input to the local `setup-nix` composite action; the
-value itself is what is gated, not merely a later upload step. The input is
-computed as
+Cachix is a performance layer, not an authority boundary. Every job that
+needs Cachix substitution passes a `cachix-auth-token` input to the local
+`setup-nix` composite action; the value itself is what is gated, not merely
+a later upload step. The input is computed as
 `${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}`,
 which resolves to `secrets.CACHIX_AUTH_TOKEN` only when the run is a push to
 `refs/heads/main`, and to the empty string for every other trigger —
