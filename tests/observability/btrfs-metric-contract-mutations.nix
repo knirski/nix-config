@@ -70,4 +70,19 @@ in
         alertExpr = "${btrfsMetrics.usagePercent} > ${btrfsMetrics.thresholdPercent}";
       };
   }
+  {
+    name = "consumer-drops-label-on-one-side";
+    # Both metric names present and one side labeled, but the label is
+    # dropped from the *other* occurrence — e.g.
+    # `btrfs_usage_percent{host="soyo"} > btrfs_usage_threshold_percent`.
+    # A check that only looks for the label substring somewhere in the
+    # whole expression would still accept this, even though the unlabeled
+    # side could match any host's series.
+    mutate =
+      fixture:
+      fixture
+      // {
+        alertExpr = "${btrfsMetrics.usagePercent}{${btrfsMetrics.hostLabel}=\"soyo\"} > ${btrfsMetrics.thresholdPercent}";
+      };
+  }
 ]

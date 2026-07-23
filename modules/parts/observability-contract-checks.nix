@@ -39,9 +39,15 @@
         && lib.elem btrfsMetrics.thresholdPercent producerTokens
         && lib.elem btrfsMetrics.usagePercent exprTokens
         && lib.elem btrfsMetrics.thresholdPercent exprTokens
-        # An explicit host label match, not a bare metric name — guards
-        # against a different host's series satisfying this alert.
-        && lib.hasInfix "${btrfsMetrics.hostLabel}=\"" fixture.alertExpr;
+        # An explicit host label match on *each* metric occurrence, not just
+        # the label substring appearing somewhere in the whole expression —
+        # a single `hasInfix "host=\""` check would still accept an
+        # expression where only one side of the comparison carries the
+        # label (e.g. `btrfs_usage_percent{host="soyo"} >
+        # btrfs_usage_threshold_percent`), which is exactly the
+        # cross-host-comparison hazard this contract exists to prevent.
+        && lib.hasInfix "${btrfsMetrics.usagePercent}{${btrfsMetrics.hostLabel}=\"" fixture.alertExpr
+        && lib.hasInfix "${btrfsMetrics.thresholdPercent}{${btrfsMetrics.hostLabel}=\"" fixture.alertExpr;
 
       safeFixture = {
         producerText = ''
@@ -89,8 +95,16 @@
               echo "alert script missing ${btrfsMetrics.thresholdPercent}" >&2
               exit 1
             fi
-            if ! grep -qF '${btrfsMetrics.hostLabel}="' "$alertScript"; then
-              echo "alert script has no explicit ${btrfsMetrics.hostLabel} label match" >&2
+            # Each metric occurrence must carry its own explicit host label
+            # immediately after it, not merely appear somewhere in the same
+            # file — otherwise a one-sided label drop (label on one metric,
+            # missing on the other) would slip through undetected.
+            if ! grep -qF '${btrfsMetrics.usagePercent}{${btrfsMetrics.hostLabel}="' "$alertScript"; then
+              echo "alert script's ${btrfsMetrics.usagePercent} occurrence has no immediate ${btrfsMetrics.hostLabel} label match" >&2
+              exit 1
+            fi
+            if ! grep -qF '${btrfsMetrics.thresholdPercent}{${btrfsMetrics.hostLabel}="' "$alertScript"; then
+              echo "alert script's ${btrfsMetrics.thresholdPercent} occurrence has no immediate ${btrfsMetrics.hostLabel} label match" >&2
               exit 1
             fi
             touch "$out"
