@@ -80,7 +80,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - name: Materialize tracked agenix-rekey inputs
         run: |
           nix store add-path --name soyo ./secrets/rekeyed/soyo
@@ -148,7 +148,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - run: nix store gc
       - name: Build complete system closure
         run: |
@@ -169,7 +169,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - run: nix store gc
       - name: Build Home Manager activation package
         run: |
@@ -191,7 +191,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - run: nix store gc
       - name: Build complete darwin closure
         run: |
@@ -212,7 +212,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - name: Require hardware virtualization
         run: test -c /dev/kvm && test -r /dev/kvm && test -w /dev/kvm
       - name: Run strict KVM behavior checks
@@ -236,7 +236,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - name: Build sanitized topology overview
         run: |
           topology=$(nix build .#topology-public-overview --no-link --print-out-paths)

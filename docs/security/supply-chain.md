@@ -17,10 +17,22 @@ expression correctness. Structural policy is parsed as YAML, while immutable
 fixtures cover scalar, flow-mapping, comment, quoting and trigger variants.
 These checks complement each other.
 
-Cachix is a performance layer, not an authority boundary. Pull requests
-configure the public `knirski-nix-config` cache without credentials. Only a
-push to `main` references `CACHIX_AUTH_TOKEN` and can upload paths; forked code
-cannot access that step or secret.
+Cachix is a performance layer, not an authority boundary. Every CI job passes
+a `cachix-auth-token` input to the local `setup-nix` composite action; the
+value itself is what is gated, not merely a later upload step. The input is
+computed as
+`${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}`,
+which resolves to `secrets.CACHIX_AUTH_TOKEN` only when the run is a push to
+`refs/heads/main`, and to the empty string for every other trigger —
+`pull_request` (same-repo or fork), `workflow_dispatch`, and pushes to any
+other branch. `setup-nix` then branches purely on whether that string is
+empty: an empty token selects the pull-only `cachix-action` step (safe for
+untrusted code, since no credential is present to leak or misuse), and a
+non-empty token selects the push-enabled step. Because the gate lives on the
+token *input* rather than on a downstream `run:` step, a same-repo pull
+request build — which GitHub does expose repository secrets to — never
+receives write access to the cache: the secret reference in the expression is
+short-circuited away before the composite action ever sees it.
 
 ## Secret and public-data scans
 

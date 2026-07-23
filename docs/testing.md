@@ -60,12 +60,17 @@ beginner-oriented explanation of why evaluation, builds, VM behavior and
 physical recovery drills remain separate forms of evidence.
 
 Cachix is configured read-only for pull requests, so they can substitute
-previously published paths without receiving credentials. Only a push to
-`main` runs the authenticated Cachix step and may upload new paths. Fork pull
-requests therefore never execute a step that references the secret. The
-workflow token remains read-only. Closure comparison was removed because a
-cached store-path string does not realize its closure in a fresh runner's Nix
-store.
+previously published paths without receiving credentials. Every job passes a
+`cachix-auth-token` input to the local `setup-nix` action, but that input is
+itself an expression gated on `github.event_name == 'push' && github.ref ==
+'refs/heads/main'`: only a push to `main` resolves it to the real
+`CACHIX_AUTH_TOKEN` secret and enables the authenticated, upload-capable
+Cachix step. Every other trigger — including same-repo and fork pull
+requests — resolves the input to an empty string, so no run driven by a pull
+request ever holds the secret's value, regardless of whether it comes from
+the same repository or a fork. The workflow token remains read-only. Closure
+comparison was removed because a cached store-path string does not realize
+its closure in a fresh runner's Nix store.
 
 ## Operational command contracts
 
