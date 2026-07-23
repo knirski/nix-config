@@ -26,7 +26,6 @@
             ];
             users.krzysiek.home = {
               stateVersion = "26.11";
-              enableNixpkgsReleaseCheck = false;
             };
           };
         }

@@ -21,7 +21,6 @@
           username = "krzysiek";
           homeDirectory = "/home/krzysiek";
           stateVersion = "26.11";
-          enableNixpkgsReleaseCheck = false;
         };
       }
     ];

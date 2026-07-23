@@ -2,6 +2,7 @@
   aspects.homeManager.base =
     {
       config,
+      options,
       pkgs,
       lib,
       ...
@@ -135,13 +136,19 @@
         fzf = {
           enable = true;
           enableZshIntegration = true;
-          # Nushell integration requires fzf >= 0.73.0, but soyo uses
-          # nixpkgs stable (release-26.05) which has fzf 0.72.0.
-          # Nushell is installed for agent tooling, not as an interactive shell.
-          enableNushellIntegration = false;
           # Fzf owns Ctrl-R for history search. The generated shell init
           # binds Ctrl-R to fzf's history widget, overlaying zsh's built-in
           # Ctrl-R reverse-search.
+        }
+        # Nushell integration requires fzf >= 0.73.0, but soyo's Home Manager
+        # release (matching its stable nixpkgs channel) predates this option
+        # entirely rather than merely defaulting it on. Guard by option
+        # availability instead of assuming every host's HM release has it —
+        # the unstable hosts (zbook, macbook, ubuntu) do have the option and
+        # get it explicitly disabled since nushell is only installed here for
+        # agent tooling, not as an interactive shell.
+        // lib.optionalAttrs (options.programs.fzf ? enableNushellIntegration) {
+          enableNushellIntegration = false;
         };
         gh = {
           enable = true;
