@@ -59,7 +59,9 @@ jobs:
           nix build --no-link \
             .#checks.x86_64-linux.pre-commit \
             .#checks.x86_64-linux.docs-correctness \
+            .#checks.x86_64-linux.formatting \
             .#checks.x86_64-linux.github-workflow-policy \
+            .#checks.x86_64-linux.kvm-gate-drift \
             .#checks.x86_64-linux.public-repository-data \
             .#checks.x86_64-linux.script-contracts \
             .#checks.x86_64-linux.shell-boundaries \
@@ -99,15 +101,20 @@ jobs:
         run: |
           nix build --no-link \
             .#checks.x86_64-linux.backup-restic-integration \
+            .#checks.x86_64-linux.boot-generation-invariants \
+            .#checks.x86_64-linux.btrfs-alert-metric-contract \
             .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
             .#checks.x86_64-linux.deploy-activate \
             .#checks.x86_64-linux.deploy-schema \
             .#checks.x86_64-linux.dns-dhcp-config \
+            .#checks.x86_64-linux.failure-notification-invariants \
+            .#checks.x86_64-linux.home-manager-channel-invariants \
             .#checks.x86_64-linux.host-role-invariants \
             .#checks.x86_64-linux.impermanence-missing-early-persist \
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.maintenance-paths \
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \
@@ -117,15 +124,20 @@ jobs:
         run: |
           nix copy --to 'https://knirski-nix-config.cachix.org' \
             .#checks.x86_64-linux.backup-restic-integration \
+            .#checks.x86_64-linux.boot-generation-invariants \
+            .#checks.x86_64-linux.btrfs-alert-metric-contract \
             .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
             .#checks.x86_64-linux.deploy-activate \
             .#checks.x86_64-linux.deploy-schema \
             .#checks.x86_64-linux.dns-dhcp-config \
+            .#checks.x86_64-linux.failure-notification-invariants \
+            .#checks.x86_64-linux.home-manager-channel-invariants \
             .#checks.x86_64-linux.host-role-invariants \
             .#checks.x86_64-linux.impermanence-missing-early-persist \
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.maintenance-paths \
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \

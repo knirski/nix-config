@@ -1,0 +1,12 @@
+name: CI
+jobs:
+  resilience:
+    name: Strict KVM behavior tests
+    steps:
+      - name: Run strict KVM behavior checks
+        run: |
+          nix build --no-link --keep-going \
+            .#checks.x86_64-linux.backup-unit-vm \
+            .#checks.x86_64-linux.dns-dhcp-vm \
+            .#checks.x86_64-linux.impermanence-vm \
+            .#checks.x86_64-linux.clipboard-protocols

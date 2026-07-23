@@ -1,0 +1,7 @@
+# Regression fixture: clipboard-protocols was removed from this recipe but
+# left in ci.yml -- the exact drift this check exists to catch.
+test-resilience:
+    nix build --no-link \
+      path:.#checks.x86_64-linux.backup-unit-vm \
+      path:.#checks.x86_64-linux.dns-dhcp-vm \
+      path:.#checks.x86_64-linux.impermanence-vm

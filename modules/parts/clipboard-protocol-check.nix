@@ -9,6 +9,7 @@ _: {
     let
       inherit (pkgs) lib;
       runKvmTest = import ../../lib/testing/run-kvm-test.nix { inherit pkgs; };
+      kvmChecks = import ../../lib/testing/kvm-checks.nix;
       runtimeDir = "/tmp/clipboard-wayland-runtime";
       compositorEnv = "XDG_RUNTIME_DIR=${runtimeDir}";
       clientEnv = "XDG_RUNTIME_DIR=${runtimeDir} WAYLAND_DISPLAY=wayland-test";
@@ -97,8 +98,8 @@ _: {
       '';
     in
     {
-      checks.clipboard-protocols = runKvmTest {
-        name = "clipboard-protocols";
+      checks.${kvmChecks.clipboardProtocols} = runKvmTest {
+        name = kvmChecks.clipboardProtocols;
 
         nodes.machine = _: {
           environment.systemPackages = [

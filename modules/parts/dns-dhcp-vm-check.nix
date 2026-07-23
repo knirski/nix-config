@@ -9,6 +9,7 @@
       inherit (pkgs) lib;
       inherit (config.aspects.nixos) blocky dhcp;
       runKvmTest = import ../../lib/testing/run-kvm-test.nix { inherit pkgs; };
+      kvmChecks = import ../../lib/testing/kvm-checks.nix;
 
       serverAddress = "10.0.0.9";
       reservations = import ../../hosts/soyo/reservations.nix;
@@ -17,8 +18,8 @@
       ) reservations;
     in
     {
-      checks.dns-dhcp-vm = runKvmTest {
-        name = "dns-dhcp-vm";
+      checks.${kvmChecks.dnsDhcpVm} = runKvmTest {
+        name = kvmChecks.dnsDhcpVm;
         globalTimeout = 360;
 
         nodes = {

@@ -9,6 +9,7 @@
     let
       backup = config.aspects.nixos.backup;
       runKvmTest = import ../../lib/testing/run-kvm-test.nix { inherit pkgs; };
+      kvmChecks = import ../../lib/testing/kvm-checks.nix;
       rawResticTest = pkgs.writeShellApplication {
         name = "restic-integration-test";
         runtimeInputs = with pkgs; [
@@ -30,8 +31,8 @@
           touch "$out"
         '';
 
-        backup-unit-vm = runKvmTest {
-          name = "backup-unit-vm";
+        ${kvmChecks.backupUnitVm} = runKvmTest {
+          name = kvmChecks.backupUnitVm;
           globalTimeout = 180;
 
           nodes.machine =

@@ -19,6 +19,13 @@ readable and writable. Check it with
 a hard failure, never a reason to silently fall back to TCG or mark the VM tier
 successful without executing it.
 
+The set of KVM-classified checks lives in one place,
+`lib/testing/kvm-checks.nix`; the `kvm-gate-drift` check (see Named checks
+below) parses `ci.yml`'s `resilience` job and the justfile's
+`test-resilience` recipe and fails if either one builds a different set of
+names than that file declares, so the four checks below cannot silently
+drift apart from what CI and `just` actually run.
+
 ## CI and local KVM gates
 
 The selected GitHub `ubuntu-24.04` runner currently exposes accelerated KVM;
@@ -30,7 +37,7 @@ quietly weakening coverage.
 
 | Trigger class | Evidence |
 | --- | --- |
-| Every push and pull request | Static hooks, documentation/public-data/workflow/shell policies, script contracts and topology freshness |
+| Every push and pull request | Static hooks, documentation/public-data/workflow/shell policies, formatting, the KVM-check drift gate, script contracts and topology freshness |
 | Every push and pull request | Full no-build evaluation, pure invariants and isolated raw-restic integration |
 | After static and evaluation pass | Complete Soyo and zbook closures; sanitized topology artifact |
 | After static and evaluation pass | Four strict-KVM behavior tests; together with earlier tiers, every flake check is covered without rebuilding pure checks |
@@ -143,6 +150,8 @@ This table is the canonical index — when adding a check, add a row here.
 | ----- | --------------- | ------ | ---- |
 | `backup-restic-integration` | restic can initialise a repo, backup, and check a snapshot | `backup-integration-check.nix` | Pure eval + shell script |
 | `backup-unit-vm` | KVM VM: backup creates repo snapshots, readiness gates work | `backup-integration-check.nix` | KVM |
+| `boot-generation-invariants` | Limine's `maxGenerations` is set, positive, and within the documented upper bound on every host | `boot-generation-invariants.nix` | Pure eval |
+| `btrfs-alert-metric-contract` | The Btrfs usage/threshold Prometheus metric names emitted by `free-space-check` and consumed by the Grafana alert never drift apart | `observability-contract-checks.nix` | Pure eval + shell script |
 | `clipboard-protocols` | Primary clipboard data-paste in Wayland | `clipboard-protocol-check.nix` | KVM |
 | `dendritic-options` | Every `lanAppliance.services.*` option declared by the hosts that toggle it | `perSystem.nix` | Pure eval |
 | `deploy-activate` | deploy-rs activation scripts don't error | `deploy.nix` (deploy-rs) | Pure eval |
@@ -152,10 +161,12 @@ This table is the canonical index — when adding a check, add a row here.
 | `docs-correctness` | Internal markdown links resolve; anchors exist; lifecycle is accurate; no orphans | `docs-checks.nix` | Pure eval |
 | `failure-notification-invariants` | Reviewed operational units (scrub, `nix-gc`, free-space check, restic, btrbk, `grafana-alert-setup`, `nix-store-optimise`) all wire `OnFailure=ntfy-failure@%N.service`; `ntfy-failure@` itself never does; generated ntfy-failure@/smartd notify scripts carry title, unit/device identity, and read credentials from a file at runtime | `failure-notification-checks.nix` | Pure eval |
 | `github-workflow-policy` | Workflow YAML uses pinned actions, least-privilege permissions, no mutable tags | `github-security-checks.nix` | Pure eval |
+| `home-manager-channel-invariants` | Each host's evaluated Home Manager release actually tracks the Nixpkgs channel its assembler intends | `home-manager-channel-checks.nix` | Pure eval |
 | `host-role-invariants` | Soyo has appliance role + no GUI; zbook has workstation role + GUI; base has no role bias | `host-role-invariants.nix` | Pure eval |
 | `impermanence-vm` | KVM VM: root wipes on boot; only persisted state survives | `impermanence-vm-check.nix` | KVM |
 | `impermanence-missing-early-persist` | Unpersisted early-boot paths fail with an error | `impermanence-vm-check.nix` | Pure eval |
 | `initrd-recovery-invariants` | Initrd SSH unlock, TPM, and break-glass paths have all required options | `initrd-invariants.nix` | Pure eval |
+| `kvm-gate-drift` | The KVM check set declared in `lib/testing/kvm-checks.nix` cannot drift from what `ci.yml`'s `resilience` job and `just test-resilience` actually build | `kvm-gate-drift-check.nix` | Pure eval + shell script |
 | `lan-inventory` | Python unit tests for  LAN inventory collector | `perSystem.nix` | Pure eval + Python |
 | `maintenance-paths` | Required tmpfiles rule exists for free-space check path | `perSystem.nix` | Pure eval |
 | `persistence-invariants` | Every persisted path exists in the host config; mode/owner are sane | `persistence-invariants.nix` | Pure eval |
@@ -169,6 +180,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `topology-freshness` | Committed `docs/topology/overview.svg` matches the current stable state | `topology-checks.nix` | Pure eval |
 | `dashboard-renderer` | Python unit tests for the observability dashboard renderer | `perSystem.nix` | Pure eval + Python |
 | `formatting` | treefmt — Nix, Python, shell, markdown formatting check | `perSystem.nix` | Pure eval |
+| `treefmt` | Same treefmt derivation as `formatting`, exposed under the attribute name `git-hooks.nix` also expects; CI builds `formatting` and gets this one for free (identical output path) | `perSystem.nix` | Pure eval |
 
 ### KVM tests
 
