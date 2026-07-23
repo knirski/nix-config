@@ -83,7 +83,7 @@ enforcement belongs to the documentation-check layer.
 - [Repository rules](../AGENTS.md) — hard invariants, boundaries, conventions
   and the required validation workflow. Read this before editing.
 - [Root README](../README.md) — project scope, safe quick start and architecture.
-- [Current repository assessment remediation plan](superpowers/plans/2026-07-22-repository-assessment-remediation.md)
+- [Current repository assessment remediation plan](superpowers/plans/2026-07-23-repository-assessment-remediation.md)
   — active implementation plan with prioritized fixes and acceptance criteria.
 - [Superseded correctness and resilience plan](superpowers/plans/2026-07-12-correctness-resilience-docs.md)
   — frozen record of the previous implementation phase.

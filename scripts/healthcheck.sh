@@ -133,6 +133,102 @@ run_ssh()  { "$SSH_BIN" "${SSH_OPTS[@]}" "krzysiek@$HOST" "$@"; }
 # shellcheck disable=SC2329
 run_sudo() { "$SSH_BIN" "${SSH_OPTS[@]}" "krzysiek@$HOST" sudo "$@"; }
 
+# Both restic (modules/nixos/backup.nix: timerConfig.OnCalendar default
+# "daily", RandomizedDelaySec up to 1h) and btrbk (onCalendar = "daily") run
+# once a day. 48h -- double the schedule period -- tolerates one missed or
+# delayed run (host powered off overnight, randomized start delay, a slow
+# check pass) without masking a backup that is genuinely stuck for more than
+# a full extra day.
+BACKUP_MAX_AGE_HOURS=48
+
+# Builds the POSIX-shell probe snippet that determines backup freshness from
+# an immutable success marker file, not from any systemd unit property. This
+# is the literal logic executed on the remote host over SSH by
+# check_backup_freshness below; it is also invoked directly -- via
+# `bash -c`, with `stat`/`sudo` stubbed and a real `date`, no SSH involved at
+# all -- by the SSH-free unit tests in
+# tests/scripts/backup-freshness-probe.bats, to exercise the actual
+# NEVER_RAN/STALE/FRESH branching and timestamp arithmetic.
+#
+# A prior version of this probe read systemd's `Result`, `ExecMainStatus`,
+# and `InactiveEnterTimestamp` unit properties (itself a fix for an earlier
+# bug -- ExecMainExitTimestamp never populates for
+# restic-backups-<host>.service's real multi-ExecStart + ExecStartPre unit
+# shape -- see the addendum in .superpowers/sdd/task-O3-report.md). A later
+# review found all three of those properties are systemd's *mutable*
+# bookkeeping of "the last completed activation": `systemctl reset-failed
+# <unit>` -- runnable by an operator, an alerting/ack tool, or any
+# automation with SSH access -- silently resets Result back to "success" and
+# ExecMainStatus back to "0" without re-running anything and without
+# touching what InactiveEnterTimestamp actually means (it records *when*
+# the unit last went inactive, never *whether* that transition was clean).
+# Reproduced live on this repo's own zbook host: restic-backups-zbook's only
+# run one morning genuinely failed (a real DNS resolution failure to its
+# sftp backend), yet `systemctl show restic-backups-zbook.service -p
+# Result,ExecMainStatus,InactiveEnterTimestamp --value` reported
+# success/0/a timestamp matching that failed run -- meaning the old
+# Result/ExecMainStatus-based probe reported FRESH for a backup that had
+# actually failed.
+#
+# This version instead reads the mtime of an immutable success marker file
+# (modules/nixos/backup.nix: `touch <marker>` is the *last* ExecStart entry
+# on both the restic and btrbk backup units, appended via `lib.mkAfter` so
+# it only runs -- and only updates the marker -- once every prior command
+# in the oneshot's ExecStart sequence has already exited 0). No systemd
+# unit property is read at all, so `systemctl reset-failed` has nothing to
+# lie about: the marker's mtime is either genuinely recent or it is not.
+#
+# Prints exactly one of:
+#   NEVER_RAN    -- the marker file does not exist (no run has ever reached
+#                   the genuine-success ExecStart entry)
+#   STALE:<age>h -- the marker is older than BACKUP_MAX_AGE_HOURS
+#   FRESH:<age>h -- the marker is within the threshold
+# A marker mtime that fails to parse as a number is treated as age=0-epoch
+# (i.e. maximally stale), never as a silent pass.
+freshness_probe_snippet() {
+  local marker="$1"
+  # This $-reference is evaluated by the shell that runs the snippet (the
+  # remote host over SSH in production, or the local `bash -c` in tests),
+  # not expanded here. The marker's containing directory is
+  # root/service-user-owned (systemd StateDirectory=), not world-readable,
+  # hence `sudo` -- the same passwordless-sudo access already used by
+  # run_sudo elsewhere in this script.
+  # shellcheck disable=SC2016
+  printf '%s' '
+ts=$(sudo stat -c %Y '"$marker"' 2>/dev/null)
+if [ -z "$ts" ]; then
+  echo NEVER_RAN
+else
+  case "$ts" in
+    *[!0-9]*) ts=0 ;;
+  esac
+  now=$(date +%s)
+  age=$(( (now - ts) / 3600 ))
+  if [ "$age" -gt '"$BACKUP_MAX_AGE_HOURS"' ]; then
+    echo "STALE:${age}h"
+  else
+    echo "FRESH:${age}h"
+  fi
+fi
+'
+}
+
+check_backup_freshness() {
+  local desc="$1" marker="$2"
+  check_val "$desc" "FRESH" run_ssh "$(freshness_probe_snippet "$marker")"
+}
+
+# Requires every active target in the given Prometheus job to report
+# health "up", and explicitly fails (never silently passes) when the job has
+# no active targets at all -- a "grep | head" over the raw JSON can pass on
+# just one matching line even when other targets in the same job are down,
+# or when the job returns no targets whatsoever.
+check_blackbox_job() {
+  local desc="$1" job="$2"
+  check_val "$desc" "ALL_UP" run_ssh \
+    "curl -sf --connect-timeout 5 http://localhost:9090/api/v1/targets | jq -r '(.data.activeTargets // []) | map(select(.labels.job==\"$job\")) | if length==0 then \"NO_TARGETS\" elif (map(select(.health!=\"up\")) | length) > 0 then (\"DOWN:\" + ([.[] | select(.health!=\"up\") | (.labels.instance // \"unknown\")] | join(\",\"))) else \"ALL_UP\" end'"
+}
+
 echo "=== Healthcheck: $HOST (role=$ROLE, nic=$NIC) ==="
 echo ""
 
@@ -158,15 +254,30 @@ fi
 echo ""
 echo "--- Timers ---"
 if [[ "$ROLE" == "appliance" ]]; then
-  for tmr in nix-store-optimise "btrbk-soyo" fstrim; do
+  for tmr in nix-store-optimise "btrbk-soyo" "restic-backups-soyo" fstrim; do
     check_val "$tmr timer enabled" "enabled" \
       run_ssh "systemctl is-enabled ${tmr}.timer 2>/dev/null"
   done
 else
-  for tmr in nix-store-optimise fstrim; do
+  for tmr in nix-store-optimise "btrbk-zbook" "restic-backups-zbook" fstrim; do
     check_val "$tmr timer enabled" "enabled" \
       run_ssh "systemctl is-enabled ${tmr}.timer 2>/dev/null"
   done
+fi
+
+echo ""
+echo "--- Backup freshness ---"
+# Timer-enabled only proves the schedule is armed, not that a backup has
+# actually run and succeeded recently -- that's what these checks add.
+# A successful timer here is NOT proof of restorability; the actual restore
+# path is exercised only by the manual restic restore drill (see
+# docs/backup-and-restore.md), never by this automated script.
+if [[ "$ROLE" == "appliance" ]]; then
+  check_backup_freshness "btrbk-soyo backup is fresh" "/var/lib/btrbk-soyo/last-success"
+  check_backup_freshness "restic-backups-soyo backup is fresh" "/var/lib/restic-backups-soyo/last-success"
+else
+  check_backup_freshness "btrbk-zbook backup is fresh" "/var/lib/btrbk-zbook/last-success"
+  check_backup_freshness "restic-backups-zbook backup is fresh" "/var/lib/restic-backups-zbook/last-success"
 fi
 
 echo ""
@@ -220,10 +331,8 @@ if [[ "$ROLE" == "appliance" ]]; then
     run_ssh 'curl -sI http://localhost:3000'
   check_val "LAN inventory metrics" "lan_device_" \
     run_ssh 'curl -sf http://localhost:9100/metrics | grep lan_device_'
-  check_val "blackbox ICMP probes healthy" "\"health\":\"up\"" \
-    run_ssh 'curl -sf http://localhost:9090/api/v1/targets | grep blackbox-icmp | head -5'
-  check_val "blackbox HTTP probes healthy" "\"health\":\"up\"" \
-    run_ssh 'curl -sf http://localhost:9090/api/v1/targets | grep blackbox-http | head -5'
+  check_blackbox_job "blackbox ICMP probes healthy" "blackbox-icmp"
+  check_blackbox_job "blackbox HTTP probes healthy" "blackbox-http"
 fi
 
 echo ""

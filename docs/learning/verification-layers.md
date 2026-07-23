@@ -41,11 +41,13 @@ trusted pushes to `main` may upload new paths.
 
 ## 3. KVM tests ask whether isolated systems behave correctly
 
-The repository has three NixOS VM tests:
+The repository has four NixOS VM tests:
 
 - `dns-dhcp-vm` exchanges real DNS and DHCP packets;
 - `backup-unit-vm` exercises the generated backup unit;
-- `impermanence-vm` boots encrypted Btrfs state, reboots and verifies rollback.
+- `impermanence-vm` boots encrypted Btrfs state, reboots and verifies rollback;
+- `clipboard-protocols` runs headless Sway and checks Wayland regular/PRIMARY
+  clipboard selection behavior.
 
 Their shared wrapper forces QEMU acceleration and each guest checks its KVM
 clock source. Missing or inaccessible `/dev/kvm` is therefore a failure, not a
@@ -58,7 +60,7 @@ nix flake check path:. --keep-going
 
 The GitHub workflow performs the same preflight on `ubuntu-24.04`. The pinned
 Nix installer enables KVM on that runner. Static, pure-invariant, topology and
-host-closure jobs own their outputs; the KVM job builds only the three behavior
+host-closure jobs own their outputs; the KVM job builds only the four behavior
 tests, avoiding a second build of checks already proven by earlier tiers.
 
 ## 4. Mutation fixtures ask whether checks can detect bad changes

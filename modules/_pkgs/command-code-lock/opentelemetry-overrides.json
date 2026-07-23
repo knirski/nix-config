@@ -1,0 +1,25 @@
+{
+  "_comment": "Single source of truth for the CVE-2026-54285 (GHSA-8988-4f7v-96qf) OpenTelemetry dependency-range bump. Read by three consumers so they can never drift apart: modules/_pkgs/command-code.nix's postPatch (bumps package.json before npm resolves it into the build), scripts/update-command-code.sh (reapplies the same bump when regenerating the vendored lockfile for a version update), and tests/security/check_command_code_overrides.py (asserts the resolved node_modules tree actually satisfies these floors, not just that package.json claims them). To extend or retire an override, edit this file only -- no script or .nix logic needs to change.",
+  "overrides": [
+    {
+      "package": "@opentelemetry/exporter-trace-otlp-http",
+      "range": "^0.219.0",
+      "minVersion": "0.219.0"
+    },
+    {
+      "package": "@opentelemetry/resources",
+      "range": "^2.8.0",
+      "minVersion": "2.8.0"
+    },
+    {
+      "package": "@opentelemetry/sdk-node",
+      "range": "^0.219.0",
+      "minVersion": "0.219.0"
+    },
+    {
+      "package": "@opentelemetry/sdk-trace-node",
+      "range": "^2.8.0",
+      "minVersion": "2.8.0"
+    }
+  ]
+}

@@ -36,6 +36,7 @@
             users.krzysiek = {
               imports = [
                 config.aspects.homeManager.base
+                config.aspects.homeManager.development
                 config.aspects.homeManager.desktop
                 config.aspects.homeManager.ssh
                 config.aspects.homeManager.sway
@@ -48,7 +49,6 @@
               ];
               home = {
                 stateVersion = "26.11";
-                enableNixpkgsReleaseCheck = false;
               };
             };
           };
@@ -92,6 +92,15 @@
             };
             zbook-restic-password = {
               rekeyFile = ../../secrets/zbook-restic-password.age;
+            };
+            # Workstation-only: gh/command-code/development tooling. Declared
+            # here (not in the shared aspects.nixos.users aspect) so soyo
+            # never gets this secret rekeyed for it. See docs/secrets.md.
+            github-token = {
+              rekeyFile = ../../secrets/github-token.age;
+              owner = "krzysiek";
+              group = "users";
+              mode = "0400";
             };
           };
         }

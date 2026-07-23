@@ -31,7 +31,8 @@ diagnostic approach.
    hash mismatch, missing input, evaluation error that only appears with
    `--show-trace`.
 
-4. **KVM behaviour tests:** `backup-unit-vm`, `dns-dhcp-vm`, `impermanence-vm`.
+4. **KVM behaviour tests:** `backup-unit-vm`, `dns-dhcp-vm`, `impermanence-vm`,
+   `clipboard-protocols`.
    Require `/dev/kvm`. Failure logs come from inside the VM — scroll past QEMU
    boot messages to find `FAIL` or `error` lines.
 

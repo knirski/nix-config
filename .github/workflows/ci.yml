@@ -59,13 +59,22 @@ jobs:
           nix build --no-link \
             .#checks.x86_64-linux.pre-commit \
             .#checks.x86_64-linux.docs-correctness \
+            .#checks.x86_64-linux.formatting \
             .#checks.x86_64-linux.github-workflow-policy \
+            .#checks.x86_64-linux.kvm-gate-drift \
             .#checks.x86_64-linux.public-repository-data \
             .#checks.x86_64-linux.script-contracts \
             .#checks.x86_64-linux.shell-boundaries \
             .#checks.x86_64-linux.topology-freshness
       - name: Scan current source for credentials
         run: nix run .#gitleaks -- detect --source . --no-git --redact --verbose
+      - name: Check command-code override review freshness
+        # Deliberately a plain script, not a `checks.*` derivation: see
+        # tests/security/check_command_code_freshness.py's docstring for why
+        # a cached Nix check would silently stop re-evaluating staleness.
+        run: |
+          python3 tests/security/check_command_code_freshness.py \
+            modules/_pkgs/command-code-lock/last-reviewed.json
 
   evaluation:
     name: Evaluation and pure invariants
@@ -80,7 +89,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - name: Materialize tracked agenix-rekey inputs
         run: |
           nix store add-path --name soyo ./secrets/rekeyed/soyo
@@ -99,15 +108,21 @@ jobs:
         run: |
           nix build --no-link \
             .#checks.x86_64-linux.backup-restic-integration \
+            .#checks.x86_64-linux.boot-generation-invariants \
+            .#checks.x86_64-linux.btrfs-alert-metric-contract \
+            .#checks.x86_64-linux.command-code-security \
             .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
             .#checks.x86_64-linux.deploy-activate \
             .#checks.x86_64-linux.deploy-schema \
             .#checks.x86_64-linux.dns-dhcp-config \
+            .#checks.x86_64-linux.failure-notification-invariants \
+            .#checks.x86_64-linux.home-manager-channel-invariants \
             .#checks.x86_64-linux.host-role-invariants \
             .#checks.x86_64-linux.impermanence-missing-early-persist \
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.maintenance-paths \
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \
@@ -117,15 +132,21 @@ jobs:
         run: |
           nix copy --to 'https://knirski-nix-config.cachix.org' \
             .#checks.x86_64-linux.backup-restic-integration \
+            .#checks.x86_64-linux.boot-generation-invariants \
+            .#checks.x86_64-linux.btrfs-alert-metric-contract \
+            .#checks.x86_64-linux.command-code-security \
             .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
             .#checks.x86_64-linux.deploy-activate \
             .#checks.x86_64-linux.deploy-schema \
             .#checks.x86_64-linux.dns-dhcp-config \
+            .#checks.x86_64-linux.failure-notification-invariants \
+            .#checks.x86_64-linux.home-manager-channel-invariants \
             .#checks.x86_64-linux.host-role-invariants \
             .#checks.x86_64-linux.impermanence-missing-early-persist \
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.maintenance-paths \
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \
@@ -148,7 +169,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - run: nix store gc
       - name: Build complete system closure
         run: |
@@ -169,7 +190,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - run: nix store gc
       - name: Build Home Manager activation package
         run: |
@@ -191,7 +212,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - run: nix store gc
       - name: Build complete darwin closure
         run: |
@@ -212,7 +233,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - name: Require hardware virtualization
         run: test -c /dev/kvm && test -r /dev/kvm && test -w /dev/kvm
       - name: Run strict KVM behavior checks
@@ -220,7 +241,8 @@ jobs:
           nix build --no-link --keep-going \
             .#checks.x86_64-linux.backup-unit-vm \
             .#checks.x86_64-linux.dns-dhcp-vm \
-            .#checks.x86_64-linux.impermanence-vm
+            .#checks.x86_64-linux.impermanence-vm \
+            .#checks.x86_64-linux.clipboard-protocols
 
   topology:
     name: Publish sanitized topology
@@ -235,7 +257,7 @@ jobs:
           fetch-depth: 2
       - uses: ./.github/actions/setup-nix
         with:
-          cachix-auth-token: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}
       - name: Build sanitized topology overview
         run: |
           topology=$(nix build .#topology-public-overview --no-link --print-out-paths)

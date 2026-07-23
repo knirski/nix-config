@@ -15,6 +15,10 @@ lint:
     nix build path:.#checks.x86_64-linux.pre-commit --no-link
     # Unlike the staged pre-commit hook, a manual lint scans the whole tree.
     nix run path:.#gitleaks -- detect --source . --no-git --redact --verbose
+    # Offline, time-based: deliberately not a nix check (see that script's
+    # docstring for why a checks.* derivation would cache this forever).
+    python3 tests/security/check_command_code_freshness.py \
+      modules/_pkgs/command-code-lock/last-reviewed.json
 
 # Evaluate the whole flake (lints + builds every output incl. deploy checks).
 # Prerequisites: /dev/kvm readable and writable.
@@ -22,13 +26,14 @@ check:
     @test -r /dev/kvm && test -w /dev/kvm || { echo "error: complete checks require readable and writable /dev/kvm" >&2; exit 1; }
     nix flake check path:.
 
-# Run the three KVM-backed resilience tests required before merging changes.
+# Run the four KVM-backed resilience tests required before merging changes.
 # Prerequisites: /dev/kvm readable and writable.
 test-resilience:
     nix build --no-link \
       path:.#checks.x86_64-linux.backup-unit-vm \
       path:.#checks.x86_64-linux.dns-dhcp-vm \
-      path:.#checks.x86_64-linux.impermanence-vm
+      path:.#checks.x86_64-linux.impermanence-vm \
+      path:.#checks.x86_64-linux.clipboard-protocols
 
 # Build a NixOS host's toplevel system. Pass host name as argument.
 build host="soyo":
@@ -77,6 +82,12 @@ recover-secrets *args:
 # Replace Tailscale key secrets from protected files; never auto-commits.
 set-tailscale-keys *args:
     nix run .#set-tailscale-keys -- {{args}}
+
+# Fetch a command-code version, regenerate its vendored lockfile, and print
+# the fetchurl/npmDepsHash values to paste into command-code.nix by hand.
+# Never edits command-code.nix or flake.lock, never commits.
+update-command-code version:
+    nix run .#update-command-code -- {{version}}
 
 # Run dendritic option-namespace tests (wired into nix flake check, also runs there).
 test:

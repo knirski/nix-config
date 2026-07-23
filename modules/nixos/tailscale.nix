@@ -58,10 +58,10 @@
         systemd.services.tailscale-auth = lib.mkIf (cfg.authKeyFile != null) {
           description = "Authenticate Tailscale with auth key";
           after = [
-            "tailscale.service"
+            "tailscaled.service"
             "agenix-activation.service"
           ];
-          wants = [ "tailscale.service" ];
+          wants = [ "tailscaled.service" ];
           wantedBy = [ "multi-user.target" ];
           serviceConfig =
             hardening.networkClient

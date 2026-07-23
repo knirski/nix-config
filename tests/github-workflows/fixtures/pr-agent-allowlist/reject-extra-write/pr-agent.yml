@@ -1,0 +1,20 @@
+# Basename must be exactly "pr-agent.yml" to exercise
+# JOB_WRITE_ALLOWLIST["pr-agent.yml"], which allows only issues: write and
+# pull-requests: write. Proves a write scope beyond the exact allowlist
+# entry is still rejected, even though pull-requests: write alone would
+# pass -- id-token: write is neither issues nor pull-requests, so it must
+# still be rejected.
+name: Fixture PR Agent
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+permissions:
+  contents: read
+jobs:
+  pr-agent:
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5" # v4.3.1

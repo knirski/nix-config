@@ -13,7 +13,7 @@
     "docs/learning/project-assessment.md": { "status": "active", "role": "project assessment" },
     "docs/learning/shared-env.md": { "status": "active", "role": "shared-env usage guide" },
     "docs/learning/verification-layers.md": { "status": "active", "role": "verification learning guide" },
-    "docs/archive/optional-work-plan.md": { "status": "superseded", "role": "completed planning record", "replacement": "docs/superpowers/plans/2026-07-22-repository-assessment-remediation.md" },
+    "docs/archive/optional-work-plan.md": { "status": "superseded", "role": "completed planning record", "replacement": "docs/superpowers/plans/2026-07-23-repository-assessment-remediation.md" },
     "docs/recovery.md": { "status": "active", "role": "recovery runbook" },
     "docs/architecture/router-recommendation.md": { "status": "active", "role": "network design advisory" },
     "docs/secrets.md": { "status": "canonical", "role": "secrets workflow" },
@@ -24,8 +24,8 @@
     "docs/archive/2026-06-28-soyo-dns-dhcp-appliance.md": { "status": "completed", "role": "implementation plan" },
     "docs/archive/2026-07-04-lan-observability.md": { "status": "completed", "role": "implementation plan" },
     "docs/archive/2026-07-05-ci-pipeline-plan.md": { "status": "completed", "role": "implementation plan" },
-    "docs/superpowers/plans/2026-07-12-correctness-resilience-docs.md": { "status": "superseded", "role": "completed planning record", "replacement": "docs/superpowers/plans/2026-07-22-repository-assessment-remediation.md" },
-    "docs/superpowers/plans/2026-07-22-repository-assessment-remediation.md": { "status": "active", "role": "repository assessment remediation plan" },
+    "docs/superpowers/plans/2026-07-12-correctness-resilience-docs.md": { "status": "superseded", "role": "completed planning record", "replacement": "docs/superpowers/plans/2026-07-23-repository-assessment-remediation.md" },
+    "docs/superpowers/plans/2026-07-23-repository-assessment-remediation.md": { "status": "active", "role": "repository assessment remediation plan" },
     "docs/superpowers/specs/2026-07-04-lan-observability-design.md": { "status": "active", "role": "implemented subsystem design" },
     "docs/superpowers/specs/2026-07-05-ci-pipeline-design.md": { "status": "active", "role": "implemented subsystem design" },
     "docs/superpowers/specs/soyo-dns-dhcp-appliance.md": { "status": "canonical", "role": "architecture design" },
@@ -43,6 +43,6 @@
     "hosts/macbook/INSTALL.md": { "status": "active", "role": "macbook installation index" },
     "docs/install-macbook.md": { "status": "active", "role": "macbook installation runbook" },
     "docs/install-ubuntu.md": { "status": "active", "role": "ubuntu installation runbook" },
-    "docs/superpowers/specs/repository-gaps-and-improvements.md": { "status": "superseded", "role": "dated gap-analysis record", "replacement": "docs/superpowers/plans/2026-07-22-repository-assessment-remediation.md" }
+    "docs/superpowers/specs/repository-gaps-and-improvements.md": { "status": "superseded", "role": "dated gap-analysis record", "replacement": "docs/superpowers/plans/2026-07-23-repository-assessment-remediation.md" }
   }
 }

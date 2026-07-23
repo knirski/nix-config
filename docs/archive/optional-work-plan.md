@@ -2,7 +2,7 @@
 
 > **Status: Superseded.** Completed results remain useful history. Outstanding
 > resilience work moved to the
-> [current remediation plan](../superpowers/plans/2026-07-22-repository-assessment-remediation.md).
+> [current remediation plan](../superpowers/plans/2026-07-23-repository-assessment-remediation.md).
 
 <!-- markdownlint-configure-file {"MD024": {"siblings_only": true}} -->
 

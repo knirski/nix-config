@@ -1,0 +1,10 @@
+# Regression fixture: the "Strict KVM behavior tests" job itself was removed
+# from ci.yml (e.g. renamed without keeping this display name), so the
+# resilience gate no longer runs at all in CI even though `just
+# test-resilience` still exists locally.
+test-resilience:
+    nix build --no-link \
+      path:.#checks.x86_64-linux.backup-unit-vm \
+      path:.#checks.x86_64-linux.dns-dhcp-vm \
+      path:.#checks.x86_64-linux.impermanence-vm \
+      path:.#checks.x86_64-linux.clipboard-protocols

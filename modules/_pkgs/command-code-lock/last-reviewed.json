@@ -1,0 +1,6 @@
+{
+  "_comment": "Locally-recorded review timestamp for the vendored command-code npm dependency tree (package-lock.json + opentelemetry-overrides.json). Updated by hand whenever a human reviews the vendored tree -- either by running scripts/update-command-code.sh to bump to a newer upstream version, or by re-confirming the current version and its overrides are still appropriate. Read offline by tests/security/check_command_code_freshness.py; never fetched or inferred from the network.",
+  "date": "2026-07-23",
+  "version": "0.52.3",
+  "staleAfterDays": 180
+}

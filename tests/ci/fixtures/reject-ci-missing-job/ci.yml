@@ -1,0 +1,9 @@
+name: CI
+jobs:
+  build:
+    name: Build soyo closure
+    steps:
+      - name: Build complete system closure
+        run: |
+          nix build \
+            .#nixosConfigurations.soyo.config.system.build.toplevel

@@ -87,3 +87,82 @@ setup() { setup_contract_test; }
   assert_log_has '<bootctl status | grep -i "Secure Boot"'
   assert_output_lacks 'connection timed out'
 }
+
+@test "both host roles check their own declared snapshot timers and freshness" {
+  run "$HEALTHCHECK" test-host appliance eth0
+  assert_status 0
+  assert_log_has '<systemctl is-enabled btrbk-soyo.timer'
+  assert_log_has '<systemctl is-enabled restic-backups-soyo.timer'
+  assert_log_has 'stat -c %Y /var/lib/btrbk-soyo/last-success'
+  assert_log_has 'stat -c %Y /var/lib/restic-backups-soyo/last-success'
+  assert_log_lacks 'btrbk-zbook'
+  assert_log_lacks 'restic-backups-zbook'
+  assert_output_has '[PASS] btrbk-soyo backup is fresh'
+  assert_output_has '[PASS] restic-backups-soyo backup is fresh'
+
+  : >"$OPERATOR_TEST_LOG"
+  run "$HEALTHCHECK" test-host workstation eth0
+  assert_status 0
+  assert_log_has '<systemctl is-enabled btrbk-zbook.timer'
+  assert_log_has '<systemctl is-enabled restic-backups-zbook.timer'
+  assert_log_has 'stat -c %Y /var/lib/btrbk-zbook/last-success'
+  assert_log_has 'stat -c %Y /var/lib/restic-backups-zbook/last-success'
+  assert_log_lacks 'btrbk-soyo'
+  assert_log_lacks 'restic-backups-soyo'
+  assert_output_has '[PASS] btrbk-zbook backup is fresh'
+  assert_output_has '[PASS] restic-backups-zbook backup is fresh'
+}
+
+@test "a stale backup fails with a specific message, not a generic one" {
+  export BACKUP_STATE_RESTIC_SOYO='STALE:96h'
+  run "$HEALTHCHECK" test-host appliance eth0
+  assert_status 1
+  assert_output_has 'restic-backups-soyo backup is fresh (expected: FRESH, got: STALE:96h)'
+  # btrbk on the same host is unaffected -- only the stale unit fails.
+  assert_output_has '[PASS] btrbk-soyo backup is fresh'
+}
+
+@test "reset-failed cannot mask a failed backup: an absent marker fails regardless of what systemd's mutable Result would say" {
+  # Reproduces the Critical review finding on commits 0d61ed2/10ced03: the
+  # prior probe trusted systemctl's Result/ExecMainStatus, which
+  # `systemctl reset-failed <unit>` silently resets to success/0 without
+  # re-running anything or touching any marker. The fixed probe never asks
+  # systemd anything -- fake-ssh here answers purely from the
+  # marker-file-stat command text, so this failure mode cannot recur no
+  # matter what Result would claim.
+  export BACKUP_STATE_BTRBK_ZBOOK='NEVER_RAN'
+  run "$HEALTHCHECK" test-host workstation eth0
+  assert_status 1
+  assert_output_has 'btrbk-zbook backup is fresh (expected: FRESH, got: NEVER_RAN)'
+  assert_output_has '[PASS] restic-backups-zbook backup is fresh'
+}
+
+@test "a backup unit that has never completed a run fails, not 'FRESH'" {
+  export BACKUP_STATE_RESTIC_ZBOOK='NEVER_RAN'
+  run "$HEALTHCHECK" test-host workstation eth0
+  assert_status 1
+  assert_output_has 'restic-backups-zbook backup is fresh (expected: FRESH, got: NEVER_RAN)'
+}
+
+@test "all blackbox targets healthy passes both probe jobs" {
+  run "$HEALTHCHECK" test-host appliance eth0
+  assert_status 0
+  assert_output_has '[PASS] blackbox ICMP probes healthy'
+  assert_output_has '[PASS] blackbox HTTP probes healthy'
+}
+
+@test "an empty blackbox target list fails, never silently passes" {
+  export BLACKBOX_ICMP_STATE='NO_TARGETS'
+  run "$HEALTHCHECK" test-host appliance eth0
+  assert_status 1
+  assert_output_has 'blackbox ICMP probes healthy (expected: ALL_UP, got: NO_TARGETS)'
+  assert_output_has '[PASS] blackbox HTTP probes healthy'
+}
+
+@test "a single failed blackbox target fails the whole job, not just the section" {
+  export BLACKBOX_HTTP_STATE='DOWN:nas.home.arpa'
+  run "$HEALTHCHECK" test-host appliance eth0
+  assert_status 1
+  assert_output_has 'blackbox HTTP probes healthy (expected: ALL_UP, got: DOWN:nas.home.arpa)'
+  assert_output_has '[PASS] blackbox ICMP probes healthy'
+}

@@ -1,5 +1,5 @@
 name: Fixture
-on: [push]
+on: [push, pull_request]
 permissions:
   contents: read
 jobs:
@@ -7,3 +7,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5" # v4.3.1
+      # Correctly gated Cachix token pattern: the same-repo-push-to-main
+      # condition guards the secret inline, so the value resolves to '' on
+      # pull_request even though this workflow also triggers on it.
+      - uses: ./.github/actions/setup-nix
+        with:
+          cachix-auth-token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.CACHIX_AUTH_TOKEN || '' }}

@@ -1,7 +1,7 @@
 # Plan: Repository gaps and improvements
 
 Status: superseded on 2026-07-22 by the
-[Repository Assessment Remediation Plan](../plans/2026-07-22-repository-assessment-remediation.md)
+[Repository Assessment Remediation Plan](../plans/2026-07-23-repository-assessment-remediation.md)
 
 This document is retained as a dated gap-analysis record. Its priorities and
 task list are frozen; current remediation ownership and ordering live only in

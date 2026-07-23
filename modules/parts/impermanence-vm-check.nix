@@ -9,6 +9,7 @@
       inherit (pkgs) lib;
       persistence = config.aspects.nixos.persistence;
       runKvmTest = import ../../lib/testing/run-kvm-test.nix { inherit pkgs; };
+      kvmChecks = import ../../lib/testing/kvm-checks.nix;
 
       testInventory = {
         preservation.preserveAt."/persist" = {
@@ -115,8 +116,8 @@
     in
     {
       checks = {
-        impermanence-vm = runKvmTest {
-          name = "impermanence-vm";
+        ${kvmChecks.impermanenceVm} = runKvmTest {
+          name = kvmChecks.impermanenceVm;
 
           nodes.machine =
             { pkgs, ... }:

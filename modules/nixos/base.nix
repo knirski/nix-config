@@ -83,6 +83,17 @@ in
             Nice = 19;
             IOSchedulingClass = "idle";
           };
+          # base.nix is role-neutral and shared by every NixOS host, but the
+          # ntfy-failure@ template is only defined when the maintenance
+          # aspect is enabled (modules/nixos/maintenance.nix). Reference it
+          # unconditionally anyway — same precedent as
+          # lanAppliance.services.backup.notifyOnFailure in
+          # modules/nixos/backup.nix: on a host without the maintenance
+          # aspect, systemd just logs a harmless "unit ntfy-failure@... not
+          # found" warning when this unit fails; the store-optimise unit
+          # itself is unaffected. Both current NixOS hosts (soyo, zbook)
+          # enable the maintenance aspect anyway.
+          unitConfig.OnFailure = "ntfy-failure@%N.service";
         };
         # nixpkgs also declares an unactivated `nix-optimise.service` for its
         # `nix.optimise` option. This repository deliberately uses the bounded

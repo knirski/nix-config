@@ -60,7 +60,24 @@ See [recovery.md](./recovery.md) for the full break-glass flow.
 
 ## Rollback
 
-NixOS keeps previous generations in the boot menu. Three options:
+NixOS keeps previous generations in the boot menu. `boot.loader.limine.maxGenerations`
+(set to `10` in both `hosts/soyo/boot.nix` and `hosts/zbook/boot.nix`) bounds how many
+stay listed there — without a limit, every deploy adds a menu entry and an ESP
+kernel/initrd copy that never goes away, growing the ESP and the boot menu without
+bound. After this limit takes effect, expect up to the 10 most recent generations to
+be selectable from the Limine menu at any time; older ones drop off the menu (and are
+pruned from `/boot`) as new ones are added, oldest first.
+
+This is a boot-menu limit only. It does **not** replace `nix.gc`
+(`modules/nixos/maintenance.nix`, `nix.gc.automatic` with
+`--delete-older-than 30d`), which is what actually reclaims Nix store space —
+a store path can still be garbage-collected, or retained, independently of
+whether its generation is still listed in the boot menu. It also has no effect
+on the persisted Secure Boot signing keys under `/var/lib/sbctl` (see
+[recovery.md](./recovery.md)) — those are unrelated host state, not
+per-generation boot entries.
+
+Three rollback options:
 
 ### Rollback to previous generation (quickest)
 

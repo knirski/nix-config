@@ -9,6 +9,7 @@
     );
     modules = [
       config.aspects.homeManager.base
+      config.aspects.homeManager.development
       config.aspects.homeManager.desktop
       config.aspects.homeManager.ssh
       config.aspects.homeManager.sway
@@ -21,7 +22,6 @@
           username = "krzysiek";
           homeDirectory = "/home/krzysiek";
           stateVersion = "26.11";
-          enableNixpkgsReleaseCheck = false;
         };
       }
     ];

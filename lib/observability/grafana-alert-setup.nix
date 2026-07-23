@@ -1,6 +1,9 @@
 { config, pkgs, ... }:
 let
   hardening = import ../systemd-hardening.nix;
+  # Single source of truth for the Btrfs metric names, shared with the
+  # producer in modules/nixos/maintenance.nix — see lib/observability/btrfs-metrics.nix.
+  btrfsMetrics = import ./btrfs-metrics.nix;
 in
 {
   systemd.services.grafana-alert-setup = {
@@ -8,6 +11,10 @@ in
     after = [ "grafana.service" ];
     wants = [ "grafana.service" ];
     wantedBy = [ "multi-user.target" ];
+    # A failed provisioning run leaves the Grafana alert rules or ntfy contact
+    # point stale/missing with no other signal — the failure needs to reach
+    # the operator the same way the units it's provisioning alerts for do.
+    unitConfig.OnFailure = "ntfy-failure@%N.service";
     serviceConfig = hardening.networkClient // {
       Type = "oneshot";
       RemainAfterExit = true;
@@ -134,7 +141,7 @@ in
 
                 post_rule soyo_disk_space_low \
                   "💽 Btrfs space low" \
-                  'soyo_btrfs_usage_percent > soyo_btrfs_usage_threshold_percent' \
+                  '${btrfsMetrics.usagePercent}{${btrfsMetrics.hostLabel}="${config.networking.hostName}"} > ${btrfsMetrics.thresholdPercent}{${btrfsMetrics.hostLabel}="${config.networking.hostName}"}' \
                   5m KeepLast "💽 Btrfs filesystem usage is above the configured threshold"
               }
 

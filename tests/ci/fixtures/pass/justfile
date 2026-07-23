@@ -1,0 +1,11 @@
+# Run the four KVM-backed resilience tests required before merging changes.
+test-resilience:
+    nix build --no-link \
+      path:.#checks.x86_64-linux.backup-unit-vm \
+      path:.#checks.x86_64-linux.dns-dhcp-vm \
+      path:.#checks.x86_64-linux.impermanence-vm \
+      path:.#checks.x86_64-linux.clipboard-protocols
+
+# A trailing recipe proves the recipe-body scanner stops at the right place.
+build host="soyo":
+    nix build path:.#nixosConfigurations.{{host}}.config.system.build.toplevel

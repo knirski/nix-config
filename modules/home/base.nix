@@ -2,6 +2,7 @@
   aspects.homeManager.base =
     {
       config,
+      options,
       pkgs,
       lib,
       ...
@@ -13,16 +14,10 @@
         };
         packages =
           with pkgs;
-          [
-            command-code
-          ]
-          ++ lib.optionals stdenv.isLinux [
+          lib.optionals stdenv.isLinux [
             gcx
           ]
           ++ [
-            # Nix language servers for Zed
-            nil
-            nixd
             # Modern CLI replacements (no HM modules)
             dust
             sd
@@ -36,7 +31,6 @@
             # Other tools without HM modules
             procs
             unrar # for extract() function
-            nushell # used by all agents for script execution
           ];
 
       };
@@ -82,12 +76,9 @@
             update_ms = 1000; # 1-second refresh rate
           };
         };
-        claude-code.enable = true;
-        codex.enable = true;
         command-not-found.enable = false;
         delta.enable = true;
         difftastic.enable = true;
-        docker-cli.enable = true;
         eza = {
           enable = true;
           enableZshIntegration = true;
@@ -106,7 +97,13 @@
             display = {
               separator = " → "; # Arrow separator for clean look
             };
-            # Show system info in logical groups
+            # Show system info in logical groups. "de"/"wm"/"wmtheme",
+            # "gpu", and "battery" are display/hardware-dependent, but
+            # fastfetch degrades gracefully when they're absent (verified:
+            # unsetting the desktop-session env vars drops the "de" line
+            # entirely, no error, exit 0) rather than erroring — soyo simply
+            # prints a shorter report, so this stays in base rather than
+            # moving to desktop.nix.
             modules = [
               "title"
               "separator"
@@ -135,54 +132,22 @@
         fzf = {
           enable = true;
           enableZshIntegration = true;
-          # Nushell integration requires fzf >= 0.73.0, but soyo uses
-          # nixpkgs stable (release-26.05) which has fzf 0.72.0.
-          # Nushell is installed for agent tooling, not as an interactive shell.
-          enableNushellIntegration = false;
           # Fzf owns Ctrl-R for history search. The generated shell init
           # binds Ctrl-R to fzf's history widget, overlaying zsh's built-in
           # Ctrl-R reverse-search.
-        };
-        gh = {
-          enable = true;
-          settings = {
-            editor = "nvim";
-            git_protocol = "ssh";
-            prompt = "enabled";
-          };
+        }
+        # Nushell integration requires fzf >= 0.73.0, but soyo's Home Manager
+        # release (matching its stable nixpkgs channel) predates this option
+        # entirely rather than merely defaulting it on. Guard by option
+        # availability instead of assuming every host's HM release has it —
+        # the unstable hosts (zbook, macbook, ubuntu) do have the option and
+        # get it explicitly disabled since nushell is only installed here for
+        # agent tooling, not as an interactive shell.
+        // lib.optionalAttrs (options.programs.fzf ? enableNushellIntegration) {
+          enableNushellIntegration = false;
         };
         gpg.enable = true;
         jq.enable = true;
-        lazydocker.enable = true;
-        lazygit = {
-          enable = true;
-          settings = {
-            # Catppuccin Mocha theme colors
-            gui.theme = {
-              activeBorderColor = [
-                "#89b4fa" # Blue
-                "bold"
-              ];
-              inactiveBorderColor = [ "#a6adc8" ]; # Overlay0
-              searchingActiveBorderColor = [
-                "#f9e2af" # Yellow
-                "bold"
-              ];
-              selectedLineBgColor = [ "#313244" ]; # Surface0
-              cherryPickedCommitFgColor = [ "#89dceb" ]; # Teal
-              cherryPickedCommitBgColor = [ "#45475a" ]; # Surface1
-            };
-            git = {
-              paging = {
-                colorArg = "always";
-                pager = "delta --dark --paging=never"; # Use delta for syntax highlighting
-              };
-              commit = {
-                signOff = true; # Add Signed-off-by line
-              };
-            };
-          };
-        };
         # Use eza instead of lsd for file listing
         lsd.enable = false;
         mc.enable = true;
@@ -201,8 +166,6 @@
           viAlias = true;
           vimAlias = true;
           plugins = with pkgs.vimPlugins; [
-            # LSP support for multiple languages
-            nvim-lspconfig
             # Treesitter for syntax highlighting and code understanding
             (nvim-treesitter.withPlugins (p: [
               p.nix
@@ -218,9 +181,9 @@
               p.toml
               p.markdown
             ]))
-            # Autocompletion engine
+            # Autocompletion engine (LSP-specific completion source lives in
+            # aspects.homeManager.development, alongside nvim-lspconfig)
             nvim-cmp
-            cmp-nvim-lsp # LSP source for nvim-cmp
             cmp-buffer # Buffer words source
             cmp-path # File path source
             # Fuzzy finder for files, grep, buffers
@@ -235,14 +198,12 @@
             # Theme
             catppuccin-nvim
           ];
-          extraPackages = with pkgs; [
-            nil
-            lua-language-server
-            pyright
-            typescript-language-server
-            rust-analyzer
-            gopls
-          ];
+          # Language-server integration (extraPackages, nvim-lspconfig,
+          # cmp-nvim-lsp source, and the vim.lsp.* setup) is developer-only
+          # tooling — see aspects.homeManager.development. Base keeps neovim
+          # as a general-purpose editor without any LSP servers, which is
+          # sufficient for appliance administration (e.g. editing this repo's
+          # Nix files during a soyo recovery).
           initLua = ''
             -- Basic settings
             vim.opt.number = true
@@ -258,29 +219,9 @@
             vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>")
             vim.keymap.set("n", "<leader>e", "<cmd>Neotree toggle<cr>")
 
-            -- LSP using the new vim.lsp.config API (nvim-lspconfig 2.10+, Neovim 0.11+)
-            -- See :help lspconfig-nvim-0.11
-            local capabilities = require('cmp_nvim_lsp').default_capabilities()
-
-            -- Configure LSP servers
-            vim.lsp.config.nil_ls = { capabilities = capabilities }  -- Nix
-            vim.lsp.config.lua_ls = { capabilities = capabilities }   -- Lua
-            vim.lsp.config.pyright = { capabilities = capabilities }  -- Python
-            vim.lsp.config.ts_ls = { capabilities = capabilities }    -- TypeScript/JavaScript
-            vim.lsp.config.rust_analyzer = { capabilities = capabilities }  -- Rust
-            vim.lsp.config.gopls = { capabilities = capabilities }    -- Go
-
-            -- Enable all configured LSP servers
-            vim.lsp.enable({
-              'nil_ls',
-              'lua_ls',
-              'pyright',
-              'ts_ls',
-              'rust_analyzer',
-              'gopls',
-            })
-
-            -- Completion
+            -- Completion (the 'nvim_lsp' source is only populated when
+            -- aspects.homeManager.development also installs cmp-nvim-lsp;
+            -- nvim-cmp silently ignores an unregistered source name)
             local cmp = require('cmp')
             cmp.setup({
               sources = {
@@ -300,7 +241,6 @@
             vim.cmd.colorscheme "catppuccin"
           '';
         };
-        opencode.enable = true;
         ripgrep.enable = true;
         skim = {
           enable = true;
@@ -362,7 +302,10 @@
               ];
               open = [
                 {
-                  run = "xdg-open \"$@\"";
+                  # macOS's opener is `open`; every other host here is Linux
+                  # and uses `xdg-open` (provided by xdg-utils via desktop.nix
+                  # or the base package set).
+                  run = if pkgs.stdenv.isDarwin then "open \"$@\"" else "xdg-open \"$@\"";
                   desc = "Open";
                 }
               ];
@@ -524,12 +467,6 @@
         };
         bash = {
           enable = true;
-          initExtra = lib.optionalString pkgs.stdenv.isLinux ''
-            if [ -r /run/agenix/github-token ]; then
-              export GITHUB_TOKEN="$(cat /run/agenix/github-token)"
-              export GH_TOKEN="$GITHUB_TOKEN"
-            fi
-          '';
         };
         git = {
           enable = true;
@@ -569,16 +506,21 @@
           };
         };
         home-manager.enable = true;
-        direnv = {
-          enable = true;
-          nix-direnv.enable = true;
-        };
       };
 
+      # gpg-agent is only meaningful where GPG_TTY/systemd-user-session
+      # integration applies; darwin gets its own agent wiring (or none) from
+      # aspects.homeManager.desktop/aerospace, not from base.
       services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {
         enable = true;
         enableZshIntegration = true;
-        pinentry.package = pkgs.pinentry-gnome3;
+        # pinentry-curses: a full-screen ncurses prompt that works over any
+        # SSH terminal, including soyo's headless/no-GUI session — unlike
+        # pinentry-tty's plain line prompt, it still shows key info/quality
+        # meter, which is nicer for interactive admin use. Hosts with a
+        # guaranteed graphical session (desktop.nix) upgrade this to
+        # pinentry-gnome3.
+        pinentry.package = lib.mkDefault pkgs.pinentry-curses;
       };
 
     };
