@@ -27,10 +27,15 @@ This configuration is shared across multiple hosts. Not all tools are available 
 
 - **Desktop**: Aerospace (tiling WM, similar to Sway)
 - **Terminal**: macOS's built-in Terminal.app, launched by Aerospace's
-  `Cmd+Return` via `open -a Terminal` — not Ghostty. Ghostty's nixpkgs
+  `Cmd+Return` via `open -n -a Terminal` — not Ghostty. Ghostty's nixpkgs
   package declares only Linux platforms in `meta.platforms` (no
   `aarch64-darwin`), so it cannot be installed on macbook; Terminal.app
-  ships with macOS and needs no Nix package or Home Manager module.
+  ships with macOS and needs no Nix package or Home Manager module. The
+  `-n` flag spawns a new Terminal.app instance/window on every keypress
+  (AeroSpace's own docs give this exact invocation as the canonical
+  example); without it, `open -a Terminal` would just refocus an existing
+  window instead of tiling a fresh one, matching Sway's `Mod+Return`
+  behavior on zbook/ubuntu.
 - **Shell**: Zsh, but as the *login* shell it is macOS's own `/bin/zsh`,
   not the Nix-store one — see [`docs/install-macbook.md`](install-macbook.md)
   Step 6. Home Manager's zsh configuration (aliases, functions, Oh-My-Zsh)
@@ -51,7 +56,10 @@ This configuration is shared across multiple hosts. Not all tools are available 
 - **Not available**: NixOS modules, persistence, backups, gaming, Podman,
   virt-manager, distrobox, Firefox (only declared in `aspects.nixos.desktop`,
   a NixOS-only aspect namespace unreachable from standalone Home Manager —
-  install it via `apt` if needed, outside of Nix)
+  install it via `apt` if needed, outside of Nix), Polkit agent, XDG portals
+  (both only declared in `modules/nixos/sway.nix`'s NixOS-only
+  `aspects.nixos.sway`, not the `aspects.homeManager.sway` aspect ubuntu
+  imports)
 
 ### Tool Availability Matrix
 
@@ -72,8 +80,8 @@ This configuration is shared across multiple hosts. Not all tools are available 
 | **Persistence** | ✓ | ✗ | ✗ |
 | **Backups (restic/btrbk)** | ✓ | ✗ | ✗ |
 | **NVIDIA offload** | ✓ | ✗ | ✗ |
-| **Polkit agent** | ✓ | ✗ | ✓ |
-| **XDG portals** | ✓ | ✗ | ✓ |
+| **Polkit agent** | ✓ | ✗ | ✗ |
+| **XDG portals** | ✓ | ✗ | ✗ |
 | **Firefox** | ✓ | ✗ | ✗ |
 | **Bitwarden** | ✓ | ✗ | ✓ |
 | **Signal** | ✓ | ✗ | ✓ |
@@ -89,6 +97,16 @@ macbook; Firefox additionally is not declaratively managed on ubuntu. Where
 real hardware needs one of these apps and this repo doesn't manage it,
 install the regular macOS/Ubuntu app yourself (App Store/`.dmg`/`apt`) —
 it is operator-installed, not Nix-managed, on that host.
+
+The Polkit agent (`polkit_gnome` and its systemd user service) and XDG
+portals (`xdg.portal.enable` plus `xdg-desktop-portal-wlr`/`-gtk`) are
+declared only in `modules/nixos/sway.nix`'s NixOS-only `aspects.nixos.sway`
+aspect, not the `aspects.homeManager.sway` aspect ubuntu imports. Verified
+via `nix eval`: zbook's real NixOS config has `xdg.portal.enable = true`
+and a `polkit-gnome-authentication-agent` systemd user service; ubuntu's
+real evaluated Home Manager config has `xdg.portal.enable = false` and no
+polkit service at all. Both are therefore unavailable on macbook and
+ubuntu alike, not just macbook.
 
 ## Initial Setup
 

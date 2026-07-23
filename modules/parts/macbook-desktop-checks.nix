@@ -74,7 +74,7 @@
             "focus left";
         accepts-documented-system-executable =
           execBindingResolves macbookPackageNames macosSystemExecutables
-            "exec-and-forget open -a Terminal";
+            "exec-and-forget open -n -a Terminal";
       };
       failedExecFixtures = builtins.attrNames (lib.filterAttrs (_: passed: !passed) execFixtureResults);
 

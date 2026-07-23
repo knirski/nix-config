@@ -70,7 +70,15 @@
           # macbook at all. `kitty` was never installed anywhere for
           # macbook either. Terminal.app ships with macOS and needs no Nix
           # package or Home Manager module — see docs/workstation-setup.md.
-          cmd-Return = "exec-and-forget open -a Terminal";
+          # `-n` ("open a new instance ... even if one is already running")
+          # is required so every keypress tiles a fresh window, matching
+          # Sway's `"${modifier}+Return" = "exec ${terminal}";` behavior --
+          # AeroSpace's own docs give this exact invocation
+          # (`open -n /System/Applications/Utilities/Terminal.app`) as the
+          # canonical "open a terminal" example. Without `-n`, `open -a
+          # Terminal` just refocuses an existing window instead of spawning
+          # a new one once Terminal.app is already running.
+          cmd-Return = "exec-and-forget open -n -a Terminal";
         };
       };
     };
