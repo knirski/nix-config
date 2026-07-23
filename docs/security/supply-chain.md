@@ -203,3 +203,67 @@ must not receive `security-events: write` merely to improve a badge.
 Automatic dependency merging is out of scope. Reproducibility is preserved by
 reviewing lock changes and validating built systems, not by accepting updates
 unattended.
+
+## Nixpkgs unfree and insecure package policy
+
+`lib/mk-nixpkgs-args.nix` centralizes `nixpkgs.config` (`allowUnfree`,
+`permittedInsecurePackages`) and the `command-code`/`gcx` package overlay so
+they can't drift between the NixOS, darwin, and standalone Home Manager host
+assemblers.
+
+- **`allowUnfree = true`** stays global, unconditional, and identical on
+  every host, including Soyo. This is a licensing acknowledgment, not a
+  security boundary — the repository owner has deliberately decided
+  per-host scoping here would add complexity with no real security benefit.
+- **The `command-code`/`gcx` overlay** also stays global. It looks like it
+  should be scoped alongside `command-code`'s Home Manager installation
+  (confined to `aspects.homeManager.development` — zbook/macbook/ubuntu,
+  not Soyo), but `gcx` is installed unconditionally by
+  `aspects.homeManager.base` on every Linux host (`modules/home/base.nix`),
+  Soyo included — confirmed via `nix eval` against
+  `nixosConfigurations.soyo`'s evaluated `home.packages`. Scoping the
+  overlay away from Soyo would break Soyo's real package resolution, so
+  leaving it global is required, not merely harmless.
+- **`permittedInsecurePackages`** is scoped per host. Unlike the two
+  policies above, an insecure-package allowance is genuinely
+  host-specific: only bitwarden-desktop (pulled in by
+  `aspects.homeManager.desktop`, which zbook/macbook/ubuntu enable but Soyo
+  does not) depends on the EOL `electron_39` (`electron-39.8.10`). Soyo, a
+  headless appliance, has no use for it.
+
+### The reviewed exception registry
+
+`lib/insecure-package-exceptions.nix` is the single source of truth: a list
+of attrsets, each requiring `package`, `knownVulnerability`, `rationale`,
+`owner`, `reviewed` (ISO-8601 date), and `reviewIntervalDays`. Consumers:
+
+- `modules/parts/zbook.nix`, `modules/parts/macbook.nix`, and
+  `modules/parts/ubuntu.nix` each map the registry's `package` field into
+  their own `nixpkgs.config.permittedInsecurePackages` — Soyo (the other
+  consumer of `aspects.nixos.base`) never imports this file, so it carries
+  none of it. `nixpkgs.config` in the NixOS/darwin module system merges
+  disjoint keys across separate module definitions without conflict, which
+  is what lets the shared `nixos.base`/`darwin.base` aspects (which set
+  `allowUnfree` for every host) and a host's own added
+  `permittedInsecurePackages` definition coexist without one clobbering the
+  other, regardless of definition order — verified with `nix eval` against
+  the real host outputs, not assumed from reading the module source.
+- `checks.nixpkgs-policy-invariants`
+  (`modules/parts/nixpkgs-policy-checks.nix`) is the enforcement layer: it
+  proves (a) Soyo's evaluated `nixpkgs.config.permittedInsecurePackages` is
+  empty, (b) every registry entry has well-formed, non-empty rationale/
+  owner/review metadata (checked against hand-mutated negative fixtures
+  under `tests/nixpkgs-policy/insecure-exception-mutations.nix`, so the
+  check is proven to actually reject a malformed entry, not merely accept
+  the one real entry that happens to be well-formed), and (c) zbook/
+  macbook/ubuntu's evaluated `permittedInsecurePackages` exactly match the
+  registry, so the registry can't silently drift from what's actually
+  wired into the hosts.
+
+Adding a future exception means adding an entry to
+`lib/insecure-package-exceptions.nix` with all required fields (the check
+rejects anything less) and wiring the affected host(s) to consume it the
+same way zbook/macbook/ubuntu do. Removing one that's no longer needed means
+deleting its entry and the corresponding host wiring — the check will fail
+loudly if a host's evaluated `permittedInsecurePackages` and the registry
+ever disagree.

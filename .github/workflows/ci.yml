@@ -123,6 +123,7 @@ jobs:
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
             .#checks.x86_64-linux.maintenance-paths \
+            .#checks.x86_64-linux.nixpkgs-policy-invariants \
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \
@@ -147,6 +148,7 @@ jobs:
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
             .#checks.x86_64-linux.maintenance-paths \
+            .#checks.x86_64-linux.nixpkgs-policy-invariants \
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \

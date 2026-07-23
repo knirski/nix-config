@@ -169,6 +169,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `kvm-gate-drift` | The KVM check set declared in `lib/testing/kvm-checks.nix` cannot drift from what `ci.yml`'s `resilience` job and `just test-resilience` actually build | `kvm-gate-drift-check.nix` | Pure eval + shell script |
 | `lan-inventory` | Python unit tests for  LAN inventory collector | `perSystem.nix` | Pure eval + Python |
 | `maintenance-paths` | Required tmpfiles rule exists for free-space check path | `perSystem.nix` | Pure eval |
+| `nixpkgs-policy-invariants` | Soyo's evaluated `nixpkgs.config` carries no insecure-package allowance; every `lib/insecure-package-exceptions.nix` entry has structured rationale/owner/review metadata; zbook/macbook/ubuntu's evaluated `permittedInsecurePackages` match the registry exactly | `nixpkgs-policy-checks.nix` | Pure eval |
 | `persistence-invariants` | Every persisted path exists in the host config; mode/owner are sane | `persistence-invariants.nix` | Pure eval |
 | `pre-commit` | Lint: deadnix, statix, typos, end-of-file-fixer, merge-conflicts, actionlint, shellcheck, ruff, markdownlint | `perSystem.nix` | Git hook |
 | `public-repository-data` | No secrets, hostnames, or private IPs in public SVGs | `public-repo-checks.nix` | Pure eval |
