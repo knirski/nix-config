@@ -24,6 +24,14 @@
       # Then add the public key to the Synology soyo-backup user's authorized_keys.
       sshKeyFile = "/persist/etc/restic/ssh-key";
 
+      sftp = {
+        # The FQDN (rather than the short "czworaczki" used in `repository`
+        # above) routes through Blocky (LAN DNS) instead of matching
+        # Tailscale's per-link domain.
+        host = "czworaczki.home.arpa";
+        user = "soyo-backup";
+      };
+
       # Keep yearly retention for the server (backups are critical).
       pruneOpts = [
         "--keep-daily 7"

@@ -14,6 +14,13 @@
       ];
       sshKeyFile = "/persist/etc/restic/ssh-key";
 
+      sftp = {
+        # Same NAS as Soyo; the FQDN routes through Blocky (LAN DNS) instead
+        # of matching Tailscale's per-link domain.
+        host = "czworaczki.home.arpa";
+        user = "zbook-backup";
+      };
+
       pruneOpts = [
         "--keep-daily"
         "7"
