@@ -337,7 +337,7 @@ Checks (auto-detected role + NIC):
 | TPM PCR binding | `hosts/soyo/boot.nix`, `hosts/soyo/initrd-unlock.nix` |
 | agenix-rekey flow | `modules/nixos/users.nix`, `scripts/recover-secrets.sh`, `docs/secrets.md` |
 | Backup (restic + btrbk) | `modules/nixos/backup.nix`, `hosts/*/backup.nix` |
-| KVM tests | `modules/parts/dns-dhcp-vm-check.nix`, `modules/parts/backup-integration-check.nix`, `modules/parts/impermanence-vm-check.nix` |
+| KVM tests | `modules/parts/dns-dhcp-vm-check.nix`, `modules/parts/backup-integration-check.nix`, `modules/parts/impermanence-vm-check.nix`, `modules/parts/clipboard-protocol-check.nix` |
 | Healthcheck | `scripts/healthcheck.sh`, `modules/parts/perSystem.nix` |
 | Systemd hardening | `lib/systemd-hardening.nix` |
 | Network validation | `lib/network/validate-reservations.nix` |

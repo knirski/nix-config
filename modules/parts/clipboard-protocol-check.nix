@@ -45,13 +45,31 @@ _: {
       '';
       primaryClipboard = ''
         set -eu
-        printf regular | wl-copy --paste-once >/tmp/wl-copy-regular.log 2>&1 &
-        regular_pid=$!
-        printf primary | wl-copy --paste-once --primary >/tmp/wl-copy-primary.log 2>&1 &
-        primary_pid=$!
         ${waitForOffer}
+        # wlroots' data-control selection handling races when two clients call
+        # set_selection at nearly the same instant: the loser is left with no
+        # owner and wl-paste reports "Nothing is copied". So establish the two
+        # selections one at a time -- regular first, then primary once regular's
+        # offer is actually visible. This serialises only the *set*, not the
+        # ownership: both selections stay owned simultaneously afterwards, so
+        # PRIMARY independence is still exercised for real.
+        #
+        # --foreground keeps each wl-copy as the genuine selection owner. The
+        # default double-forks and the launched process exits the moment the
+        # selection is set, which would make the trailing `wait` reap an
+        # already-dead launcher instead of the real paste-once owner.
+        printf regular | wl-copy --foreground --paste-once &
+        regular_pid=$!
         wait_for_offer regular text/plain
+        printf primary | wl-copy --foreground --paste-once --primary &
+        primary_pid=$!
         wait_for_offer primary text/plain
+        # Both selections are held at once: re-confirm regular survived primary
+        # taking ownership, proving simultaneous ownership before any paste
+        # consumes an owner.
+        wait_for_offer regular text/plain
+        # Each paste-once read serves once and lets that owner exit. PRIMARY must
+        # still read back untouched after the regular selection was consumed.
         test "$(timeout 5 wl-paste -n)" = regular
         test "$(timeout 5 wl-paste --primary -n)" = primary
         wait "$regular_pid" "$primary_pid"

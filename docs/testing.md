@@ -7,8 +7,8 @@ development, but do not replace it.
 
 ## KVM policy for VM checks
 
-The DNS/DHCP, backup-unit, and impermanence checks require hardware
-virtualization. Their shared test wrapper enables nixpkgs' `qemu.forceAccel`,
+The DNS/DHCP, backup-unit, impermanence, and clipboard-protocol checks require
+hardware virtualization. Their shared test wrapper enables nixpkgs' `qemu.forceAccel`,
 so QEMU fails immediately when `/dev/kvm` is missing or inaccessible instead
 of silently falling back to slow TCG emulation. Each guest also verifies the
 KVM clock source, providing runtime evidence that acceleration is active.
@@ -33,7 +33,7 @@ quietly weakening coverage.
 | Every push and pull request | Static hooks, documentation/public-data/workflow/shell policies, script contracts and topology freshness |
 | Every push and pull request | Full no-build evaluation, pure invariants and isolated raw-restic integration |
 | After static and evaluation pass | Complete Soyo and zbook closures; sanitized topology artifact |
-| After static and evaluation pass | Three strict-KVM behavior tests; together with earlier tiers, every flake check is covered without rebuilding pure checks |
+| After static and evaluation pass | Four strict-KVM behavior tests; together with earlier tiers, every flake check is covered without rebuilding pure checks |
 | Required before local handoff | The same complete KVM-backed flake gate |
 
 The no-build tier runs first in a fresh job, before repository artifacts are
@@ -165,9 +165,9 @@ This table is the canonical index — when adding a check, add a row here.
 
 ### KVM tests
 
-The three KVM-requiring checks (`dns-dhcp-vm`, `backup-unit-vm`, `impermanence-vm`)
-run in a sandbox QEMU with `qemu.forceAccel` enabled. They require
-`/dev/kvm` to be readable and writable.
+The four KVM-requiring checks (`dns-dhcp-vm`, `backup-unit-vm`, `impermanence-vm`,
+`clipboard-protocols`) run in a sandbox QEMU with `qemu.forceAccel` enabled.
+They require `/dev/kvm` to be readable and writable.
 
 ### Shell contract tests
 

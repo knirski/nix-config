@@ -22,13 +22,14 @@ check:
     @test -r /dev/kvm && test -w /dev/kvm || { echo "error: complete checks require readable and writable /dev/kvm" >&2; exit 1; }
     nix flake check path:.
 
-# Run the three KVM-backed resilience tests required before merging changes.
+# Run the four KVM-backed resilience tests required before merging changes.
 # Prerequisites: /dev/kvm readable and writable.
 test-resilience:
     nix build --no-link \
       path:.#checks.x86_64-linux.backup-unit-vm \
       path:.#checks.x86_64-linux.dns-dhcp-vm \
-      path:.#checks.x86_64-linux.impermanence-vm
+      path:.#checks.x86_64-linux.impermanence-vm \
+      path:.#checks.x86_64-linux.clipboard-protocols
 
 # Build a NixOS host's toplevel system. Pass host name as argument.
 build host="soyo":
