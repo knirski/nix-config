@@ -226,7 +226,7 @@ check_backup_freshness() {
 check_blackbox_job() {
   local desc="$1" job="$2"
   check_val "$desc" "ALL_UP" run_ssh \
-    "curl -sf http://localhost:9090/api/v1/targets | jq -r '(.data.activeTargets // []) | map(select(.labels.job==\"$job\")) | if length==0 then \"NO_TARGETS\" elif (map(select(.health!=\"up\")) | length) > 0 then (\"DOWN:\" + ([.[] | select(.health!=\"up\") | (.labels.instance // \"unknown\")] | join(\",\"))) else \"ALL_UP\" end'"
+    "curl -sf --connect-timeout 5 http://localhost:9090/api/v1/targets | jq -r '(.data.activeTargets // []) | map(select(.labels.job==\"$job\")) | if length==0 then \"NO_TARGETS\" elif (map(select(.health!=\"up\")) | length) > 0 then (\"DOWN:\" + ([.[] | select(.health!=\"up\") | (.labels.instance // \"unknown\")] | join(\",\"))) else \"ALL_UP\" end'"
 }
 
 echo "=== Healthcheck: $HOST (role=$ROLE, nic=$NIC) ==="
