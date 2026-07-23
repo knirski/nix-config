@@ -123,7 +123,20 @@ sudo reboot
 After reboot, verify:
 
 - **Hostname**: `scutil --get HostName` → `macbook`
-- **Zsh**: `echo $SHELL` → `/run/current-system/sw/bin/zsh`
+- **Login shell**: `echo $SHELL` → `/bin/zsh` (macOS's own system zsh, *not*
+  `/run/current-system/sw/bin/zsh`). This is deliberate: `hosts/macbook/users.nix`
+  intentionally omits `users.users.krzysiek.shell` so login never depends on
+  the Nix store being healthy — see the comment there. Setting nix-darwin's
+  `shell` option would only take effect once the user is also added to
+  `users.knownUsers` (nix-darwin will not touch the shell of a user it
+  doesn't manage), and doing so would re-run the exact `dscl ... UserShell`
+  write on every activation that the current design avoids — reintroducing
+  the risk the comment warns about. Home Manager's zsh configuration
+  (aliases, functions, Oh-My-Zsh, `programs.zsh` in `modules/home/base.nix`)
+  is verified separately: open a new terminal and confirm it, e.g. `alias ll`
+  or `echo $ZSH_VERSION` — Home Manager writes `~/.zshrc` directly, so any
+  zsh binary that starts an interactive shell sources it, regardless of
+  whether `/bin/zsh` or the Nix-store zsh is `$SHELL`.
 - **Git**: `git --version`
 - **macOS defaults**: Dock is hidden; fast key repeat enabled
 - **Aerospace**: Launch the Aerospace tiling window manager and verify it

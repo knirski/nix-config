@@ -26,10 +26,21 @@ This configuration is shared across multiple hosts. Not all tools are available 
 ### macbook (nix-darwin) — Assembler + CI evaluation only; hardware deploy pending
 
 - **Desktop**: Aerospace (tiling WM, similar to Sway)
-- **Terminal**: Ghostty, Zsh, same shell config
+- **Terminal**: macOS's built-in Terminal.app, launched by Aerospace's
+  `Cmd+Return` via `open -a Terminal` — not Ghostty. Ghostty's nixpkgs
+  package declares only Linux platforms in `meta.platforms` (no
+  `aarch64-darwin`), so it cannot be installed on macbook; Terminal.app
+  ships with macOS and needs no Nix package or Home Manager module.
+- **Shell**: Zsh, but as the *login* shell it is macOS's own `/bin/zsh`,
+  not the Nix-store one — see [`docs/install-macbook.md`](install-macbook.md)
+  Step 6. Home Manager's zsh configuration (aliases, functions, Oh-My-Zsh)
+  still applies once that shell sources `~/.zshrc`.
 - **Editors**: Neovim, Zed
 - **All CLI tools available** (cross-platform packages)
-- **Not available**: Sway, DMS, Wayland tools, gaming, Podman, virt-manager, distrobox
+- **Not available**: Sway, DMS, Wayland tools, gaming, Podman, virt-manager,
+  distrobox, Firefox, Bitwarden, Signal, Obsidian (all four are Linux-only
+  in this repo's Home Manager aspects — see the matrix below; install the
+  regular macOS app yourself if you need one, outside of Nix)
 
 ### ubuntu (Standalone Home Manager) — Assembler + CI evaluation only; hardware deploy pending
 
@@ -37,7 +48,10 @@ This configuration is shared across multiple hosts. Not all tools are available 
 - **Terminal**: Ghostty, Zsh, same shell config
 - **Editors**: Neovim, Zed
 - **All CLI tools available** (Home Manager packages)
-- **Not available**: NixOS modules, persistence, backups, gaming, Podman, virt-manager, distrobox
+- **Not available**: NixOS modules, persistence, backups, gaming, Podman,
+  virt-manager, distrobox, Firefox (only declared in `aspects.nixos.desktop`,
+  a NixOS-only aspect namespace unreachable from standalone Home Manager —
+  install it via `apt` if needed, outside of Nix)
 
 ### Tool Availability Matrix
 
@@ -60,10 +74,21 @@ This configuration is shared across multiple hosts. Not all tools are available 
 | **NVIDIA offload** | ✓ | ✗ | ✗ |
 | **Polkit agent** | ✓ | ✗ | ✓ |
 | **XDG portals** | ✓ | ✗ | ✓ |
-| **Firefox** | ✓ | ✓ | ✓ |
-| **Bitwarden** | ✓ | ✓ | ✓ |
-| **Signal** | ✓ | ✓ | ✓ |
-| **Obsidian** | ✓ | ✓ | ✓ |
+| **Firefox** | ✓ | ✗ | ✗ |
+| **Bitwarden** | ✓ | ✗ | ✓ |
+| **Signal** | ✓ | ✗ | ✓ |
+| **Obsidian** | ✓ | ✗ | ✓ |
+
+Firefox, Bitwarden, Signal, and Obsidian are only declared in
+`modules/home/desktop.nix`'s Linux-only `lib.optionals stdenv.isLinux [...]`
+guard (Bitwarden/Signal/Obsidian) or in `modules/nixos/desktop.nix`'s
+`aspects.nixos.desktop` (Firefox), a NixOS-only aspect namespace that
+neither macbook (nix-darwin) nor ubuntu (standalone Home Manager, no NixOS)
+can import. None of these four are declaratively managed by this repo on
+macbook; Firefox additionally is not declaratively managed on ubuntu. Where
+real hardware needs one of these apps and this repo doesn't manage it,
+install the regular macOS/Ubuntu app yourself (App Store/`.dmg`/`apt`) —
+it is operator-installed, not Nix-managed, on that host.
 
 ## Initial Setup
 
@@ -303,7 +328,7 @@ These tools are only available on NixOS hosts:
 | `age` | Encryption |
 | `gnupg` | Encryption |
 | `lynis` | Security auditing (NixOS only) |
-| `bitwarden-desktop` | Password manager |
+| `bitwarden-desktop` | Password manager (Linux only — zbook, ubuntu; not available on macbook, see the matrix above) |
 
 ### Container Tools (NixOS Only)
 

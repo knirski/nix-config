@@ -122,6 +122,7 @@ jobs:
             .#checks.x86_64-linux.impermanence-missing-early-persist \
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.macbook-desktop-invariants \
             .#checks.x86_64-linux.maintenance-paths \
             .#checks.x86_64-linux.nixpkgs-policy-invariants \
             .#checks.x86_64-linux.persistence-invariants \
@@ -147,6 +148,7 @@ jobs:
             .#checks.x86_64-linux.impermanence-missing-early-persist \
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.macbook-desktop-invariants \
             .#checks.x86_64-linux.maintenance-paths \
             .#checks.x86_64-linux.nixpkgs-policy-invariants \
             .#checks.x86_64-linux.persistence-invariants \

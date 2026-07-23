@@ -61,8 +61,16 @@
           cmd-f = "fullscreen";
           cmd-shift-space = "layout floating tiling";
 
-          # Terminal
-          cmd-Return = "exec-and-forget kitty";
+          # Terminal — macOS's built-in Terminal.app, launched via `open`
+          # (a real /usr/bin/open on every Mac). Ghostty (zbook/ubuntu's
+          # terminal) is not an option here: its nixpkgs derivation declares
+          # only Linux platforms in `meta.platforms` (verified with
+          # `nix eval path:.#darwinConfigurations.macbook.pkgs.ghostty.meta.platforms`
+          # — no aarch64-darwin entry), so it cannot be installed for
+          # macbook at all. `kitty` was never installed anywhere for
+          # macbook either. Terminal.app ships with macOS and needs no Nix
+          # package or Home Manager module — see docs/workstation-setup.md.
+          cmd-Return = "exec-and-forget open -a Terminal";
         };
       };
     };
