@@ -12,6 +12,7 @@ rec {
     ".config"
     ".commandcode"
     ".codex"
+    ".claude"
     ".local/state/wireplumber"
     ".local/share/atuin"
     ".local/share/zed"
