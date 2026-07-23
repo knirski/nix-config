@@ -68,6 +68,13 @@ jobs:
             .#checks.x86_64-linux.topology-freshness
       - name: Scan current source for credentials
         run: nix run .#gitleaks -- detect --source . --no-git --redact --verbose
+      - name: Check command-code override review freshness
+        # Deliberately a plain script, not a `checks.*` derivation: see
+        # tests/security/check_command_code_freshness.py's docstring for why
+        # a cached Nix check would silently stop re-evaluating staleness.
+        run: |
+          python3 tests/security/check_command_code_freshness.py \
+            modules/_pkgs/command-code-lock/last-reviewed.json
 
   evaluation:
     name: Evaluation and pure invariants
@@ -103,6 +110,7 @@ jobs:
             .#checks.x86_64-linux.backup-restic-integration \
             .#checks.x86_64-linux.boot-generation-invariants \
             .#checks.x86_64-linux.btrfs-alert-metric-contract \
+            .#checks.x86_64-linux.command-code-security \
             .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
             .#checks.x86_64-linux.deploy-activate \
@@ -126,6 +134,7 @@ jobs:
             .#checks.x86_64-linux.backup-restic-integration \
             .#checks.x86_64-linux.boot-generation-invariants \
             .#checks.x86_64-linux.btrfs-alert-metric-contract \
+            .#checks.x86_64-linux.command-code-security \
             .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
             .#checks.x86_64-linux.deploy-activate \

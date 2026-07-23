@@ -11,6 +11,7 @@ EXPECTED_SOURCES = {
     "scripts/healthcheck.sh",
     "scripts/recover-secrets.sh",
     "scripts/set-tailscale-keys.sh",
+    "scripts/update-command-code.sh",
     "tests/backup/restic-integration.sh",
 }
 EXPECTED_TEST_HARNESSES = {

@@ -7,31 +7,25 @@
 #
 # The sharp native image module needs libvips headers during npm install.
 # The upstream tarball ships no package-lock.json, so one is vendored in
-# modules/pkgs/command-code-lock/.
+# command-code-lock/. That lockfile is a real, owned npm dependency tree:
+# see docs/security/supply-chain.md's "Dependency automation decisions" for
+# how it's reviewed, updated and scanned, and command-code-lock/
+# opentelemetry-overrides.json for the single source of truth for the
+# security override applied below.
 #
 # Ref: https://nixos.org/manual/nixpkgs/stable/#buildNpmPackage
 #
-# Updating to a newer version:
-#   1. Bump `version` and the `fetchurl` hash (get it from the npm registry
-#      via `nix store prefetch-file --hash-type sha512 https://...`).
-#   2. Delete `npmDepsHash` and set it to `lib.fakeHash`.
-#   3. Run:  nix build .#command-code 2>&1 | grep "got:"
-#   4. Copy the printed hash back into `npmDepsHash`.
-#   5. The lockfile in `command-code-lock/` was generated from the original
-#      upstream tarball after stripping devDeps and bumping OpenTelemetry
-#      dependency ranges (see postPatch below for the exact bumps needed to
-#      fix CVE-2026-54285). To regenerate:
-#        tar xzf <tarball> -C /tmp/cc && cd /tmp/cc/package && \
-#        sed -i '/"devDependencies": {/,/^  }/d' package.json && \
-#        sed -i \
-#          -e 's|"@opentelemetry/exporter-trace-otlp-http": "[^"]*"|"@opentelemetry/exporter-trace-otlp-http": "^0.219.0"|' \
-#          -e 's|"@opentelemetry/resources": "[^"]*"|"@opentelemetry/resources": "^2.8.0"|' \
-#          -e 's|"@opentelemetry/sdk-node": "[^"]*"|"@opentelemetry/sdk-node": "^0.219.0"|' \
-#          -e 's|"@opentelemetry/sdk-trace-node": "[^"]*"|"@opentelemetry/sdk-trace-node": "^2.8.0"|' \
-#          package.json && \
-#        npm install --package-lock-only --ignore-scripts && \
-#        cp package-lock.json modules/pkgs/command-code-lock/
-#   6. Rebuild with `nix build .#command-code` to confirm.
+# Updating to a newer version: run `just update-command-code <version>`
+# (scripts/update-command-code.sh). It fetches the upstream tarball, prints
+# the `fetchurl` hash, regenerates command-code-lock/package-lock.json with
+# the same devDeps-stripping and OpenTelemetry-override transformation
+# applied here, and prints the `npmDepsHash` a human pastes below -- it does
+# not edit this file itself, touch flake.lock, or commit anything. After
+# pasting the printed `version`/`hash`/`npmDepsHash`, confirm with
+# `nix build path:.#command-code` and `nix build
+# path:.#checks.x86_64-linux.command-code-security`, then review and commit
+# the regenerated lockfile. See that script's header for the manual dance
+# this automates, if you ever need to do it by hand.
 {
   lib,
   fetchurl,
@@ -42,6 +36,15 @@
   vips,
 }:
 
+let
+  # Data, not code: see command-code-lock/opentelemetry-overrides.json for
+  # why this list is the single place to add/remove a dependency-range bump.
+  opentelemetryOverrides =
+    (builtins.fromJSON (builtins.readFile ./command-code-lock/opentelemetry-overrides.json)).overrides;
+  overrideSedArgs = lib.concatMapStringsSep " " (
+    o: "-e 's|\"${o.package}\": \"[^\"]*\"|\"${o.package}\": \"${o.range}\"|'"
+  ) opentelemetryOverrides;
+in
 buildNpmPackage rec {
   pname = "command-code";
   version = "0.52.3";
@@ -56,13 +59,11 @@ buildNpmPackage rec {
   postPatch = ''
     cp ${./command-code-lock/package-lock.json} package-lock.json
     sed -i '/^  "devDependencies": {/,/^  }/d' package.json
-    # Bump OpenTelemetry deps to fix CVE-2026-54285 (GHSA-8988-4f7v-96qf)
-    sed -i \
-      -e 's|"@opentelemetry/exporter-trace-otlp-http": "[^"]*"|"@opentelemetry/exporter-trace-otlp-http": "^0.219.0"|' \
-      -e 's|"@opentelemetry/resources": "[^"]*"|"@opentelemetry/resources": "^2.8.0"|' \
-      -e 's|"@opentelemetry/sdk-node": "[^"]*"|"@opentelemetry/sdk-node": "^0.219.0"|' \
-      -e 's|"@opentelemetry/sdk-trace-node": "[^"]*"|"@opentelemetry/sdk-trace-node": "^2.8.0"|' \
-      package.json
+    # Bump OpenTelemetry deps to fix CVE-2026-54285 (GHSA-8988-4f7v-96qf).
+    # The exact package/range pairs come from command-code-lock/
+    # opentelemetry-overrides.json (see above) so this list can never drift
+    # from what scripts/update-command-code.sh and the security check use.
+    sed -i ${overrideSedArgs} package.json
   '';
 
   npmDepsHash = "sha256-vXqNR0orxegO+cZs/n7VSuaZMwuTA2geKB1kP3U+ToQ=";

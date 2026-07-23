@@ -1,0 +1,42 @@
+# Scheduled, network-dependent vulnerability scan over the vendored npm
+# lockfile for command-code (modules/_pkgs/command-code-lock/package-lock.json).
+#
+# osv-scanner's default source-scan mode queries deps.dev over the network
+# for each resolved package, so this cannot be part of `nix flake check`
+# (which must stay offline/pure -- see checks.command-code-security in
+# modules/parts/command-code-security-checks.nix for the offline half: real
+# build, smoke test, and proof that the OpenTelemetry CVE-2026-54285
+# override actually resolved). This workflow is the online half: it looks
+# up currently-disclosed vulnerabilities against the exact resolved
+# dependency tree, which can change over time even with no local edits.
+name: Security scan
+
+on:
+  schedule:
+    # Weekly, offset from Renovate's Monday-06:00 flake-input schedule
+    # (renovate.json) so the two don't compete for the same review window.
+    - cron: '0 6 * * 3'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  osv-scan:
+    name: OSV scan vendored npm lockfile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-nix
+      - name: Scan command-code's vendored npm dependency tree
+        run: |
+          nix run .#osv-scanner -- scan source \
+            --lockfile modules/_pkgs/command-code-lock/package-lock.json \
+            --format table

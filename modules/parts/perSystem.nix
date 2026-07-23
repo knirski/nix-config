@@ -59,6 +59,19 @@
         ];
         text = builtins.readFile ../../scripts/set-tailscale-keys.sh;
       };
+      update-command-code = pkgs.writeShellApplication {
+        name = "update-command-code";
+        runtimeInputs = with pkgs; [
+          coreutils
+          git
+          gnused
+          gnutar
+          jq
+          nix
+          nodejs
+        ];
+        text = builtins.readFile ../../scripts/update-command-code.sh;
+      };
     in
     {
       pre-commit.settings = {
@@ -134,8 +147,16 @@
         # Expose the scanner from this flake's locked nixpkgs input. Using the
         # registry shorthand `nixpkgs#gitleaks` would select the caller's
         # registry revision instead of the reviewed flake.lock revision.
-        inherit (pkgs) deadnix gitleaks;
-        inherit healthcheck recover-secrets set-tailscale-keys;
+        # Exposed from this flake's locked nixpkgs for the same reason as
+        # gitleaks/deadnix above: the scheduled security-scan workflow must
+        # scan with the reviewed nixpkgs revision, not the caller's registry.
+        inherit (pkgs) deadnix gitleaks osv-scanner;
+        inherit
+          healthcheck
+          recover-secrets
+          set-tailscale-keys
+          update-command-code
+          ;
         command-code = pkgs'.callPackage ../../modules/_pkgs/command-code.nix { };
         gcx = pkgs'.callPackage ../../modules/_pkgs/gcx.nix { };
       };
@@ -145,6 +166,11 @@
           type = "app";
           program = pkgs.lib.getExe pkgs.gitleaks;
           meta.description = "Scan repository content for credentials and secrets";
+        };
+        osv-scanner = {
+          type = "app";
+          program = pkgs.lib.getExe pkgs.osv-scanner;
+          meta.description = "Scan a lockfile for disclosed vulnerabilities (network required; see .github/workflows/security-scan.yml)";
         };
         healthcheck = {
           type = "app";
@@ -160,6 +186,11 @@
           type = "app";
           program = pkgs.lib.getExe set-tailscale-keys;
           meta.description = "Encrypt per-host Tailscale keys and run agenix-rekey";
+        };
+        update-command-code = {
+          type = "app";
+          program = pkgs.lib.getExe update-command-code;
+          meta.description = "Fetch a command-code version, regenerate its vendored lockfile, and print hashes to paste into command-code.nix";
         };
       };
 

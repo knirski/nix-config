@@ -1,11 +1,35 @@
-# Renovate configuration for automated flake input updates.
-# Replaces the ad-hoc update-flake-lock workflow: Renovate updates
-# flake.lock inputs on a schedule and opens versioned PRs.
-#
-# Renovate is the de-facto standard for keeping Nix flake inputs current
-# (used by fbosch/nixos and many dendritic configs). It understands
-# flake.lock natively via the `flakebot` ecosystem and groups updates
-# sensibly (e.g. one PR per input, pinned by the flake input name).
+// Renovate configuration for automated flake input updates.
+// Replaces the ad-hoc update-flake-lock workflow: Renovate updates
+// flake.lock inputs on a schedule and opens versioned PRs.
+//
+// Renovate is the de-facto standard for keeping Nix flake inputs current
+// (used by fbosch/nixos and many dendritic configs). It understands
+// flake.lock natively via the `flakebot` ecosystem and groups updates
+// sensibly (e.g. one PR per input, pinned by the flake input name).
+//
+// NOTE: this file uses `//` line comments, not `#`. Renovate documents
+// JSONC support for `.json` config files specifically via `//`; `#` is not
+// a recognized comment marker for any of Renovate's supported config
+// formats (JSONC or JSON5) and a strict JSON parser rejects it outright.
+//
+// command-code (modules/_pkgs/command-code.nix) is deliberately NOT given a
+// customManagers entry here, even though Renovate's regex-based custom
+// managers can target arbitrary files (including .nix) and there is prior
+// art for pinning a `fetchurl`-style tarball this way. It was evaluated and
+// rejected: see docs/security/supply-chain.md's "Dependency automation
+// decisions" section for the full reasoning. In short, Renovate has no way
+// to compute the new `hash` (npm tarball sha512) or `npmDepsHash` (fixed
+// npmDeps output hash) that a version bump requires -- both need a real
+// fetch/build, which Renovate's regex manager cannot perform without
+// postUpgradeTasks (a self-hosted-only, explicitly-allowlisted feature not
+// available here). A version-only regex bump would open a PR with a
+// correct-looking version string and a stale hash, which fails
+// `nix build` outright -- a strictly worse outcome than no automation,
+// since it looks like real progress but isn't. The intentional manual
+// update path is `just update-command-code <version>`
+// (scripts/update-command-code.sh), and freshness is enforced instead by
+// tests/security/check_command_code_freshness.py (wired into ci.yml's
+// `static` job and `just lint`), not by a customManagers PR.
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
