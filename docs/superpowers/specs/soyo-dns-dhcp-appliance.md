@@ -621,8 +621,8 @@ Silent failure is the real risk. Soyo pushes to an ntfy topic so the operator le
   would also fire for irrelevant transient units and, without care, could
   recurse on the notification template's own failure. The reviewed list
   (enforced by `checks.failure-notification-invariants`): Btrfs scrub,
-  `nix.gc`, the free-space check, restic and btrbk backups, and the Grafana
-  alert-provisioning helper
+  `nix.gc`, the free-space check, restic and btrbk backups, the Grafana
+  alert-provisioning helper, and the weekly Nix store optimisation unit
 - `smartd` notifies on SMART errors via its own `-M exec` hook, independent of
   the systemd `OnFailure` mechanism above (it monitors disk health, not a
   systemd unit's exit status)

@@ -144,7 +144,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `dns-dhcp-config` | Generated Blocky + dnsmasq config is valid; reservations match | `dns-dhcp-checks.nix` | Pure eval |
 | `dns-dhcp-vm` | KVM VM: two nodes perform forward/reverse DNS, DHCP lease, restart | `dns-dhcp-vm-check.nix` | KVM |
 | `docs-correctness` | Internal markdown links resolve; anchors exist; lifecycle is accurate; no orphans | `docs-checks.nix` | Pure eval |
-| `failure-notification-invariants` | Reviewed operational units (scrub, `nix-gc`, free-space check, restic, btrbk, `grafana-alert-setup`) all wire `OnFailure=ntfy-failure@%N.service`; `ntfy-failure@` itself never does; generated ntfy-failure@/smartd notify scripts carry title, unit/device identity, and read credentials from a file at runtime | `failure-notification-checks.nix` | Pure eval |
+| `failure-notification-invariants` | Reviewed operational units (scrub, `nix-gc`, free-space check, restic, btrbk, `grafana-alert-setup`, `nix-store-optimise`) all wire `OnFailure=ntfy-failure@%N.service`; `ntfy-failure@` itself never does; generated ntfy-failure@/smartd notify scripts carry title, unit/device identity, and read credentials from a file at runtime | `failure-notification-checks.nix` | Pure eval |
 | `github-workflow-policy` | Workflow YAML uses pinned actions, least-privilege permissions, no mutable tags | `github-security-checks.nix` | Pure eval |
 | `host-role-invariants` | Soyo has appliance role + no GUI; zbook has workstation role + GUI; base has no role bias | `host-role-invariants.nix` | Pure eval |
 | `impermanence-vm` | KVM VM: root wipes on boot; only persisted state survives | `impermanence-vm-check.nix` | KVM |

@@ -22,9 +22,13 @@
 
       # Every unit whose silent failure matters for recovery visibility
       # (task O1's enumeration): Btrfs scrub, Nix GC, free-space check,
-      # restic, btrbk, and the Grafana alert-provisioning helper. Store
-      # optimisation (services.nix-optimise) is deliberately disabled in
-      # modules/nixos/base.nix, so there is no unit to wire here for it.
+      # restic, btrbk, the Grafana alert-provisioning helper, and the weekly
+      # Nix store optimisation unit. Note: `services.nix-optimise` (the
+      # built-in nixpkgs unit for `nix.optimise`) is deliberately disabled in
+      # modules/nixos/base.nix and is NOT this unit — the repo's own
+      # `nix-store-optimise` unit (also defined in base.nix) is a separate,
+      # active, unconditional weekly job that genuinely runs
+      # `nix store optimise`, so it belongs in this reviewed list.
       reviewed = [
         "free-space-check"
         "nix-gc"
@@ -32,6 +36,7 @@
         "grafana-alert-setup"
         "btrfs-scrub"
         "restic-backups-${hostName}"
+        "nix-store-optimise"
       ];
 
       expectedOnFailure = "ntfy-failure@%N.service";
