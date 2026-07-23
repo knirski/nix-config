@@ -84,8 +84,7 @@ enforcement belongs to the documentation-check layer.
   and the required validation workflow. Read this before editing.
 - [Root README](../README.md) — project scope, safe quick start and architecture.
 - [Current repository assessment remediation plan](superpowers/plans/2026-07-22-repository-assessment-remediation.md)
-  — the sole active implementation plan, with prioritized fixes and acceptance
-  criteria for correctness, operations, security, hosts, CI and documentation.
+  — active implementation plan with prioritized fixes and acceptance criteria.
 - [Superseded correctness and resilience plan](superpowers/plans/2026-07-12-correctness-resilience-docs.md)
   — frozen record of the previous implementation phase.
 - [Superseded repository gaps and improvements](superpowers/specs/repository-gaps-and-improvements.md)
