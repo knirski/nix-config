@@ -9,6 +9,7 @@
     let
       cfg = config.lanAppliance.services.maintenance;
       hardening = import ../../lib/systemd-hardening.nix;
+      btrfsMetrics = import ../../lib/observability/btrfs-metrics.nix;
       prometheusTextfileDirectory = "/var/lib/prometheus/textfiles";
       prometheusTextfileEnabled = config.services.prometheus.exporters.node.enable;
     in
@@ -177,9 +178,13 @@
                       ${lib.optionalString prometheusTextfileEnabled ''
                         # Export a Btrfs-aware Prometheus metric so Grafana alerts on the
                         # same signal as the ntfy check, not df-style filesystem stats.
+                        # Metric names come from lib/observability/btrfs-metrics.nix, the
+                        # single source of truth shared with the Grafana alert rule in
+                        # lib/observability/grafana-alert-setup.nix — keep them in sync there,
+                        # not by hand here.
                         mkdir -p /var/lib/prometheus/textfiles
-                        host="${config.networking.hostName}"
-                        printf '%s\n' '# HELP btrfs_usage_percent Percent of Btrfs device space currently used.' '# TYPE btrfs_usage_percent gauge' "btrfs_usage_percent{host=\"$host\"} $USED_PCT" '# HELP btrfs_usage_threshold_percent Configured Btrfs usage alert threshold.' '# TYPE btrfs_usage_threshold_percent gauge' "btrfs_usage_threshold_percent{host=\"$host\"} $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
+                        ${btrfsMetrics.hostLabel}="${config.networking.hostName}"
+                        printf '%s\n' '# HELP ${btrfsMetrics.usagePercent} Percent of Btrfs device space currently used.' '# TYPE ${btrfsMetrics.usagePercent} gauge' "${btrfsMetrics.usagePercent}{${btrfsMetrics.hostLabel}=\"${"$" + btrfsMetrics.hostLabel}\"} $USED_PCT" '# HELP ${btrfsMetrics.thresholdPercent} Configured Btrfs usage alert threshold.' '# TYPE ${btrfsMetrics.thresholdPercent} gauge' "${btrfsMetrics.thresholdPercent}{${btrfsMetrics.hostLabel}=\"${"$" + btrfsMetrics.hostLabel}\"} $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
                         mv /var/lib/prometheus/textfiles/btrfs-space.prom.$$ /var/lib/prometheus/textfiles/btrfs-space.prom
                       ''}
 

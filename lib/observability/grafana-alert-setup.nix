@@ -1,6 +1,9 @@
 { config, pkgs, ... }:
 let
   hardening = import ../systemd-hardening.nix;
+  # Single source of truth for the Btrfs metric names, shared with the
+  # producer in modules/nixos/maintenance.nix — see lib/observability/btrfs-metrics.nix.
+  btrfsMetrics = import ./btrfs-metrics.nix;
 in
 {
   systemd.services.grafana-alert-setup = {
@@ -134,7 +137,7 @@ in
 
                 post_rule soyo_disk_space_low \
                   "💽 Btrfs space low" \
-                  'soyo_btrfs_usage_percent > soyo_btrfs_usage_threshold_percent' \
+                  '${btrfsMetrics.usagePercent}{${btrfsMetrics.hostLabel}="${config.networking.hostName}"} > ${btrfsMetrics.thresholdPercent}{${btrfsMetrics.hostLabel}="${config.networking.hostName}"}' \
                   5m KeepLast "💽 Btrfs filesystem usage is above the configured threshold"
               }
 
