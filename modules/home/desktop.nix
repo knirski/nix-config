@@ -14,6 +14,14 @@
         git.settings.alias.visual = "!gitk";
       };
 
+      # Upgrade base's terminal-safe pinentry to a GUI prompt now that a
+      # graphical session is guaranteed. pinentry-gnome3 is a Linux/GTK
+      # package with no Darwin build, so guard even though this aspect is
+      # also imported on macbook (aerospace/Aqua, not GNOME).
+      services.gpg-agent = lib.mkIf pkgs.stdenv.isLinux {
+        pinentry.package = pkgs.pinentry-gnome3;
+      };
+
       # Neovim clipboard integration (requires wl-clipboard on Wayland)
       home.file.".config/nvim/after/plugin/clipboard.lua".text = ''
         -- Only enable system clipboard on desktop sessions

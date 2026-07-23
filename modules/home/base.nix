@@ -97,7 +97,13 @@
             display = {
               separator = " → "; # Arrow separator for clean look
             };
-            # Show system info in logical groups
+            # Show system info in logical groups. "de"/"wm"/"wmtheme",
+            # "gpu", and "battery" are display/hardware-dependent, but
+            # fastfetch degrades gracefully when they're absent (verified:
+            # unsetting the desktop-session env vars drops the "de" line
+            # entirely, no error, exit 0) rather than erroring — soyo simply
+            # prints a shorter report, so this stays in base rather than
+            # moving to desktop.nix.
             modules = [
               "title"
               "separator"
@@ -296,7 +302,10 @@
               ];
               open = [
                 {
-                  run = "xdg-open \"$@\"";
+                  # macOS's opener is `open`; every other host here is Linux
+                  # and uses `xdg-open` (provided by xdg-utils via desktop.nix
+                  # or the base package set).
+                  run = if pkgs.stdenv.isDarwin then "open \"$@\"" else "xdg-open \"$@\"";
                   desc = "Open";
                 }
               ];
@@ -499,10 +508,19 @@
         home-manager.enable = true;
       };
 
+      # gpg-agent is only meaningful where GPG_TTY/systemd-user-session
+      # integration applies; darwin gets its own agent wiring (or none) from
+      # aspects.homeManager.desktop/aerospace, not from base.
       services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {
         enable = true;
         enableZshIntegration = true;
-        pinentry.package = pkgs.pinentry-gnome3;
+        # pinentry-curses: a full-screen ncurses prompt that works over any
+        # SSH terminal, including soyo's headless/no-GUI session — unlike
+        # pinentry-tty's plain line prompt, it still shows key info/quality
+        # meter, which is nicer for interactive admin use. Hosts with a
+        # guaranteed graphical session (desktop.nix) upgrade this to
+        # pinentry-gnome3.
+        pinentry.package = lib.mkDefault pkgs.pinentry-curses;
       };
 
     };
