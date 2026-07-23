@@ -2,7 +2,13 @@
 
 Date: 2026-07-12
 
-Status: active; implementation is in progress
+Status: superseded on 2026-07-22 by the
+[Repository Assessment Remediation Plan](2026-07-22-repository-assessment-remediation.md)
+
+This file is a frozen planning record. Its completed work remains useful
+historical context, but its remaining task list is no longer authoritative.
+Revalidate any apparently unfinished item and map it into the replacement plan
+before implementation.
 
 ## Goal
 

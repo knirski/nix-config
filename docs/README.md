@@ -83,10 +83,13 @@ enforcement belongs to the documentation-check layer.
 - [Repository rules](../AGENTS.md) — hard invariants, boundaries, conventions
   and the required validation workflow. Read this before editing.
 - [Root README](../README.md) — project scope, safe quick start and architecture.
-- [Current correctness and resilience plan](superpowers/plans/2026-07-12-correctness-resilience-docs.md)
-  — the active implementation work and task acceptance criteria.
-- [Repository gaps and improvements](superpowers/specs/repository-gaps-and-improvements.md)
-  — comprehensive gap analysis for hosts, CI, tests, documentation.
+- [Current repository assessment remediation plan](superpowers/plans/2026-07-22-repository-assessment-remediation.md)
+  — the sole active implementation plan, with prioritized fixes and acceptance
+  criteria for correctness, operations, security, hosts, CI and documentation.
+- [Superseded correctness and resilience plan](superpowers/plans/2026-07-12-correctness-resilience-docs.md)
+  — frozen record of the previous implementation phase.
+- [Superseded repository gaps and improvements](superpowers/specs/repository-gaps-and-improvements.md)
+  — dated gap analysis retained for historical context.
 
 ### Architecture and topology
 
