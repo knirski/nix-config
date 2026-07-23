@@ -616,9 +616,16 @@ How Soyo stays up and how the operator learns when it does not. Complements the 
 
 Silent failure is the real risk. Soyo pushes to an ntfy topic so the operator learns of problems without looking:
 
-- `systemd` `OnFailure` posts to ntfy for scrub, `nix.gc`, and any failed unit
-- restic backup failures notify explicitly
-- `smartd` notifies on SMART errors
+- `systemd` `OnFailure` posts to ntfy for a reviewed allowlist of operational
+  units — not a blanket drop-in on every unit on the host. A global drop-in
+  would also fire for irrelevant transient units and, without care, could
+  recurse on the notification template's own failure. The reviewed list
+  (enforced by `checks.failure-notification-invariants`): Btrfs scrub,
+  `nix.gc`, the free-space check, restic and btrbk backups, and the Grafana
+  alert-provisioning helper
+- `smartd` notifies on SMART errors via its own `-M exec` hook, independent of
+  the systemd `OnFailure` mechanism above (it monitors disk health, not a
+  systemd unit's exit status)
 
 The topic/URL is host-local config; any token is an agenix secret. A single lightweight push channel, not a full monitoring stack.
 

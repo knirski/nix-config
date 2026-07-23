@@ -309,11 +309,16 @@
                 };
               };
             };
-            systemd.services."btrbk-${hostName}".serviceConfig = lib.mkIf cfg.isolateResources {
-              MemoryMax = "512M";
-              CPUQuota = "25%";
-              Nice = 10;
-              IOWeight = 25;
+            systemd.services."btrbk-${hostName}" = {
+              serviceConfig = lib.mkIf cfg.isolateResources {
+                MemoryMax = "512M";
+                CPUQuota = "25%";
+                Nice = 10;
+                IOWeight = 25;
+              };
+              # Same notifyOnFailure flag as the restic unit above — both are
+              # "backup failed" for the operator, whichever tool ran it.
+              unitConfig.OnFailure = lib.mkIf cfg.notifyOnFailure "ntfy-failure@%N.service";
             };
           })
         ]

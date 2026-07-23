@@ -4,6 +4,31 @@
 requirements for repository-owned systemd units. It complements resource
 limits; neither mechanism proves immunity to every resource-exhaustion event.
 
+## Failure notification classes
+
+Four distinct mechanisms exist for "something is wrong"; they overlap in
+purpose but not in trigger, transport, or failure mode. Confusing them (e.g.
+treating a threshold alert as proof a unit didn't crash) hides real gaps:
+
+| Class | Trigger | Transport | Covers | Cannot cover |
+| --- | --- | --- | --- | --- |
+| Threshold alert | A Prometheus expression crosses a bound (e.g. `soyo_disk_space_low`) | Grafana → its `ntfy` contact point, provisioned by `grafana-alert-setup` | Gradual, measurable drift (disk filling, backup metric stale) | A unit that never ran, or a metric pipeline itself down |
+| Unit execution failure | Any reviewed unit's `systemd` job exits non-zero or times out | `OnFailure=ntfy-failure@%N.service` → the shared `ntfy-failure@` template | The reviewed units in `checks.failure-notification-invariants` (Btrfs scrub, `nix-gc`, free-space check, restic, btrbk, `grafana-alert-setup`) crashing outright, even before any metric would reflect it | Units outside the reviewed list; a fully hung (not failed) unit |
+| SMART warning | `smartd` self-test/attribute failure on a monitored disk | `smartd`'s `-M exec` hook → `ntfy-smartd-notify` (see `modules/nixos/maintenance.nix`) | Disk-level hardware degradation, independent of any systemd unit | Data loss already in progress; this is an early-warning signal only |
+| Total host outage | Soyo is unreachable at all (panic, dead PSU, hung kernel) | The Synology's Uptime Kuma, probing from an independent failure domain | The one case none of the above can self-report — a dead box can't push its own notification | Everything above; Uptime Kuma only proves liveness, not that a specific job succeeded |
+
+The first three are all "the box is alive and something failed" — see
+`docs/superpowers/specs/soyo-dns-dhcp-appliance.md`, "Health Checking", for
+why total host outage necessarily needs an external, independently-powered
+watcher instead. That NAS-side Uptime Kuma setup is an operator step, not
+flake-managed, and is not re-documented here.
+
+`OnFailure=` is deliberately a reviewed allowlist of specific units (enforced
+by `checks.failure-notification-invariants`), not a blanket systemd drop-in
+applied to every unit on the host: a global drop-in would also fire for
+irrelevant transient units and — without the same self-guard `ntfy-failure@`
+uses — risks recursing on its own failure.
+
 ## Review method
 
 Hardening follows the unit's job rather than a universal

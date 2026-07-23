@@ -11,6 +11,10 @@ in
     after = [ "grafana.service" ];
     wants = [ "grafana.service" ];
     wantedBy = [ "multi-user.target" ];
+    # A failed provisioning run leaves the Grafana alert rules or ntfy contact
+    # point stale/missing with no other signal — the failure needs to reach
+    # the operator the same way the units it's provisioning alerts for do.
+    unitConfig.OnFailure = "ntfy-failure@%N.service";
     serviceConfig = hardening.networkClient // {
       Type = "oneshot";
       RemainAfterExit = true;
