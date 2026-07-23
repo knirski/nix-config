@@ -131,6 +131,14 @@ Soyo also keeps yearly snapshots: add `--keep-yearly 2`.
 
 A backup never restored is not a backup.
 
+`just healthcheck` verifies that each host's restic and btrbk timers are
+enabled *and* that the most recent run actually completed successfully
+within a documented freshness window (see `check_backup_freshness` in
+`scripts/healthcheck.sh`). That only proves a backup was taken and the tool
+reported success — it never touches restore. Treat a green healthcheck as
+"the backup ran", not as "the backup is restorable"; only this manual drill
+demonstrates the latter.
+
 ```sh
 # Check what's in the latest snapshot
 sudo restic -r <repo> -p /run/agenix/<password-file> ls latest

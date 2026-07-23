@@ -133,6 +133,62 @@ run_ssh()  { "$SSH_BIN" "${SSH_OPTS[@]}" "krzysiek@$HOST" "$@"; }
 # shellcheck disable=SC2329
 run_sudo() { "$SSH_BIN" "${SSH_OPTS[@]}" "krzysiek@$HOST" sudo "$@"; }
 
+# Both restic (modules/nixos/backup.nix: timerConfig.OnCalendar default
+# "daily", RandomizedDelaySec up to 1h) and btrbk (onCalendar = "daily") run
+# once a day. 48h -- double the schedule period -- tolerates one missed or
+# delayed run (host powered off overnight, randomized start delay, a slow
+# check pass) without masking a backup that is genuinely stuck for more than
+# a full extra day.
+BACKUP_MAX_AGE_HOURS=48
+
+# Probes a oneshot backup service's last completed run over SSH using only
+# machine-readable `systemctl show -p ... --value` properties (never
+# decorative `systemctl status` text), and prints exactly one of:
+#   NEVER_RAN    -- the unit has not completed a run yet (no exit timestamp)
+#   FAILED:...   -- the last run's Result/ExecMainStatus was not success/0
+#   STALE:<age>h -- last successful run is older than BACKUP_MAX_AGE_HOURS
+#   FRESH:<age>h -- last successful run is within the threshold
+# A last-run timestamp that fails to parse is treated as age=0-epoch (i.e.
+# maximally stale), never as a silent pass.
+check_backup_freshness() {
+  local desc="$1" service="$2"
+  local remote_cmd
+  # These $-references are evaluated on the remote host by the remote shell,
+  # not expanded locally.
+  # shellcheck disable=SC2016
+  remote_cmd='
+result=$(systemctl show '"$service"' -p Result --value 2>/dev/null)
+code=$(systemctl show '"$service"' -p ExecMainStatus --value 2>/dev/null)
+ts=$(systemctl show '"$service"' -p ExecMainExitTimestamp --value 2>/dev/null)
+if [ -z "$ts" ] || [ "$ts" = "n/a" ]; then
+  echo NEVER_RAN
+elif [ "$result" != success ] || [ "$code" != 0 ]; then
+  echo "FAILED:result=$result,exit=$code"
+else
+  now=$(date +%s)
+  last=$(date -d "$ts" +%s 2>/dev/null || echo 0)
+  age=$(( (now - last) / 3600 ))
+  if [ "$age" -gt '"$BACKUP_MAX_AGE_HOURS"' ]; then
+    echo "STALE:${age}h"
+  else
+    echo "FRESH:${age}h"
+  fi
+fi
+'
+  check_val "$desc" "FRESH" run_ssh "$remote_cmd"
+}
+
+# Requires every active target in the given Prometheus job to report
+# health "up", and explicitly fails (never silently passes) when the job has
+# no active targets at all -- a "grep | head" over the raw JSON can pass on
+# just one matching line even when other targets in the same job are down,
+# or when the job returns no targets whatsoever.
+check_blackbox_job() {
+  local desc="$1" job="$2"
+  check_val "$desc" "ALL_UP" run_ssh \
+    "curl -sf http://localhost:9090/api/v1/targets | jq -r '(.data.activeTargets // []) | map(select(.labels.job==\"$job\")) | if length==0 then \"NO_TARGETS\" elif (map(select(.health!=\"up\")) | length) > 0 then (\"DOWN:\" + ([.[] | select(.health!=\"up\") | (.labels.instance // \"unknown\")] | join(\",\"))) else \"ALL_UP\" end'"
+}
+
 echo "=== Healthcheck: $HOST (role=$ROLE, nic=$NIC) ==="
 echo ""
 
@@ -158,15 +214,30 @@ fi
 echo ""
 echo "--- Timers ---"
 if [[ "$ROLE" == "appliance" ]]; then
-  for tmr in nix-store-optimise "btrbk-soyo" fstrim; do
+  for tmr in nix-store-optimise "btrbk-soyo" "restic-backups-soyo" fstrim; do
     check_val "$tmr timer enabled" "enabled" \
       run_ssh "systemctl is-enabled ${tmr}.timer 2>/dev/null"
   done
 else
-  for tmr in nix-store-optimise fstrim; do
+  for tmr in nix-store-optimise "btrbk-zbook" "restic-backups-zbook" fstrim; do
     check_val "$tmr timer enabled" "enabled" \
       run_ssh "systemctl is-enabled ${tmr}.timer 2>/dev/null"
   done
+fi
+
+echo ""
+echo "--- Backup freshness ---"
+# Timer-enabled only proves the schedule is armed, not that a backup has
+# actually run and succeeded recently -- that's what these checks add.
+# A successful timer here is NOT proof of restorability; the actual restore
+# path is exercised only by the manual restic restore drill (see
+# docs/backup-and-restore.md), never by this automated script.
+if [[ "$ROLE" == "appliance" ]]; then
+  check_backup_freshness "btrbk-soyo backup is fresh" "btrbk-soyo.service"
+  check_backup_freshness "restic-backups-soyo backup is fresh" "restic-backups-soyo.service"
+else
+  check_backup_freshness "btrbk-zbook backup is fresh" "btrbk-zbook.service"
+  check_backup_freshness "restic-backups-zbook backup is fresh" "restic-backups-zbook.service"
 fi
 
 echo ""
@@ -220,10 +291,8 @@ if [[ "$ROLE" == "appliance" ]]; then
     run_ssh 'curl -sI http://localhost:3000'
   check_val "LAN inventory metrics" "lan_device_" \
     run_ssh 'curl -sf http://localhost:9100/metrics | grep lan_device_'
-  check_val "blackbox ICMP probes healthy" "\"health\":\"up\"" \
-    run_ssh 'curl -sf http://localhost:9090/api/v1/targets | grep blackbox-icmp | head -5'
-  check_val "blackbox HTTP probes healthy" "\"health\":\"up\"" \
-    run_ssh 'curl -sf http://localhost:9090/api/v1/targets | grep blackbox-http | head -5'
+  check_blackbox_job "blackbox ICMP probes healthy" "blackbox-icmp"
+  check_blackbox_job "blackbox HTTP probes healthy" "blackbox-http"
 fi
 
 echo ""
