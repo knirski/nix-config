@@ -49,8 +49,22 @@ This configuration is shared across multiple hosts. Not all tools are available 
 
 ### ubuntu (Standalone Home Manager) — Assembler + CI evaluation only; hardware deploy pending
 
-- **Desktop**: Sway + DMS (via Home Manager)
+- **Desktop**: Sway + DMS config is Home Manager-managed (the config files
+  themselves), but **not automatically startable** — Ubuntu's GDM3 discovers
+  sessions from `/usr/share/wayland-sessions/*.desktop`, a system directory
+  standalone Home Manager cannot write to. There is no display-manager
+  session registration anywhere in this repo for ubuntu. See
+  [`docs/install-ubuntu.md`](install-ubuntu.md)'s "Starting a Sway session"
+  for the supported console `dbus-run-session sway` path (and an optional,
+  operator-created system session file if you want GDM3 login-screen
+  selection instead).
 - **Terminal**: Ghostty, Zsh, same shell config
+- **Shell**: Zsh's configuration (aliases, functions, Oh-My-Zsh) is
+  Home Manager-managed, but the *login* shell (`$SHELL`, `/etc/passwd`) is
+  **not** changed automatically — see
+  [`docs/install-ubuntu.md`](install-ubuntu.md)'s "Zsh is not your login
+  shell yet" for the optional `chsh` step and the stable
+  `~/.nix-profile/bin/zsh` path to use with it.
 - **Editors**: Neovim, Zed
 - **All CLI tools available** (Home Manager packages)
 - **Not available**: NixOS modules, persistence, backups, gaming, Podman,
@@ -59,7 +73,9 @@ This configuration is shared across multiple hosts. Not all tools are available 
   install it via `apt` if needed, outside of Nix), Polkit agent, XDG portals
   (both only declared in `modules/nixos/sway.nix`'s NixOS-only
   `aspects.nixos.sway`, not the `aspects.homeManager.sway` aspect ubuntu
-  imports)
+  imports — install and start them via `apt` yourself if you need them, see
+  [`docs/install-ubuntu.md`](install-ubuntu.md)'s Prerequisites), a
+  display-manager session file (see the Desktop bullet above)
 
 ### Tool Availability Matrix
 

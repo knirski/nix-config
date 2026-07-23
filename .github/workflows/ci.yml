@@ -128,7 +128,8 @@ jobs:
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \
-            .#checks.x86_64-linux.systemd-hardening-invariants
+            .#checks.x86_64-linux.systemd-hardening-invariants \
+            .#checks.x86_64-linux.ubuntu-desktop-invariants
       - name: Push evaluation artifacts to Cachix
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
@@ -154,7 +155,8 @@ jobs:
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.soyo-guest-isolation \
-            .#checks.x86_64-linux.systemd-hardening-invariants
+            .#checks.x86_64-linux.systemd-hardening-invariants \
+            .#checks.x86_64-linux.ubuntu-desktop-invariants
 
   build:
     name: Build ${{ matrix.host }} closure
