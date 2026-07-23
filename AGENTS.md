@@ -6,8 +6,8 @@ A multi-host NixOS/nix-darwin flake.
 | ---- | ---- | ------ | ------ |
 | **Soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | NixOS (stable) | M1/M2 complete, M3 complete (Secure Boot on), M4 deferred |
 | **zbook** (HP ZBook Studio 16" G10) | Workstation/gaming laptop, 32 GB, NVIDIA RTX 4000 Ada | NixOS (unstable) | M4 complete |
-| **macbook** (Apple Silicon) | Professional workstation laptop | nix-darwin (unstable) | Planned, untested |
-| **ubuntu** (Ubuntu 24.04 LTS) | Professional work laptop | Standalone HM (unstable) | Planned, untested |
+| **macbook** (Apple Silicon) | Professional workstation laptop | nix-darwin (unstable) | Assembler + CI evaluation/build only; hardware deploy pending (verified 2026-07-23, see [`docs/workstation-setup.md`](docs/workstation-setup.md)) |
+| **ubuntu** (Ubuntu 24.04 LTS) | Professional work laptop | Standalone HM (unstable) | Assembler + CI evaluation/build only; hardware deploy pending (verified 2026-07-23, see [`docs/workstation-setup.md`](docs/workstation-setup.md)) |
 
 ## Machine Roles
 

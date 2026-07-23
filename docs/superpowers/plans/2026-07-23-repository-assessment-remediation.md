@@ -4,7 +4,11 @@ Date: 2026-07-22
 
 Last revalidated: 2026-07-23 against `origin/main` at `e4296e7`
 
-Status: active; implementation has not started
+Status: active; implementation in progress — 16 of 18 work items (C1–M1)
+landed as of 2026-07-23, each as its own commit matching the "Suggested PR
+sequence" below. D1 (this documentation reconciliation) is in progress; D2
+has not started. This remains the repository's sole active implementation
+plan.
 
 ## Goal
 
@@ -960,26 +964,43 @@ the manual safety boundary defined by `AGENTS.md` and the canonical design.
 
 ## Suggested PR sequence
 
-1. `fix(tailscale): order authentication after tailscaled` — C1.
-2. `fix(observability): share the btrfs alert metric contract` — C2.
-3. `fix(flake): align home manager inputs with host channels` — C3.
-4. `fix(test): make primary clipboard coverage deterministic` — C4.
-5. `feat(maintenance): complete operational failure alerts` — O1.
-6. `fix(boot): bound retained limine generations` — O2.
-7. `feat(healthcheck): verify backup freshness and every probe` — O3.
-8. `refactor(home): isolate development tools and credentials` — R1.
-9. `refactor(home): keep the shared base platform neutral` — R2.
-10. `fix(ci): restrict cache and review workflow credentials` — S1.
-11. `test(ci): make the complete behavior gate explicit` — S2. Apply the
-    corresponding GitHub ruleset change only as a separately authorized
-    operation after this repository PR is green.
-12. `feat(supply-chain): own command-code dependency updates` — S3.
-13. `refactor(nixpkgs): scope package policy exceptions` — S4.
-14. `fix(macbook): align desktop bindings and install contract` — H1.
-15. `docs(ubuntu): correct the standalone home manager runbook` — H2.
-16. `refactor(services): move appliance data into host options` — M1.
-17. `docs(status): reconcile active plans with repository state` — D1.
-18. `docs(workflow): align just recipes with actual gates` — D2.
+Status column added 2026-07-23 (task D1): "Landed" means the named commit
+exists on this branch (`git log --oneline c1699f2..HEAD`); this is the
+canonical progress record for this plan — do not duplicate it elsewhere.
+
+1. `fix(tailscale): order authentication after tailscaled` — C1. Landed.
+2. `fix(observability): share the btrfs alert metric contract` — C2. Landed
+   (plus a follow-up `fix(observability): reject one-sided host-label drift
+   in btrfs alert contract`).
+3. `fix(flake): align home manager inputs with host channels` — C3. Landed.
+4. `fix(test): make primary clipboard coverage deterministic` — C4. Landed.
+5. `feat(maintenance): complete operational failure alerts` — O1. Landed.
+6. `fix(boot): bound retained limine generations` — O2. Landed.
+7. `feat(healthcheck): verify backup freshness and every probe` — O3. Landed
+   (plus two follow-ups fixing the freshness marker/timestamp source).
+8. `refactor(home): isolate development tools and credentials` — R1. Landed.
+9. `refactor(home): keep the shared base platform neutral` — R2. Landed.
+10. `fix(ci): restrict cache and review workflow credentials` — S1. Landed.
+11. `test(ci): make the complete behavior gate explicit` — S2. Landed (plus a
+    follow-up restoring `issues: write` for pr-agent's comment API). The
+    corresponding GitHub ruleset change is a separately authorized operation
+    and has **not** been applied — see
+    [`docs/security/github-settings.md`](../../security/github-settings.md#required-status-checks).
+12. `feat(supply-chain): own command-code dependency updates` — S3. Landed.
+    The `@opentelemetry/propagator-jaeger` CVE it surfaced remains open for
+    human triage — see
+    [`docs/security/supply-chain.md`](../../security/supply-chain.md#override-ownership-and-lifecycle).
+13. `refactor(nixpkgs): scope package policy exceptions` — S4. Landed.
+14. `fix(macbook): align desktop bindings and install contract` — H1. Landed
+    (plus a follow-up correcting the Terminal.app launch flag and
+    polkit/portal matrix rows).
+15. `docs(ubuntu): correct the standalone home manager runbook` — H2. Landed
+    (plus a follow-up fixing a dangling step reference and the zsh-path
+    check).
+16. `refactor(services): move appliance data into host options` — M1. Landed.
+17. `docs(status): reconcile active plans with repository state` — D1. In
+    progress (this task).
+18. `docs(workflow): align just recipes with actual gates` — D2. Not started.
 
 Each PR must be independently buildable and revertible. If a task exposes a
 new production defect, add it to this plan with evidence and dependencies
