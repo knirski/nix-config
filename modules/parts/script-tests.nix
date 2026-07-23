@@ -17,7 +17,19 @@ _: {
       fakeDig = fake "dig" ../../tests/scripts/fixtures/fake-dig.bash;
       fakeRage = fake "rage" ../../tests/scripts/fixtures/fake-rage.bash;
       fakeNix = fake "nix" ../../tests/scripts/fixtures/fake-nix.bash;
-      fakeSystemctl = fake "systemctl" ../../tests/scripts/fixtures/fake-systemctl.bash;
+      fakeStat = fake "stat" ../../tests/scripts/fixtures/fake-stat.bash;
+      # No runtimeInputs: fake "sudo" only needs to `exec "$@"`, and
+      # writeShellApplication prepends any runtimeInputs' bin directories
+      # onto PATH before that exec runs. Giving it coreutils (like every
+      # other fixture) would put the *real* coreutils stat ahead of
+      # tests/scripts/fixtures/fake-stat.bash on PATH, silently defeating
+      # the fake for the one command this fake-sudo is meant to pass
+      # through to.
+      fakeSudo = pkgs.writeShellApplication {
+        name = "sudo";
+        runtimeInputs = [ ];
+        text = builtins.readFile ../../tests/scripts/fixtures/fake-sudo.bash;
+      };
       testSubject =
         name: runtimeInputs: source:
         pkgs.writeShellApplication {
@@ -68,7 +80,8 @@ _: {
             export FAKE_DIG=${pkgs.lib.getExe fakeDig}
             export FAKE_RAGE=${pkgs.lib.getExe fakeRage}
             export FAKE_NIX=${pkgs.lib.getExe fakeNix}
-            export FAKE_SYSTEMCTL=${pkgs.lib.getExe fakeSystemctl}
+            export FAKE_STAT=${pkgs.lib.getExe fakeStat}
+            export FAKE_SUDO=${pkgs.lib.getExe fakeSudo}
             # Raw (unpackaged) script source, used by the SSH-free
             # backup-freshness-probe unit tests to extract and execute the
             # real embedded shell logic directly (no SSH, no fake-ssh).

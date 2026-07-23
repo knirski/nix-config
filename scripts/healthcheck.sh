@@ -141,54 +141,69 @@ run_sudo() { "$SSH_BIN" "${SSH_OPTS[@]}" "krzysiek@$HOST" sudo "$@"; }
 # a full extra day.
 BACKUP_MAX_AGE_HOURS=48
 
-# Builds the POSIX-shell probe snippet that determines backup freshness for
-# a given systemd oneshot unit. This is the literal logic executed on the
-# remote host over SSH by check_backup_freshness below; it is also invoked
-# directly -- via `bash -c`, with `systemctl` stubbed and a real `date`, no
-# SSH involved at all -- by the SSH-free unit tests in
+# Builds the POSIX-shell probe snippet that determines backup freshness from
+# an immutable success marker file, not from any systemd unit property. This
+# is the literal logic executed on the remote host over SSH by
+# check_backup_freshness below; it is also invoked directly -- via
+# `bash -c`, with `stat`/`sudo` stubbed and a real `date`, no SSH involved at
+# all -- by the SSH-free unit tests in
 # tests/scripts/backup-freshness-probe.bats, to exercise the actual
-# NEVER_RAN/FAILED/STALE/FRESH branching and timestamp arithmetic.
+# NEVER_RAN/STALE/FRESH branching and timestamp arithmetic.
 #
-# Uses InactiveEnterTimestamp (the last transition into the inactive/failed
-# state), not ExecMainExitTimestamp. Confirmed against the real, live
-# restic-backups-zbook.service and btrbk-zbook.service on this machine:
-# restic-backups-<host>.service (modules/nixos/backup.nix) has multiple
-# ExecStart= lines (backup/unlock/forget/check) plus an ExecStartPre=, and
-# for units shaped this way ExecMainPID/ExecMainStartTimestamp/
-# ExecMainExitTimestamp stay at their unset defaults even after the unit has
-# run and finished -- `systemctl show restic-backups-zbook.service -p
-# Result,ExecMainExitTimestamp,InactiveEnterTimestamp --value` showed
-# `success` / (empty) / a populated timestamp despite the unit having just
-# run. btrbk-<host>.service (single ExecStart=, no ExecStartPre=) does not
-# have this problem, but InactiveEnterTimestamp is populated and correct for
-# both unit shapes, and stays empty exactly when the unit has never
-# completed a run -- preserving the original NEVER_RAN semantics.
+# A prior version of this probe read systemd's `Result`, `ExecMainStatus`,
+# and `InactiveEnterTimestamp` unit properties (itself a fix for an earlier
+# bug -- ExecMainExitTimestamp never populates for
+# restic-backups-<host>.service's real multi-ExecStart + ExecStartPre unit
+# shape -- see the addendum in .superpowers/sdd/task-O3-report.md). A later
+# review found all three of those properties are systemd's *mutable*
+# bookkeeping of "the last completed activation": `systemctl reset-failed
+# <unit>` -- runnable by an operator, an alerting/ack tool, or any
+# automation with SSH access -- silently resets Result back to "success" and
+# ExecMainStatus back to "0" without re-running anything and without
+# touching what InactiveEnterTimestamp actually means (it records *when*
+# the unit last went inactive, never *whether* that transition was clean).
+# Reproduced live on this repo's own zbook host: restic-backups-zbook's only
+# run one morning genuinely failed (a real DNS resolution failure to its
+# sftp backend), yet `systemctl show restic-backups-zbook.service -p
+# Result,ExecMainStatus,InactiveEnterTimestamp --value` reported
+# success/0/a timestamp matching that failed run -- meaning the old
+# Result/ExecMainStatus-based probe reported FRESH for a backup that had
+# actually failed.
+#
+# This version instead reads the mtime of an immutable success marker file
+# (modules/nixos/backup.nix: `touch <marker>` is the *last* ExecStart entry
+# on both the restic and btrbk backup units, appended via `lib.mkAfter` so
+# it only runs -- and only updates the marker -- once every prior command
+# in the oneshot's ExecStart sequence has already exited 0). No systemd
+# unit property is read at all, so `systemctl reset-failed` has nothing to
+# lie about: the marker's mtime is either genuinely recent or it is not.
 #
 # Prints exactly one of:
-#   NEVER_RAN    -- the unit has not completed a run yet (no timestamp)
-#   FAILED:...   -- the last run's Result/ExecMainStatus was not success/0
-#   STALE:<age>h -- last successful run is older than BACKUP_MAX_AGE_HOURS
-#   FRESH:<age>h -- last successful run is within the threshold
-# A last-run timestamp that fails to parse is treated as age=0-epoch (i.e.
-# maximally stale), never as a silent pass.
+#   NEVER_RAN    -- the marker file does not exist (no run has ever reached
+#                   the genuine-success ExecStart entry)
+#   STALE:<age>h -- the marker is older than BACKUP_MAX_AGE_HOURS
+#   FRESH:<age>h -- the marker is within the threshold
+# A marker mtime that fails to parse as a number is treated as age=0-epoch
+# (i.e. maximally stale), never as a silent pass.
 freshness_probe_snippet() {
-  local service="$1"
-  # These $-references are evaluated by the shell that runs the snippet
-  # (the remote host over SSH in production, or the local `bash -c` in
-  # tests), not expanded here.
+  local marker="$1"
+  # This $-reference is evaluated by the shell that runs the snippet (the
+  # remote host over SSH in production, or the local `bash -c` in tests),
+  # not expanded here. The marker's containing directory is
+  # root/service-user-owned (systemd StateDirectory=), not world-readable,
+  # hence `sudo` -- the same passwordless-sudo access already used by
+  # run_sudo elsewhere in this script.
   # shellcheck disable=SC2016
   printf '%s' '
-result=$(systemctl show '"$service"' -p Result --value 2>/dev/null)
-code=$(systemctl show '"$service"' -p ExecMainStatus --value 2>/dev/null)
-ts=$(systemctl show '"$service"' -p InactiveEnterTimestamp --value 2>/dev/null)
-if [ -z "$ts" ] || [ "$ts" = "n/a" ]; then
+ts=$(sudo stat -c %Y '"$marker"' 2>/dev/null)
+if [ -z "$ts" ]; then
   echo NEVER_RAN
-elif [ "$result" != success ] || [ "$code" != 0 ]; then
-  echo "FAILED:result=$result,exit=$code"
 else
+  case "$ts" in
+    *[!0-9]*) ts=0 ;;
+  esac
   now=$(date +%s)
-  last=$(date -d "$ts" +%s 2>/dev/null || echo 0)
-  age=$(( (now - last) / 3600 ))
+  age=$(( (now - ts) / 3600 ))
   if [ "$age" -gt '"$BACKUP_MAX_AGE_HOURS"' ]; then
     echo "STALE:${age}h"
   else
@@ -199,8 +214,8 @@ fi
 }
 
 check_backup_freshness() {
-  local desc="$1" service="$2"
-  check_val "$desc" "FRESH" run_ssh "$(freshness_probe_snippet "$service")"
+  local desc="$1" marker="$2"
+  check_val "$desc" "FRESH" run_ssh "$(freshness_probe_snippet "$marker")"
 }
 
 # Requires every active target in the given Prometheus job to report
@@ -258,11 +273,11 @@ echo "--- Backup freshness ---"
 # path is exercised only by the manual restic restore drill (see
 # docs/backup-and-restore.md), never by this automated script.
 if [[ "$ROLE" == "appliance" ]]; then
-  check_backup_freshness "btrbk-soyo backup is fresh" "btrbk-soyo.service"
-  check_backup_freshness "restic-backups-soyo backup is fresh" "restic-backups-soyo.service"
+  check_backup_freshness "btrbk-soyo backup is fresh" "/var/lib/btrbk-soyo/last-success"
+  check_backup_freshness "restic-backups-soyo backup is fresh" "/var/lib/restic-backups-soyo/last-success"
 else
-  check_backup_freshness "btrbk-zbook backup is fresh" "btrbk-zbook.service"
-  check_backup_freshness "restic-backups-zbook backup is fresh" "restic-backups-zbook.service"
+  check_backup_freshness "btrbk-zbook backup is fresh" "/var/lib/btrbk-zbook/last-success"
+  check_backup_freshness "restic-backups-zbook backup is fresh" "/var/lib/restic-backups-zbook/last-success"
 fi
 
 echo ""

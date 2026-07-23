@@ -93,8 +93,8 @@ setup() { setup_contract_test; }
   assert_status 0
   assert_log_has '<systemctl is-enabled btrbk-soyo.timer'
   assert_log_has '<systemctl is-enabled restic-backups-soyo.timer'
-  assert_log_has 'systemctl show btrbk-soyo.service'
-  assert_log_has 'systemctl show restic-backups-soyo.service'
+  assert_log_has 'stat -c %Y /var/lib/btrbk-soyo/last-success'
+  assert_log_has 'stat -c %Y /var/lib/restic-backups-soyo/last-success'
   assert_log_lacks 'btrbk-zbook'
   assert_log_lacks 'restic-backups-zbook'
   assert_output_has '[PASS] btrbk-soyo backup is fresh'
@@ -105,8 +105,8 @@ setup() { setup_contract_test; }
   assert_status 0
   assert_log_has '<systemctl is-enabled btrbk-zbook.timer'
   assert_log_has '<systemctl is-enabled restic-backups-zbook.timer'
-  assert_log_has 'systemctl show btrbk-zbook.service'
-  assert_log_has 'systemctl show restic-backups-zbook.service'
+  assert_log_has 'stat -c %Y /var/lib/btrbk-zbook/last-success'
+  assert_log_has 'stat -c %Y /var/lib/restic-backups-zbook/last-success'
   assert_log_lacks 'btrbk-soyo'
   assert_log_lacks 'restic-backups-soyo'
   assert_output_has '[PASS] btrbk-zbook backup is fresh'
@@ -122,11 +122,18 @@ setup() { setup_contract_test; }
   assert_output_has '[PASS] btrbk-soyo backup is fresh'
 }
 
-@test "a failed last backup run fails with a specific message, not a generic one" {
-  export BACKUP_STATE_BTRBK_ZBOOK='FAILED:result=failed,exit=1'
+@test "reset-failed cannot mask a failed backup: an absent marker fails regardless of what systemd's mutable Result would say" {
+  # Reproduces the Critical review finding on commits 0d61ed2/10ced03: the
+  # prior probe trusted systemctl's Result/ExecMainStatus, which
+  # `systemctl reset-failed <unit>` silently resets to success/0 without
+  # re-running anything or touching any marker. The fixed probe never asks
+  # systemd anything -- fake-ssh here answers purely from the
+  # marker-file-stat command text, so this failure mode cannot recur no
+  # matter what Result would claim.
+  export BACKUP_STATE_BTRBK_ZBOOK='NEVER_RAN'
   run "$HEALTHCHECK" test-host workstation eth0
   assert_status 1
-  assert_output_has 'btrbk-zbook backup is fresh (expected: FRESH, got: FAILED:result=failed,exit=1)'
+  assert_output_has 'btrbk-zbook backup is fresh (expected: FRESH, got: NEVER_RAN)'
   assert_output_has '[PASS] restic-backups-zbook backup is fresh'
 }
 
