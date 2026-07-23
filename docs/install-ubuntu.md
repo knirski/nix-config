@@ -41,7 +41,8 @@ outputs):
   packages.
 - `dbus-user-session` (typically already installed on Ubuntu Desktop; if
   missing, `sudo apt install dbus-user-session`) — needed for the
-  `dbus-run-session` Sway launch path in Step 6 below.
+  `dbus-run-session` Sway launch path documented under "Starting a Sway
+  session" below.
 - XDG desktop portals and a Polkit authentication agent, if you want
   screen-sharing/file-picker portals or GUI polkit prompts to work under
   Sway. `modules/home/sway.nix` (the aspect ubuntu imports) declares
