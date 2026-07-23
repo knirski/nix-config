@@ -14,16 +14,10 @@
         };
         packages =
           with pkgs;
-          [
-            command-code
-          ]
-          ++ lib.optionals stdenv.isLinux [
+          lib.optionals stdenv.isLinux [
             gcx
           ]
           ++ [
-            # Nix language servers for Zed
-            nil
-            nixd
             # Modern CLI replacements (no HM modules)
             dust
             sd
@@ -37,7 +31,6 @@
             # Other tools without HM modules
             procs
             unrar # for extract() function
-            nushell # used by all agents for script execution
           ];
 
       };
@@ -83,12 +76,9 @@
             update_ms = 1000; # 1-second refresh rate
           };
         };
-        claude-code.enable = true;
-        codex.enable = true;
         command-not-found.enable = false;
         delta.enable = true;
         difftastic.enable = true;
-        docker-cli.enable = true;
         eza = {
           enable = true;
           enableZshIntegration = true;
@@ -150,46 +140,8 @@
         // lib.optionalAttrs (options.programs.fzf ? enableNushellIntegration) {
           enableNushellIntegration = false;
         };
-        gh = {
-          enable = true;
-          settings = {
-            editor = "nvim";
-            git_protocol = "ssh";
-            prompt = "enabled";
-          };
-        };
         gpg.enable = true;
         jq.enable = true;
-        lazydocker.enable = true;
-        lazygit = {
-          enable = true;
-          settings = {
-            # Catppuccin Mocha theme colors
-            gui.theme = {
-              activeBorderColor = [
-                "#89b4fa" # Blue
-                "bold"
-              ];
-              inactiveBorderColor = [ "#a6adc8" ]; # Overlay0
-              searchingActiveBorderColor = [
-                "#f9e2af" # Yellow
-                "bold"
-              ];
-              selectedLineBgColor = [ "#313244" ]; # Surface0
-              cherryPickedCommitFgColor = [ "#89dceb" ]; # Teal
-              cherryPickedCommitBgColor = [ "#45475a" ]; # Surface1
-            };
-            git = {
-              paging = {
-                colorArg = "always";
-                pager = "delta --dark --paging=never"; # Use delta for syntax highlighting
-              };
-              commit = {
-                signOff = true; # Add Signed-off-by line
-              };
-            };
-          };
-        };
         # Use eza instead of lsd for file listing
         lsd.enable = false;
         mc.enable = true;
@@ -208,8 +160,6 @@
           viAlias = true;
           vimAlias = true;
           plugins = with pkgs.vimPlugins; [
-            # LSP support for multiple languages
-            nvim-lspconfig
             # Treesitter for syntax highlighting and code understanding
             (nvim-treesitter.withPlugins (p: [
               p.nix
@@ -225,9 +175,9 @@
               p.toml
               p.markdown
             ]))
-            # Autocompletion engine
+            # Autocompletion engine (LSP-specific completion source lives in
+            # aspects.homeManager.development, alongside nvim-lspconfig)
             nvim-cmp
-            cmp-nvim-lsp # LSP source for nvim-cmp
             cmp-buffer # Buffer words source
             cmp-path # File path source
             # Fuzzy finder for files, grep, buffers
@@ -242,14 +192,12 @@
             # Theme
             catppuccin-nvim
           ];
-          extraPackages = with pkgs; [
-            nil
-            lua-language-server
-            pyright
-            typescript-language-server
-            rust-analyzer
-            gopls
-          ];
+          # Language-server integration (extraPackages, nvim-lspconfig,
+          # cmp-nvim-lsp source, and the vim.lsp.* setup) is developer-only
+          # tooling — see aspects.homeManager.development. Base keeps neovim
+          # as a general-purpose editor without any LSP servers, which is
+          # sufficient for appliance administration (e.g. editing this repo's
+          # Nix files during a soyo recovery).
           initLua = ''
             -- Basic settings
             vim.opt.number = true
@@ -265,29 +213,9 @@
             vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers<cr>")
             vim.keymap.set("n", "<leader>e", "<cmd>Neotree toggle<cr>")
 
-            -- LSP using the new vim.lsp.config API (nvim-lspconfig 2.10+, Neovim 0.11+)
-            -- See :help lspconfig-nvim-0.11
-            local capabilities = require('cmp_nvim_lsp').default_capabilities()
-
-            -- Configure LSP servers
-            vim.lsp.config.nil_ls = { capabilities = capabilities }  -- Nix
-            vim.lsp.config.lua_ls = { capabilities = capabilities }   -- Lua
-            vim.lsp.config.pyright = { capabilities = capabilities }  -- Python
-            vim.lsp.config.ts_ls = { capabilities = capabilities }    -- TypeScript/JavaScript
-            vim.lsp.config.rust_analyzer = { capabilities = capabilities }  -- Rust
-            vim.lsp.config.gopls = { capabilities = capabilities }    -- Go
-
-            -- Enable all configured LSP servers
-            vim.lsp.enable({
-              'nil_ls',
-              'lua_ls',
-              'pyright',
-              'ts_ls',
-              'rust_analyzer',
-              'gopls',
-            })
-
-            -- Completion
+            -- Completion (the 'nvim_lsp' source is only populated when
+            -- aspects.homeManager.development also installs cmp-nvim-lsp;
+            -- nvim-cmp silently ignores an unregistered source name)
             local cmp = require('cmp')
             cmp.setup({
               sources = {
@@ -307,7 +235,6 @@
             vim.cmd.colorscheme "catppuccin"
           '';
         };
-        opencode.enable = true;
         ripgrep.enable = true;
         skim = {
           enable = true;
@@ -531,12 +458,6 @@
         };
         bash = {
           enable = true;
-          initExtra = lib.optionalString pkgs.stdenv.isLinux ''
-            if [ -r /run/agenix/github-token ]; then
-              export GITHUB_TOKEN="$(cat /run/agenix/github-token)"
-              export GH_TOKEN="$GITHUB_TOKEN"
-            fi
-          '';
         };
         git = {
           enable = true;
@@ -576,10 +497,6 @@
           };
         };
         home-manager.enable = true;
-        direnv = {
-          enable = true;
-          nix-direnv.enable = true;
-        };
       };
 
       services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {

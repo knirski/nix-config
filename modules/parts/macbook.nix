@@ -20,6 +20,7 @@
             useUserPackages = true;
             users.krzysiek.imports = [
               config.aspects.homeManager.base
+              config.aspects.homeManager.development
               config.aspects.homeManager.desktop
               config.aspects.homeManager.ssh
               config.aspects.homeManager.aerospace

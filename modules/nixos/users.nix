@@ -16,17 +16,17 @@
     # rekeyFile points to the master-encrypted secret (encrypted with the
     # operator's key).  agenix-rekey auto-generates the per-host rekeyed
     # version (encrypted with the host's SSH key) and populates `file` from it.
+    #
+    # github-token is NOT declared here: it is only for gh/command-code/
+    # development tooling, so it is declared in the per-host block of hosts
+    # that enable aspects.homeManager.development (currently only zbook; see
+    # modules/parts/zbook.nix). Soyo has no GitHub workflow and must not get
+    # this secret.
     age.secrets = {
       root-password.rekeyFile = ../../secrets/root-password.age;
       krzysiek-password.rekeyFile = ../../secrets/krzysiek-password.age;
       ntfy-token.rekeyFile = ../../secrets/ntfy-token.age;
       ntfy-topic.rekeyFile = ../../secrets/ntfy-topic.age;
-      github-token = {
-        rekeyFile = ../../secrets/github-token.age;
-        owner = "krzysiek";
-        group = "users";
-        mode = "0400";
-      };
     };
   };
 }
