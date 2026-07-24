@@ -67,7 +67,7 @@
       });
       bitwarden-desktop = prev.bitwarden-desktop.overrideAttrs (old: {
         postFixup = (old.postFixup or "") + ''
-          substituteInPlace $out/bin/bitwarden-desktop \
+          substituteInPlace $out/bin/bitwarden \
             --replace-fail '"$@"' '--force-dark-mode "$@"'
         '';
       });
