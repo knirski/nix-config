@@ -122,15 +122,14 @@ in
       <path d="M 630 175 V 113 H 435"/>
       <path d="M 760 218 H 930"/>
       <path d="M 630 261 V 370"/>
-      <path d="M 760 240 L 930 390"/>
+      <path d="M 700 261 L 930 390"/>
       <path d="M 1035 261 V 370"/>
-      <path d="M 270 543 H 850 V 261 H 930"/>
-      <path d="M 850 261 H 760"/>
+      <path d="M 270 520 H 460"/>
     </g>
 
     <text x="500" y="98" fill="#475569" font-family="sans-serif" font-size="14">Encrypted DNS</text>
     <text x="790" y="320" fill="#475569" font-family="sans-serif" font-size="14">Encrypted backups</text>
-    <text x="700" y="533" fill="#475569" font-family="sans-serif" font-size="14">Remote access</text>
+    <text x="275" y="505" fill="#475569" font-family="sans-serif" font-size="14">Remote access</text>
 
     ${lib.concatMapStrings renderNode nodes}
   </svg>

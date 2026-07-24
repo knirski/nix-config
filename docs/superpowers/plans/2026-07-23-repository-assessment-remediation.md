@@ -2,13 +2,20 @@
 
 Date: 2026-07-22
 
-Last revalidated: 2026-07-23 against `origin/main` at `e4296e7`
+Last revalidated: 2026-07-24 against `origin/main` at `15d03ac`
 
-Status: active; implementation in progress — 16 of 18 work items (C1–M1)
-landed as of 2026-07-23, each as its own commit matching the "Suggested PR
-sequence" below. D1 (this documentation reconciliation) is in progress; D2
-has not started. This remains the repository's sole active implementation
-plan.
+Status: complete. All 18 work items (C1–D2) landed on the working branches,
+each as its own commit matching the "Suggested PR sequence" below; the G1
+final repository gate passed and the whole-branch review's findings were
+fixed. On `main`, that history is two squash-merged pull requests: #106
+(B0–S3: correctness, operational, role-separation, and security) and #107
+(S4–G1: package policy, host contracts, reusability, and documentation). G2
+(separately authorized
+live validation — deploy, reboot, rekey, GitHub settings change, live
+notification, live restore) was intentionally left out of scope for this
+plan; see `G2` below and the two findings it left open (missing
+`required_status_checks` ruleset rule; open `@opentelemetry/propagator-jaeger`
+CVE). This plan is retained as a historical record, not an active plan.
 
 ## Goal
 
@@ -998,9 +1005,11 @@ canonical progress record for this plan — do not duplicate it elsewhere.
     (plus a follow-up fixing a dangling step reference and the zsh-path
     check).
 16. `refactor(services): move appliance data into host options` — M1. Landed.
-17. `docs(status): reconcile active plans with repository state` — D1. In
-    progress (this task).
-18. `docs(workflow): align just recipes with actual gates` — D2. Not started.
+17. `docs(status): reconcile active plans with repository state` — D1. Landed.
+18. `docs(workflow): align just recipes with actual gates` — D2. Landed (plus
+    a follow-up from the G1 final whole-branch review indexing the 3
+    remaining new checks in `docs/testing.md` and wiring
+    `service-aspect-invariants` into CI's build/Cachix lists).
 
 Each PR must be independently buildable and revertible. If a task exposes a
 new production defect, add it to this plan with evidence and dependencies
