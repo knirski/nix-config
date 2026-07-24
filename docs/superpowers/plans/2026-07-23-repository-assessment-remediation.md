@@ -4,12 +4,13 @@ Date: 2026-07-22
 
 Last revalidated: 2026-07-24 against `origin/main` at `15d03ac`
 
-Status: complete. All 18 work items (C1–D2) landed, each as its own commit
-matching the "Suggested PR sequence" below; the G1 final repository gate
-passed and the whole-branch review's findings were fixed. The work merged to
-`main` as two squash-merged pull requests: #106 (B0–S3: correctness,
-operational, role-separation, and security) and #107 (S4–G1: package policy,
-host contracts, reusability, and documentation). G2 (separately authorized
+Status: complete. All 18 work items (C1–D2) landed on the working branches,
+each as its own commit matching the "Suggested PR sequence" below; the G1
+final repository gate passed and the whole-branch review's findings were
+fixed. On `main`, that history is two squash-merged pull requests: #106
+(B0–S3: correctness, operational, role-separation, and security) and #107
+(S4–G1: package policy, host contracts, reusability, and documentation). G2
+(separately authorized
 live validation — deploy, reboot, rekey, GitHub settings change, live
 notification, live restore) was intentionally left out of scope for this
 plan; see `G2` below and the two findings it left open (missing
