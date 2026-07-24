@@ -2,10 +2,21 @@
 # Professional work laptop (Ubuntu 24.04 LTS, standalone Home Manager).
 # No NixOS or nix-darwin — only user environment managed by HM.
 { config, inputs, ... }:
+let
+  # Ubuntu enables aspects.homeManager.desktop below, so it needs the
+  # reviewed insecure-package exceptions (see
+  # lib/insecure-package-exceptions.nix for what/why).
+  insecurePackageExceptions = import ../../lib/insecure-package-exceptions.nix;
+in
 {
   flake.homeConfigurations.ubuntu = inputs.home-manager.lib.homeManagerConfiguration {
     pkgs = import inputs.nixpkgs-unstable (
-      (import ../../lib/mk-nixpkgs-args.nix { }) // { system = "x86_64-linux"; }
+      (import ../../lib/mk-nixpkgs-args.nix {
+        permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
+      })
+      // {
+        system = "x86_64-linux";
+      }
     );
     modules = [
       config.aspects.homeManager.base

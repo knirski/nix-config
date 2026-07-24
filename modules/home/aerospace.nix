@@ -61,8 +61,24 @@
           cmd-f = "fullscreen";
           cmd-shift-space = "layout floating tiling";
 
-          # Terminal
-          cmd-Return = "exec-and-forget kitty";
+          # Terminal — macOS's built-in Terminal.app, launched via `open`
+          # (a real /usr/bin/open on every Mac). Ghostty (zbook/ubuntu's
+          # terminal) is not an option here: its nixpkgs derivation declares
+          # only Linux platforms in `meta.platforms` (verified with
+          # `nix eval path:.#darwinConfigurations.macbook.pkgs.ghostty.meta.platforms`
+          # — no aarch64-darwin entry), so it cannot be installed for
+          # macbook at all. `kitty` was never installed anywhere for
+          # macbook either. Terminal.app ships with macOS and needs no Nix
+          # package or Home Manager module — see docs/workstation-setup.md.
+          # `-n` ("open a new instance ... even if one is already running")
+          # is required so every keypress tiles a fresh window, matching
+          # Sway's `"${modifier}+Return" = "exec ${terminal}";` behavior --
+          # AeroSpace's own docs give this exact invocation
+          # (`open -n /System/Applications/Utilities/Terminal.app`) as the
+          # canonical "open a terminal" example. Without `-n`, `open -a
+          # Terminal` just refocuses an existing window instead of spawning
+          # a new one once Terminal.app is already running.
+          cmd-Return = "exec-and-forget open -n -a Terminal";
         };
       };
     };

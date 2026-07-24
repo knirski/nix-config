@@ -59,6 +59,7 @@ jobs:
           nix build --no-link \
             .#checks.x86_64-linux.pre-commit \
             .#checks.x86_64-linux.docs-correctness \
+            .#checks.x86_64-linux.fmt-scope-contract \
             .#checks.x86_64-linux.formatting \
             .#checks.x86_64-linux.github-workflow-policy \
             .#checks.x86_64-linux.kvm-gate-drift \
@@ -122,11 +123,15 @@ jobs:
             .#checks.x86_64-linux.impermanence-missing-early-persist \
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.macbook-desktop-invariants \
             .#checks.x86_64-linux.maintenance-paths \
+            .#checks.x86_64-linux.nixpkgs-policy-invariants \
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
+            .#checks.x86_64-linux.service-aspect-invariants \
             .#checks.x86_64-linux.soyo-guest-isolation \
-            .#checks.x86_64-linux.systemd-hardening-invariants
+            .#checks.x86_64-linux.systemd-hardening-invariants \
+            .#checks.x86_64-linux.ubuntu-desktop-invariants
       - name: Push evaluation artifacts to Cachix
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
@@ -146,11 +151,15 @@ jobs:
             .#checks.x86_64-linux.impermanence-missing-early-persist \
             .#checks.x86_64-linux.initrd-recovery-invariants \
             .#checks.x86_64-linux.lan-inventory \
+            .#checks.x86_64-linux.macbook-desktop-invariants \
             .#checks.x86_64-linux.maintenance-paths \
+            .#checks.x86_64-linux.nixpkgs-policy-invariants \
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
+            .#checks.x86_64-linux.service-aspect-invariants \
             .#checks.x86_64-linux.soyo-guest-isolation \
-            .#checks.x86_64-linux.systemd-hardening-invariants
+            .#checks.x86_64-linux.systemd-hardening-invariants \
+            .#checks.x86_64-linux.ubuntu-desktop-invariants
 
   build:
     name: Build ${{ matrix.host }} closure

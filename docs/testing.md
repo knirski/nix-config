@@ -160,6 +160,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `dns-dhcp-vm` | KVM VM: two nodes perform forward/reverse DNS, DHCP lease, restart | `dns-dhcp-vm-check.nix` | KVM |
 | `docs-correctness` | Internal markdown links resolve; anchors exist; lifecycle is accurate; no orphans | `docs-checks.nix` | Pure eval |
 | `failure-notification-invariants` | Reviewed operational units (scrub, `nix-gc`, free-space check, restic, btrbk, `grafana-alert-setup`, `nix-store-optimise`) all wire `OnFailure=ntfy-failure@%N.service`; `ntfy-failure@` itself never does; generated ntfy-failure@/smartd notify scripts carry title, unit/device identity, and read credentials from a file at runtime | `failure-notification-checks.nix` | Pure eval |
+| `fmt-scope-contract` | treefmt enables exactly `nixfmt` and none of `ruff-format`/`black`/`shfmt`/`mdformat`/`prettier`, matching `just fmt`'s doc comment and the `formatting` row below; fails with an actionable message if a future edit silently widens treefmt's scope | `perSystem.nix` | Pure eval |
 | `github-workflow-policy` | Workflow YAML uses pinned actions, least-privilege permissions, no mutable tags | `github-security-checks.nix` | Pure eval |
 | `home-manager-channel-invariants` | Each host's evaluated Home Manager release actually tracks the Nixpkgs channel its assembler intends | `home-manager-channel-checks.nix` | Pure eval |
 | `host-role-invariants` | Soyo has appliance role + no GUI; zbook has workstation role + GUI; base has no role bias | `host-role-invariants.nix` | Pure eval |
@@ -168,19 +169,22 @@ This table is the canonical index — when adding a check, add a row here.
 | `initrd-recovery-invariants` | Initrd SSH unlock, TPM, and break-glass paths have all required options | `initrd-invariants.nix` | Pure eval |
 | `kvm-gate-drift` | The KVM check set declared in `lib/testing/kvm-checks.nix` cannot drift from what `ci.yml`'s `resilience` job and `just test-resilience` actually build | `kvm-gate-drift-check.nix` | Pure eval + shell script |
 | `lan-inventory` | Python unit tests for  LAN inventory collector | `perSystem.nix` | Pure eval + Python |
+| `macbook-desktop-invariants` | Every Aerospace `exec-and-forget` binding resolves to a real package in macbook's evaluated Home Manager closure or a documented macOS system executable; docs/workstation-setup.md's Tool Availability Matrix matches zbook/macbook/ubuntu's real evaluated closures | `macbook-desktop-checks.nix` | Pure eval |
 | `maintenance-paths` | Required tmpfiles rule exists for free-space check path | `perSystem.nix` | Pure eval |
+| `nixpkgs-policy-invariants` | Soyo's evaluated `nixpkgs.config` carries no insecure-package allowance; every `lib/insecure-package-exceptions.nix` entry has structured rationale/owner/review metadata; zbook/macbook/ubuntu's evaluated `permittedInsecurePackages` match the registry exactly | `nixpkgs-policy-checks.nix` | Pure eval |
 | `persistence-invariants` | Every persisted path exists in the host config; mode/owner are sane | `persistence-invariants.nix` | Pure eval |
 | `pre-commit` | Lint: deadnix, statix, typos, end-of-file-fixer, merge-conflicts, actionlint, shellcheck, ruff, markdownlint | `perSystem.nix` | Git hook |
 | `public-repository-data` | No secrets, hostnames, or private IPs in public SVGs | `public-repo-checks.nix` | Pure eval |
 | `reservation-validation` | Reservations have valid MACs, IPs, and no duplicates | `reservation-checks.nix` | Pure eval |
 | `script-contracts` | Operator commands (healthcheck, recover-secrets, set-tailscale-keys) handle valid/invalid/dry-run/interrupted args correctly | `script-tests.nix` | Shell (Bats) |
+| `service-aspect-invariants` | The shared backup and observability aspects carry no Soyo-specific values (hostname, `czworaczki`, `enp1s0`) when evaluated against alternate-host fixtures; the built lan-inventory-exporter script queries the fixture's own NIC, not Soyo's | `service-aspect-invariants.nix` | Pure eval + shell script |
 | `shell-boundaries` | No `writeShellScript` calls; generated unit fragments have strict checking | `shell-checks.nix` | Pure eval |
 | `soyo-guest-isolation` | Guest services on Soyo have MemoryMax, CPUQuota, Nice applied | `soyo-guest-isolation.nix` | Pure eval |
 | `systemd-hardening-invariants` | Applicable systemd services have basic hardening (ProtectSystem, PrivateTmp, etc.) | `systemd-hardening-checks.nix` | Pure eval |
 | `topology-freshness` | Committed `docs/topology/overview.svg` matches the current stable state | `topology-checks.nix` | Pure eval |
+| `ubuntu-desktop-invariants` | Real build of `homeConfigurations.ubuntu.activationPackage`: expected packages/binaries are present in the built closure, and the built `activate` script still supports the stable `~/.nix-profile` zsh path docs/install-ubuntu.md's chsh instructions depend on | `ubuntu-desktop-checks.nix` | Pure eval + shell script |
 | `dashboard-renderer` | Python unit tests for the observability dashboard renderer | `perSystem.nix` | Pure eval + Python |
-| `formatting` | treefmt — Nix, Python, shell, markdown formatting check | `perSystem.nix` | Pure eval |
-| `treefmt` | Same treefmt derivation as `formatting`, exposed under the attribute name `git-hooks.nix` also expects; CI builds `formatting` and gets this one for free (identical output path) | `perSystem.nix` | Pure eval |
+| `formatting` | treefmt formatting check — Nix only (`nixfmt`); Python/shell/Markdown are lint-checked by the `ruff`/`shellcheck`/`markdownlint` pre-commit hooks instead, not auto-formatted. treefmt-nix's own auto-generated `checks.treefmt` is disabled (`flakeCheck = false`) so this is the repo's only treefmt check | `perSystem.nix` | Pure eval |
 
 ### KVM tests
 

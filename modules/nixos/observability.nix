@@ -74,7 +74,7 @@
           tmpdir="$(mktemp -d)"
           trap 'rm -rf "$tmpdir"' EXIT
 
-          ${pkgs.iproute2}/bin/ip -json neigh show dev enp1s0 > "$tmpdir/neighbors.json"
+          ${pkgs.iproute2}/bin/ip -json neigh show dev ${cfg.lanInterface} > "$tmpdir/neighbors.json"
 
           exec ${pkgs.python3}/bin/python3 ${./observability/lan_inventory.py} \
             --network-data ${lanInventoryNetworkJson} \
@@ -204,6 +204,11 @@
       options.lanAppliance.services.observability = {
         enable = lib.mkEnableOption "prometheus node_exporter, dnsmasq exporter, and optional on-box Grafana dashboards";
 
+        lanInterface = lib.mkOption {
+          type = lib.types.str;
+          description = "LAN network interface name, used for passive neighbor-discovery inventory and (when openFirewall is set) the exporter/Grafana firewall rules.";
+        };
+
         nodeExporter = {
           listenAddress = lib.mkOption {
             type = lib.types.str;
@@ -233,8 +238,8 @@
           enable = lib.mkEnableOption "on-box Grafana dashboards (adds a local Prometheus scraper; resource-isolated as a guest service)";
           listenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "soyo";
-            description = "Grafana listen address (the module appends :3000).";
+            default = "0.0.0.0";
+            description = "Grafana listen address (bind address; the module appends :3000). Wired directly into services.grafana.settings.server.http_addr. When openFirewall is set, the LAN firewall rule for port 3000 is only added if this is not loopback-only.";
           };
           domain = lib.mkOption {
             type = lib.types.str;
@@ -361,7 +366,12 @@
             users.users.node-exporter.extraGroups = [ "prometheus" ];
 
             networking.firewall = lib.mkIf cfg.openFirewall {
-              interfaces.enp1s0.allowedTCPPorts = lib.optionals grafanaCfg.enable [ 3000 ];
+              # Only expose 3000 on the LAN if Grafana is actually reachable
+              # from off-box — a loopback-only listenAddress means the port
+              # is unreachable regardless, so opening it would be misleading.
+              interfaces.${cfg.lanInterface}.allowedTCPPorts = lib.optionals (
+                grafanaCfg.enable && grafanaCfg.listenAddress != "127.0.0.1"
+              ) [ 3000 ];
             };
 
             systemd = {
@@ -534,7 +544,7 @@
                     let
                       config' = {
                         server = {
-                          http_addr = "0.0.0.0";
+                          http_addr = grafanaCfg.listenAddress;
                           http_port = 3000;
                           inherit (grafanaCfg) domain;
                           root_url = "http://${grafanaCfg.domain}:3000";

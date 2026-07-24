@@ -65,10 +65,34 @@
             default = null;
             description = "Path to an SSH private key for SFTP transport. Persist this under /persist/etc/restic/ so it survives reboots.";
           };
+          sftp = {
+            host = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              example = "nas.home.arpa";
+              description = "SFTP server hostname/FQDN used to build the sftp.command SSH invocation. Required when sshKeyFile is set.";
+            };
+            user = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              example = "myhost-backup";
+              description = "SSH user for the SFTP transport. Required when sshKeyFile is set.";
+            };
+            strictHostKeyChecking = lib.mkOption {
+              type = lib.types.str;
+              default = "accept-new";
+              description = "Value for ssh -o StrictHostKeyChecking=<value>. accept-new avoids the interactive prompt on first connection while still detecting later host key changes.";
+            };
+            knownHostsFile = lib.mkOption {
+              type = lib.types.str;
+              default = "/persist/etc/restic/known_hosts";
+              description = "Path for ssh -o UserKnownHostsFile=<value>. Should live under persisted storage on hosts with an ephemeral root.";
+            };
+          };
           extraOptions = lib.mkOption {
             type = lib.types.listOf lib.types.str;
             default = [ ];
-            description = "Additional -o options passed to restic. The sshKeyFile option auto-generates the sftp.command value when set.";
+            description = "Additional -o options passed to restic. When sshKeyFile is set, the restic.sftp.* options generate an additional sftp.command entry.";
           };
           timerConfig = lib.mkOption {
             type = lib.types.attrs;
@@ -118,6 +142,16 @@
 
       config = lib.mkIf cfg.enable (
         lib.mkMerge [
+          {
+            assertions = [
+              {
+                assertion =
+                  cfg.restic.sshKeyFile == null || (cfg.restic.sftp.host != null && cfg.restic.sftp.user != null);
+                message = "lanAppliance.services.backup.restic.sftp.host and .user must be set when restic.sshKeyFile is set.";
+              }
+            ];
+          }
+
           # Prometheus backup metric bootstrap (optional)
           (lib.mkIf cfg.enablePromMetrics {
             systemd.services.restic-backup-metric-bootstrap = {
@@ -177,12 +211,11 @@
                   # ExecStart= parser splits on spaces, and without them sftp.command
                   # would only be set to "ssh" while the host and key path would leak
                   # as separate positional arguments to restic.
-                  # StrictHostKeyChecking=accept-new avoids the interactive prompt on
-                  # first connection; UserKnownHostsFile persists the host key under
-                  # /persist (the root filesystem is ephemeral on this host).
-                  # The FQDN czworaczki.home.arpa routes to Blocky (LAN DNS) instead
-                  # of matching Tailscale's per-link domain.
-                  "sftp.command='ssh ${hostName}-backup@czworaczki.home.arpa -i ${cfg.restic.sshKeyFile} -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/persist/etc/restic/known_hosts -s sftp'"
+                  # Host, user, host-key policy, and known-hosts path are all
+                  # host-supplied (restic.sftp.*) — this aspect is reused by
+                  # hosts with different SFTP targets and naming conventions,
+                  # so nothing here may be assumed from hostName or hardcoded.
+                  "sftp.command='ssh ${cfg.restic.sftp.user}@${cfg.restic.sftp.host} -i ${cfg.restic.sshKeyFile} -o StrictHostKeyChecking=${cfg.restic.sftp.strictHostKeyChecking} -o UserKnownHostsFile=${cfg.restic.sftp.knownHostsFile} -s sftp'"
                 ];
               pruneOpts = cfg.restic.pruneOpts;
               checkOpts = cfg.restic.checkOpts;

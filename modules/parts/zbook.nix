@@ -1,5 +1,14 @@
 # flake-parts module: assembles nixosConfigurations.zbook
 { config, inputs, ... }:
+let
+  # zbook enables aspects.homeManager.desktop (bitwarden-desktop, a Linux
+  # host), so unlike soyo (nixos.base's other consumer, headless/no
+  # desktop aspect) it needs the reviewed insecure-package exceptions. See
+  # lib/insecure-package-exceptions.nix for what/why, and
+  # lib/mk-nixpkgs-args.nix for why this is added here rather than baked
+  # into the shared nixos.base aspect soyo also imports.
+  insecurePackageExceptions = import ../../lib/insecure-package-exceptions.nix;
+in
 {
   flake.nixosConfigurations.zbook = inputs.nixpkgs-unstable.lib.nixosSystem {
     system = "x86_64-linux";
@@ -67,13 +76,22 @@
         { facter.reportPath = ../../hosts/zbook/facter.json; }
         {
           networking.hostName = "zbook";
-          nixpkgs.hostPlatform = "x86_64-linux";
           system.stateVersion = "26.11";
-          nixpkgs.overlays = [
-            (_: prev: {
-              dgop = inputs.dgop.packages.${prev.stdenv.hostPlatform.system}.default;
-            })
-          ];
+          nixpkgs = {
+            hostPlatform = "x86_64-linux";
+            overlays = [
+              (_: prev: {
+                dgop = inputs.dgop.packages.${prev.stdenv.hostPlatform.system}.default;
+              })
+            ];
+            # Separate `nixpkgs.config` definition from aspects.nixos.base's
+            # `nixpkgs.config = sharedNixpkgsArgs.config;` -- disjoint keys
+            # (base never sets permittedInsecurePackages when called with no
+            # args), so the module system's merge is unambiguous regardless
+            # of definition order. Soyo, the other nixos.base consumer, does
+            # not add this and so gets none of it.
+            config.permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
+          };
 
           age.rekey = {
             hostPubkey = ../../secrets/zbook.pub;

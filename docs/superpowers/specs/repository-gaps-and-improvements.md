@@ -7,6 +7,42 @@ This document is retained as a dated gap-analysis record. Its priorities and
 task list are frozen; current remediation ownership and ordering live only in
 the replacement plan.
 
+This section note (added 2026-07-23, task D1) reconciles the items below
+against the repository as it stands today, without rewriting the frozen
+prose itself:
+
+- **Closed since this document was written:** this document's C2 (CI never
+  built `darwinConfigurations.macbook`/`homeConfigurations.ubuntu`), H4
+  (`just deploy`/`just build-*` didn't cover macbook/ubuntu), H5 (host-role
+  invariants didn't cover macbook/ubuntu), and D-C3 (no automated
+  link/lifecycle checker) are all done: `.github/workflows/ci.yml` has
+  `build-macbook` and `build-ubuntu` jobs, `justfile`'s `deploy`/`build-macbook`/
+  `build-ubuntu` recipes exist, `checks.macbook-desktop-invariants` /
+  `checks.ubuntu-desktop-invariants` exist, and
+  `modules/parts/docs-checks.nix` (`checks.docs-correctness`) is the checker
+  this D1 task itself runs. This document's C1 was already resolved (by
+  direct `nix eval` verification) at the time this document was written, per
+  its own prose above. The 2026-07-23 replacement plan's separately-named H1
+  and H2 tasks (different scope than this document's H1/H2 below) closed the
+  macbook/ubuntu desktop-binding and runbook *content*-correctness gaps
+  (terminal, shell, tool-availability matrix); `docs/workstation-setup.md`'s
+  "Planned" labels were replaced with dated "assembler + CI evaluation only;
+  hardware deploy pending" status.
+- **Still genuinely open as of 2026-07-23:** this document's own H1
+  (`modules/darwin/` still has only `base.nix` — no darwin-native `ssh.nix`,
+  `tailscale.nix`, or `backup.nix` mirroring the NixOS aspects) and M1
+  (`dendritic-options` in `modules/parts/perSystem.nix` still only computes
+  `hostOpts` for `soyo`/`zbook`; macbook/ubuntu are not covered). H3 (M4
+  guest services) is not a defect at all — the canonical design
+  ([`soyo-dns-dhcp-appliance.md`](soyo-dns-dhcp-appliance.md#m4--expansion))
+  already records "future services on Soyo" as a deliberate deferral, and
+  `AGENTS.md`'s host status table marks Soyo's M4 as "deferred".
+- This record is **not** re-annotated item-by-item beyond this note — each
+  item below remains historical evidence of what was found on the date this
+  document was written, not a live status board. Consult
+  [`docs/learning/project-assessment.md`](../../learning/project-assessment.md)
+  and the replacement plan for current, dated status.
+
 ## Goal
 
 Close the structural and operational gaps identified in the repository
