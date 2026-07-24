@@ -52,5 +52,37 @@
       command-code = final.callPackage ../modules/_pkgs/command-code.nix { };
       gcx = final.callPackage ../modules/_pkgs/gcx.nix { };
     })
+
+    # Force dark mode in Electron apps to fix the white CSD title bar that
+    # Chromium's Wayland backend produces regardless of GTK color-scheme.
+    # Patches individual app wrappers (not the electron binary itself) to avoid
+    # invalidating caches for electron versions that fail to build from source
+    # on CI (electron-39). Upstream: https://github.com/electron/electron/issues/27016
+    (_: prev: {
+      signal-desktop = prev.signal-desktop.overrideAttrs (old: {
+        postFixup = (old.postFixup or "") + ''
+          substituteInPlace $out/bin/signal-desktop \
+            --replace-fail '"$@"' '--force-dark-mode "$@"'
+        '';
+      });
+      bitwarden-desktop = prev.bitwarden-desktop.overrideAttrs (old: {
+        postFixup = (old.postFixup or "") + ''
+          substituteInPlace $out/bin/bitwarden \
+            --replace-fail '"$@"' '--force-dark-mode "$@"'
+        '';
+      });
+      obsidian = prev.obsidian.overrideAttrs (old: {
+        postFixup = (old.postFixup or "") + ''
+          substituteInPlace $out/bin/obsidian \
+            --replace-fail '"$@"' '--force-dark-mode "$@"'
+        '';
+      });
+      freetube = prev.freetube.overrideAttrs (old: {
+        postFixup = (old.postFixup or "") + ''
+          substituteInPlace $out/bin/freetube \
+            --replace-fail '"$@"' '--force-dark-mode "$@"'
+        '';
+      });
+    })
   ];
 }
