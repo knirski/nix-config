@@ -52,5 +52,32 @@
       command-code = final.callPackage ../modules/_pkgs/command-code.nix { };
       gcx = final.callPackage ../modules/_pkgs/gcx.nix { };
     })
+
+    # Force dark mode in all Electron apps to fix the white CSD title bar
+    # that Chromium's Wayland backend produces regardless of GTK color-scheme.
+    # --force-dark-mode is a Chromium switch at the Electron level, upstream fix
+    # tracked at https://github.com/electron/electron/issues/27016.
+    (
+      _: prev:
+      let
+        wrapElectron =
+          name:
+          prev.${name}.overrideAttrs (old: {
+            postFixup = (old.postFixup or "") + ''
+              substituteInPlace $out/bin/electron \
+                --replace-fail '"$@"' '--force-dark-mode "$@"'
+            '';
+          });
+        electronNames = builtins.filter (name: builtins.match "^electron(_[0-9]+)?$" name != null) (
+          builtins.attrNames prev
+        );
+      in
+      builtins.listToAttrs (
+        map (name: {
+          inherit name;
+          value = wrapElectron name;
+        }) electronNames
+      )
+    )
   ];
 }
