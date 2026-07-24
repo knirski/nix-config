@@ -44,12 +44,19 @@
         services.xserver.videoDrivers = [ "nvidia" ];
 
         hardware = {
-          # Latest NVIDIA driver (from nixpkgs-unstable)
+          # Stable production-branch NVIDIA driver (595.x series).  The New
+          # Feature Branch (610.x) had an ABBA rw-semaphore deadlock in
+          # rm_acpi_nvpcf_notify (the ACPI handler for USB-C dock events)
+          # that blocks suspend and requires a cold power-cycle.
           nvidia = {
-            package = config.boot.kernelPackages.nvidiaPackages.latest;
+            package = config.boot.kernelPackages.nvidiaPackages.stable;
             modesetting.enable = true;
             nvidiaSettings = true;
             powerManagement.enable = true;
+            # TODO: finegrained = false was needed on driver 610.43.03 to work
+            # around an ABBA rw-semaphore deadlock in rm_acpi_nvpcf_notify.
+            # The stable 595.x branch may not have this bug — confirm and
+            # either drop this TODO or restore the workaround if it does.
             powerManagement.finegrained = true;
             open = false; # Proprietary driver (RTX 4000 Ada needs this)
             # In offload mode the GPU powers down — persistenced isn't needed
