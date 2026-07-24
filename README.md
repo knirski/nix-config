@@ -15,6 +15,8 @@ workstation—built as a practical guide to modern, readable Nix.
 | --- | --- | --- | --- |
 | **Soyo** | DNS and DHCP appliance | NixOS 26.05 | Production; Secure Boot enabled |
 | **zbook** | Desktop, gaming and backup client | nixpkgs unstable | Production; Secure Boot enabled |
+| **macbook** | Professional workstation (nix-darwin) | nixpkgs unstable | Assembler and CI evaluation/build only; hardware deploy pending |
+| **ubuntu** | Professional workstation (standalone Home Manager) | nixpkgs unstable | Assembler and CI evaluation/build only; hardware deploy pending |
 
 The diagram intentionally shows roles and trust flows, not a home-network
 inventory. See the [public repository data policy](docs/security/public-repository.md).
@@ -89,8 +91,9 @@ flake.nix
 └── tests/           named fixtures and executable behavior tests
 ```
 
-Start with `modules/parts/soyo.nix` or `modules/parts/zbook.nix` to see exactly
-which aspects build each host.
+Start with `modules/parts/soyo.nix`, `modules/parts/zbook.nix`,
+`modules/parts/macbook.nix` or `modules/parts/ubuntu.nix` to see exactly which
+aspects build each host.
 
 ## Scope
 
