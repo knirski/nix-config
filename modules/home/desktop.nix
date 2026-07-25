@@ -2,6 +2,69 @@
   aspects.homeManager.desktop =
     { pkgs, lib, ... }:
     {
+      home = {
+        sessionVariables =
+          # GTK_THEME=Adwaita:dark forces Electron's native menu bars
+          # (rendered via GTK widgets) to use the dark theme, which
+          # Adwaita-dark's CSS/theme settings in dconf don't reliably
+          # achieve in every display backend (XWayland vs Wayland).
+          # Applied globally so every Electron app picks it up without
+          # per-app wrapper patches. Harmless on non-Linux/macOS hosts
+          # (the env var is simply unused).
+          lib.mkIf pkgs.stdenv.isLinux {
+            GTK_THEME = "Adwaita:dark";
+          };
+
+        # Neovim clipboard integration (requires wl-clipboard on Wayland)
+        file.".config/nvim/after/plugin/clipboard.lua".text = ''
+          -- Only enable system clipboard on desktop sessions
+          if vim.env.DISPLAY or vim.env.WAYLAND_DISPLAY then
+            vim.opt.clipboard = "unnamedplus"
+          end
+        '';
+
+        packages =
+          with pkgs;
+          (
+            [
+              antigravity-cli
+              mpv
+              spotify
+            ]
+            ++ lib.optionals stdenv.isLinux [
+              bitwarden-desktop
+            ]
+          )
+          ++ lib.optionals stdenv.isLinux [
+            (writeShellApplication {
+              name = "disable-lid";
+              runtimeInputs = [ systemd ];
+              text = ''
+                exec systemd-inhibit \
+                  --what=handle-lid-switch \
+                  --who="disable-lid" \
+                  --why="Manual lid-close override" \
+                  sleep infinity
+              '';
+            })
+          ]
+          ++ lib.optionals stdenv.isLinux [
+            wl-clipboard
+            loupe
+            freetube
+            signal-desktop
+            grim
+            slurp
+            swappy
+            # Communication and media
+            thunderbird
+            obs-studio
+            gimp
+            inkscape
+            obsidian
+          ];
+      };
+
       programs = {
         zed-editor.enable = true;
         gh = {
@@ -21,59 +84,5 @@
       services.gpg-agent = lib.mkIf pkgs.stdenv.isLinux {
         pinentry.package = pkgs.pinentry-gnome3;
       };
-
-      # Neovim clipboard integration (requires wl-clipboard on Wayland)
-      home.file.".config/nvim/after/plugin/clipboard.lua".text = ''
-        -- Only enable system clipboard on desktop sessions
-        if vim.env.DISPLAY or vim.env.WAYLAND_DISPLAY then
-          vim.opt.clipboard = "unnamedplus"
-        end
-      '';
-
-      # Manual lid-close inhibitor.  Run `disable-lid` in a terminal before
-      # closing the laptop lid to keep the system awake (useful when moving
-      # between rooms while media is playing or a download is running).
-      # Cancel it with Ctrl+C — the inhibitor is released on script exit.
-      # Linux only — macOS manages lid behavior via pmset.
-      home.packages =
-        with pkgs;
-        (
-          [
-            antigravity-cli
-            mpv
-            spotify
-          ]
-          ++ lib.optionals stdenv.isLinux [
-            bitwarden-desktop
-          ]
-        )
-        ++ lib.optionals stdenv.isLinux [
-          (writeShellApplication {
-            name = "disable-lid";
-            runtimeInputs = [ systemd ];
-            text = ''
-              exec systemd-inhibit \
-                --what=handle-lid-switch \
-                --who="disable-lid" \
-                --why="Manual lid-close override" \
-                sleep infinity
-            '';
-          })
-        ]
-        ++ lib.optionals stdenv.isLinux [
-          wl-clipboard
-          loupe
-          freetube
-          signal-desktop
-          grim
-          slurp
-          swappy
-          # Communication and media
-          thunderbird
-          obs-studio
-          gimp
-          inkscape
-          obsidian
-        ];
     };
 }
