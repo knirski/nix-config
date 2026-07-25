@@ -25,30 +25,13 @@
 
         packages =
           with pkgs;
-          (
-            [
-              antigravity-cli
-              mpv
-              spotify
-            ]
-            ++ lib.optionals stdenv.isLinux [
-              bitwarden-desktop
-            ]
-          )
-          ++ lib.optionals stdenv.isLinux [
-            (writeShellApplication {
-              name = "disable-lid";
-              runtimeInputs = [ systemd ];
-              text = ''
-                exec systemd-inhibit \
-                  --what=handle-lid-switch \
-                  --who="disable-lid" \
-                  --why="Manual lid-close override" \
-                  sleep infinity
-              '';
-            })
+          [
+            antigravity-cli
+            mpv
+            spotify
           ]
           ++ lib.optionals stdenv.isLinux [
+            bitwarden-desktop
             wl-clipboard
             loupe
             freetube
@@ -62,6 +45,17 @@
             gimp
             inkscape
             obsidian
+            (writeShellApplication {
+              name = "disable-lid";
+              runtimeInputs = [ systemd ];
+              text = ''
+                exec systemd-inhibit \
+                  --what=handle-lid-switch \
+                  --who="disable-lid" \
+                  --why="Manual lid-close override" \
+                  sleep infinity
+              '';
+            })
           ];
       };
 
