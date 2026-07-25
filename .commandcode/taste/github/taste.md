@@ -5,3 +5,4 @@
 - Before blindly applying bot-generated PR review comments (from gemini-code-assist, coderabbitai, etc.), critically evaluate each comment for validity — not all automated suggestions are correct or worth applying. Confidence: 0.65
 - When CI is stuck on a non-substantive post-run cleanup step but all substantive job steps passed, prefer merging the PR directly rather than continuing to debug/cancel/rerun the CI infrastructure issue. Confidence: 0.65
 - When merging PRs, use `gh pr merge --squash` with a conventional-commit-formatted subject line and a detailed body explaining the changes, then clean up both local and remote branches. Confidence: 0.60
+- Keep PR descriptions in sync with the actual code on the branch — when code is removed, renamed, or modified after the initial PR description was written, update the description to accurately reflect the current state, removing references to code that no longer exists. Confidence: 0.70
