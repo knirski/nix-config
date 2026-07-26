@@ -28,13 +28,21 @@
         text = ''
           set -euo pipefail
           text=$(cat)
-          other=$([ "''${1:-}" = "--to-primary" ] && echo --primary || echo "")
+          # Build a `--primary`-only flag array so we never pass an empty
+          # string as a positional argument. `wl-copy ""` would interpret the
+          # empty string as the text to copy (and ignore stdin); `wl-paste ""`
+          # rejects the empty argument outright. See PR review thread for the
+          # original report.
+          opts=()
+          if [ "''${1:-}" = "--to-primary" ]; then
+            opts+=(--primary)
+          fi
           # Skip empty payloads (the selection has been cleared).
           [ -n "$text" ] || exit 0
-          current=$(wl-paste "$other" --no-newline 2>/dev/null || true)
+          current=$(wl-paste "''${opts[@]}" --no-newline 2>/dev/null || true)
           # Steady-state short-circuit — see the Nix-side comment above.
           [ "$text" != "$current" ] || exit 0
-          printf %s "$text" | wl-copy "$other"
+          printf %s "$text" | wl-copy "''${opts[@]}"
         '';
       };
     in
