@@ -227,9 +227,7 @@
       #
       # Selecting text anywhere copies it (PRIMARY → CLIPBOARD) and Ctrl+C
       # also populates PRIMARY for middle-click (CLIPBOARD → PRIMARY).
-      #
-      # `--type text` keeps image/file offers untouched so DMS still owns
-      # rich MIME handling. The protocol-level loop that would arise (
+      # The protocol-level loop that would arise (
       # PRIMARY → CLIPBOARD → PRIMARY → …) terminates naturally because
       # wlroots does not fire the watch event when the owning process
       # itself set the selection.
