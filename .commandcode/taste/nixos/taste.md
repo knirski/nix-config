@@ -81,6 +81,7 @@
 - Add DMS satellite tools as flake inputs: `dsearch` (`github:AvengeMedia/danksearch`, HM module available as `inputs.dsearch.homeModules.default`) and `dcal` (`github:AvengeMedia/dankcalendar`). Confidence: 0.60
 - Add the DMS plugin registry (`github:AvengeMedia/dms-plugin-registry`) as a flake input for community plugins. Confidence: 0.60
 - Use `nix fmt` before committing to satisfy treefmt pre-commit hooks — the project requires formatted files before git operations. Confidence: 0.75
+- When multiple `systemd.user.services.X = { … };` declarations exist in the same file, collapse them into a single `systemd.user.services = { … };` nested attrset block — statix W:20 enforces this and CI will reject non-compliant code. Confidence: 0.9
 
 # sway/dms
 - Prefer Home Manager managing DMS settings declaratively via `settings` block over letting DMS own the `settings.json` file at runtime; HM-managed means DMS GUI changes get wiped on deploy, but the user explicitly chose this trade-off. Confidence: 0.82
@@ -88,3 +89,10 @@
 - When DMS is the shell, disable the Sway bar by adding `bars = [ ]` to the Sway config or `bar { status_command false }` in `extraConfig` to avoid having two bars active. User explicitly said "I want to disable sway bar - DMS bar is enough". Confidence: 0.75
 - HM `programs.<name>.enable` auto-installs the package — do NOT add a redundant entry in `home.packages`. User corrected that `starship` didn't need to be in both places after `programs.starship.enable = true` was set. Confidence: 0.70
 - In multi-host NixOS flakes, define explicit machine roles/profiles with a clear taxonomy (e.g., `LAN appliance`, `workstation/gaming laptop`, `professional workstation laptop`) and document the role-to-aspect mapping in a host table — roles are a conceptual/documentation abstraction, not a code abstraction, with the host assembler's aspect selection being the real differentiation. Confidence: 0.65
+- The repo has a `modules/parts/clipboard-protocol-check.nix` file that validates clipboard protocol-level invariants (e.g., PRIMARY independence) — reference it when adding clipboard-related services. Confidence: 0.90
+- Bidirectional PRIMARY↔CLIPBOARD sync has no existing NixOS service or packaged tool in the Nix ecosystem; the closest reference is the ArchWiki one-way pattern (`wl-paste --primary --watch wl-copy`). Our bidirectional extension is novel but built on the well-trodden one-way primitive. Confidence: 0.90
+- `wl-clip-persist` with `--clipboard both` is orthogonal to the bidirectional bridge — it preserves each selection independently and doesn't conflict with `wl-paste --watch` mirroring. Confidence: 0.85
+- DMS (DankMaterialShell) does not have built-in PRIMARY↔CLIPBOARD sync — it watches only the regular clipboard via `ext-data-control-v1`. Our bridge fills a gap DMS doesn't address. Confidence: 0.90
+- The Wayland Ricing Guide §125.6 is the canonical reference for bidirectional PRIMARY↔CLIPBOARD sync on Wayland, recommending `wl-paste --watch wl-copy --primary &` and `wl-paste --primary --watch wl-copy &` — both directions without loop prevention, considered safe in practice. Confidence: 0.85
+- `vanillacode314/stow-dotfiles` implements the bidirectional bridge pattern as a shell script (`wl-paste -p --watch wl-copy &` / `wl-paste --watch wl-copy -p`), confirming the pattern exists in real dotfiles. Confidence: 0.80
+- `darkone-linux/darkone-nixos-framework` has the exact bridge pattern (`wl-paste --primary --watch wl-copy`) but disabled with a TODO comment: "Watch mode requires a compositor that supports the data-control protocol" — this confirms the protocol dependency is real and that Sway (which supports `wlr-data-control-unstable-v1`) is safe. Confidence: 0.80
