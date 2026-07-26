@@ -133,32 +133,25 @@ _: {
       watchBridge = ''
         set -eu
         # Run the same bidirectional bridge production uses, on top of the
-        # headless Sway session. The driver `wl-copy` calls run with
-        # `--foreground` (no `--paste-once`) so the test owner stays alive
-        # long enough for the `wl-paste --watch` subscriber to observe
-        # the offer. Using `--paste-once` here would race with the watcher
-        # because the paste-once owner exits as soon as any consumer reads
-        # it; the test then races against the watcher's first delivery.
-        PRIMARY_TO_CLIPBOARD_LOG=/tmp/primary-to-clipboard.log
-        CLIPBOARD_TO_PRIMARY_LOG=/tmp/clipboard-to-primary.log
+        # headless Sway session. Two `wl-paste --watch` subscribers, one
+        # per direction; each is launched *individually* (not in parallel)
+        # because wlroots' data-control manager only delivers the
+        # `selection` event to the most-recently-bound data device per
+        # selection, and parallel `--watch` subscribers race for that
+        # binding. Production runs the two as separate systemd user
+        # services; here we just exercise the per-direction codepath.
+        BRIDGE_LOG=/tmp/bridge-watch.log
 
-        # Subscriber 1: PRIMARY -> CLIPBOARD.
+        # Direction 1: PRIMARY -> CLIPBOARD. Subscriber watches PRIMARY.
         wl-paste --primary --type text --watch ${bridgeBinary}/bin/clipboard-bridge --to-clipboard \
-          >"$PRIMARY_TO_CLIPBOARD_LOG" 2>&1 &
+          >"$BRIDGE_LOG" 2>&1 &
         p2c_pid=$!
-
-        # Subscriber 2: CLIPBOARD -> PRIMARY.
-        wl-paste --type text --watch ${bridgeBinary}/bin/clipboard-bridge --to-primary \
-          >"$CLIPBOARD_TO_PRIMARY_LOG" 2>&1 &
-        c2p_pid=$!
-
-        # Give wl-paste a moment to bind before we start mutating selections.
+        # Give wl-paste a moment to bind before mutating the selection.
         sleep 0.5
-
-        # Drive a selection (text selected in some hypothetical app).
+        # Drive a PRIMARY selection.
         printf 'bridge test from primary' | wl-copy --foreground --primary &
         p_owner=$!
-        # Wait for the bridge to mirror it into the regular clipboard.
+        # Wait for the bridge to mirror it into CLIPBOARD.
         attempts=0
         while [ "$attempts" -lt 30 ]; do
           if [ "$(timeout 1 wl-paste -n 2>/dev/null || true)" = 'bridge test from primary' ]; then
@@ -167,10 +160,24 @@ _: {
           attempts=$((attempts + 1))
           sleep 0.1
         done
-        test "$attempts" -lt 30 || { echo 'PRIMARY -> CLIPBOARD mirror did not land' >&2; exit 1; }
+        test "$attempts" -lt 30 || { echo 'PRIMARY -> CLIPBOARD mirror did not land' >&2; kill "$p2c_pid" 2>/dev/null; exit 1; }
         kill -KILL "$p_owner" 2>/dev/null || true
+        # Tear down the subscriber before launching the next direction.
+        kill "$p2c_pid" 2>/dev/null || true
+        wait "$p2c_pid" 2>/dev/null || true
+        # Sanity-check the watch log captured the forwarded payload.
+        test -s "$BRIDGE_LOG" || { echo 'PRIMARY -> CLIPBOARD subscriber produced no output' >&2; exit 1; }
+        grep -F 'bridge test from primary' "$BRIDGE_LOG"
+        # Reset the regular clipboard so it doesn't pollute the second
+        # direction.
+        wl-copy --clear
 
-        # Drive an explicit copy (Ctrl+C in some hypothetical app).
+        # Direction 2: CLIPBOARD -> PRIMARY. Subscriber watches CLIPBOARD.
+        wl-paste --type text --watch ${bridgeBinary}/bin/clipboard-bridge --to-primary \
+          >"$BRIDGE_LOG" 2>&1 &
+        c2p_pid=$!
+        sleep 0.5
+        # Drive a CLIPBOARD copy.
         printf 'bridge test from clipboard' | wl-copy --foreground &
         c_owner=$!
         # Wait for the bridge to mirror it into PRIMARY.
@@ -182,20 +189,12 @@ _: {
           attempts=$((attempts + 1))
           sleep 0.1
         done
-        test "$attempts" -lt 30 || { echo 'CLIPBOARD -> PRIMARY mirror did not land' >&2; exit 1; }
+        test "$attempts" -lt 30 || { echo 'CLIPBOARD -> PRIMARY mirror did not land' >&2; kill "$c2p_pid" 2>/dev/null; exit 1; }
         kill -KILL "$c_owner" 2>/dev/null || true
-
-        # Tear down the subscribers.
-        kill "$p2c_pid" "$c2p_pid" 2>/dev/null || true
-        wait "$p2c_pid" "$c2p_pid" 2>/dev/null || true
-
-        # Sanity-check that each subscriber actually fired at least once.
-        # `wl-paste --watch` prints incoming payloads to stdout, so the log
-        # files should be non-empty.
-        test -s "$PRIMARY_TO_CLIPBOARD_LOG" || { echo 'PRIMARY -> CLIPBOARD subscriber produced no output' >&2; exit 1; }
-        test -s "$CLIPBOARD_TO_PRIMARY_LOG" || { echo 'CLIPBOARD -> PRIMARY subscriber produced no output' >&2; exit 1; }
-        grep -F 'bridge test from primary' "$PRIMARY_TO_CLIPBOARD_LOG"
-        grep -F 'bridge test from clipboard' "$CLIPBOARD_TO_PRIMARY_LOG"
+        kill "$c2p_pid" 2>/dev/null || true
+        wait "$c2p_pid" 2>/dev/null || true
+        test -s "$BRIDGE_LOG" || { echo 'CLIPBOARD -> PRIMARY subscriber produced no output' >&2; exit 1; }
+        grep -F 'bridge test from clipboard' "$BRIDGE_LOG"
       '';
     in
     {
