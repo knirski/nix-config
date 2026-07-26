@@ -27,7 +27,13 @@
         runtimeInputs = [ pkgs.wl-clipboard ];
         text = ''
           set -euo pipefail
-          text=$(cat)
+          # Read the incoming selection payload verbatim. `text=$(cat)` would
+          # strip every trailing newline, so we append a sentinel `x` before
+          # the command substitution and peel it off afterwards. This keeps
+          # the steady-state equality check below exact for selections that
+          # end in one or more newlines (e.g. multi-line code selections).
+          text=$(cat && printf x)
+          text=${text%x}
           # Build a `--primary`-only flag array so we never pass an empty
           # string as a positional argument. `wl-copy ""` would interpret the
           # empty string as the text to copy (and ignore stdin); `wl-paste ""`
@@ -39,7 +45,8 @@
           fi
           # Skip empty payloads (the selection has been cleared).
           [ -n "$text" ] || exit 0
-          current=$(wl-paste "''${opts[@]}" --no-newline 2>/dev/null || true)
+          current=$(wl-paste "''${opts[@]}" 2>/dev/null && printf x || true)
+          current=${current%x}
           # Steady-state short-circuit — see the Nix-side comment above.
           [ "$text" != "$current" ] || exit 0
           printf %s "$text" | wl-copy "''${opts[@]}"

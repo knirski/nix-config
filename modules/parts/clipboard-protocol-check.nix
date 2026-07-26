@@ -96,6 +96,107 @@ _: {
         ! timeout 5 wl-paste -n 2>/dev/null
         kill -KILL "$copy_pid" 2>/dev/null || true
       '';
+      # Bridge subtest: re-derive the same `clipboard-bridge` script the
+      # sway.nix aspect builds, then drive it from `wl-paste --watch` in
+      # both directions. This is the test that justifies the production
+      # systemd service pair: it proves the data-control protocol's
+      # `--watch` codepath actually delivers new offers to a long-lived
+      # subscriber, not just the `--paste-once` codepath the four
+      # protocol-level subtests above exercise.
+      #
+      # The script is rebuilt here verbatim (with the same shape as
+      # `modules/home/sway.nix`) so this test stays self-contained: it
+      # does not depend on the home-manager activation package, the
+      # NixOS service unit, or the `services.xserver.videoDrivers`
+      # configuration that the production closure carries.
+      bridgeBinary = pkgs.writeShellApplication {
+        name = "clipboard-bridge";
+        runtimeInputs = [ pkgs.wl-clipboard ];
+        # Mirror the production bridge verbatim so this test exercises the
+        # same shell code that runs in the user systemd service. Drift here
+        # would silently invalidate the KVM check.
+        text = ''
+          set -euo pipefail
+          text=$(cat && printf x)
+          text=''${text%x}
+          opts=()
+          if [ "''${1:-}" = "--to-primary" ]; then
+            opts+=(--primary)
+          fi
+          [ -n "$text" ] || exit 0
+          current=$(wl-paste "''${opts[@]}" 2>/dev/null && printf x || true)
+          current=''${current%x}
+          [ "$text" != "$current" ] || exit 0
+          printf %s "$text" | wl-copy "''${opts[@]}"
+        '';
+      };
+      watchBridge = ''
+        set -eu
+        # Run the same bidirectional bridge production uses, on top of the
+        # headless Sway session. The driver `wl-copy` calls run with
+        # `--foreground` (no `--paste-once`) so the test owner stays alive
+        # long enough for the `wl-paste --watch` subscriber to observe
+        # the offer. Using `--paste-once` here would race with the watcher
+        # because the paste-once owner exits as soon as any consumer reads
+        # it; the test then races against the watcher's first delivery.
+        PRIMARY_TO_CLIPBOARD_LOG=/tmp/primary-to-clipboard.log
+        CLIPBOARD_TO_PRIMARY_LOG=/tmp/clipboard-to-primary.log
+
+        # Subscriber 1: PRIMARY -> CLIPBOARD.
+        wl-paste --primary --type text --watch ${bridgeBinary}/bin/clipboard-bridge --to-clipboard \
+          >"$PRIMARY_TO_CLIPBOARD_LOG" 2>&1 &
+        p2c_pid=$!
+
+        # Subscriber 2: CLIPBOARD -> PRIMARY.
+        wl-paste --type text --watch ${bridgeBinary}/bin/clipboard-bridge --to-primary \
+          >"$CLIPBOARD_TO_PRIMARY_LOG" 2>&1 &
+        c2p_pid=$!
+
+        # Give wl-paste a moment to bind before we start mutating selections.
+        sleep 0.5
+
+        # Drive a selection (text selected in some hypothetical app).
+        printf 'bridge test from primary' | wl-copy --foreground --primary &
+        p_owner=$!
+        # Wait for the bridge to mirror it into the regular clipboard.
+        attempts=0
+        while [ "$attempts" -lt 30 ]; do
+          if [ "$(timeout 1 wl-paste -n 2>/dev/null || true)" = 'bridge test from primary' ]; then
+            break
+          fi
+          attempts=$((attempts + 1))
+          sleep 0.1
+        done
+        test "$attempts" -lt 30 || { echo 'PRIMARY -> CLIPBOARD mirror did not land' >&2; exit 1; }
+        kill -KILL "$p_owner" 2>/dev/null || true
+
+        # Drive an explicit copy (Ctrl+C in some hypothetical app).
+        printf 'bridge test from clipboard' | wl-copy --foreground &
+        c_owner=$!
+        # Wait for the bridge to mirror it into PRIMARY.
+        attempts=0
+        while [ "$attempts" -lt 30 ]; do
+          if [ "$(timeout 1 wl-paste --primary -n 2>/dev/null || true)" = 'bridge test from clipboard' ]; then
+            break
+          fi
+          attempts=$((attempts + 1))
+          sleep 0.1
+        done
+        test "$attempts" -lt 30 || { echo 'CLIPBOARD -> PRIMARY mirror did not land' >&2; exit 1; }
+        kill -KILL "$c_owner" 2>/dev/null || true
+
+        # Tear down the subscribers.
+        kill "$p2c_pid" "$c2p_pid" 2>/dev/null || true
+        wait "$p2c_pid" "$c2p_pid" 2>/dev/null || true
+
+        # Sanity-check that each subscriber actually fired at least once.
+        # `wl-paste --watch` prints incoming payloads to stdout, so the log
+        # files should be non-empty.
+        test -s "$PRIMARY_TO_CLIPBOARD_LOG" || { echo 'PRIMARY -> CLIPBOARD subscriber produced no output' >&2; exit 1; }
+        test -s "$CLIPBOARD_TO_PRIMARY_LOG" || { echo 'CLIPBOARD -> PRIMARY subscriber produced no output' >&2; exit 1; }
+        grep -F 'bridge test from primary' "$PRIMARY_TO_CLIPBOARD_LOG"
+        grep -F 'bridge test from clipboard' "$CLIPBOARD_TO_PRIMARY_LOG"
+      '';
     in
     {
       checks.${kvmChecks.clipboardProtocols} = runKvmTest {
@@ -155,6 +256,9 @@ _: {
 
           with subtest("regular clipboard can be cleared"):
               machine.succeed("${asClient clearClipboard}")
+
+          with subtest("bidirectional PRIMARY <-> CLIPBOARD bridge via wl-paste --watch"):
+              machine.succeed("${asClient watchBridge}")
 
           machine.succeed("test -S ${runtimeDir}/wayland-test")
         '';
