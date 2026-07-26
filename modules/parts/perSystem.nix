@@ -137,6 +137,7 @@
           };
         };
       };
+
       treefmt.config = {
         projectRootFile = "flake.nix";
         programs.nixfmt.enable = true;
@@ -201,6 +202,34 @@
       };
 
       checks = {
+        # Override git-hooks.nix's pre-commit check to use a source tree
+        # that has no `.git` pointer file. The upstream `flakeModule`
+        # sets `pre-commit.settings.rootSrc = self.outPath`, which is the
+        # unfiltered flake source. When the flake is consumed from inside
+        # a git worktree, that source tree contains a `.git` *file* (not
+        # directory) with `gitdir: .../.git/worktrees/<name>`. Inside the
+        # Nix sandbox the `git init` step sees that `.git` file, follows
+        # the `gitdir:` line, and tries to read the worktree metadata at
+        # a path that does not exist in the sandbox -- so it refuses with
+        # `fatal: not a git repository: .../.git/worktrees/<name>`.
+        # `pkgs.lib.cleanSource` strips the `.git` file and the rest of
+        # the VCS metadata, so the sandbox starts from a plain directory
+        # the same way CI's fresh-checkout source does. Pure CI usage is
+        # unaffected (CI's source has no `.git` either, the run uses
+        # action/checkout which doesn't write the pointer file).
+        #
+        # We use `config.pre-commit.settings.run` as the upstream
+        # derivation, not `config.checks.pre-commit`, because flake-parts
+        # evaluates the option being defined as part of itself, and
+        # `config.checks.pre-commit.overrideAttrs` recurses infinitely.
+        # `lib.mkForce` wins the merge conflict against the upstream
+        # `flakeModule`'s `checks.pre-commit = cfg.settings.run`.
+        pre-commit = pkgs.lib.mkForce (
+          config.pre-commit.settings.run.overrideAttrs (_: {
+            src = pkgs.lib.cleanSource inputs.self;
+          })
+        );
+
         # `path:.` includes local VCS metadata, unlike the normal Git flake
         # source used by CI. Filter it before treefmt so a generated hook under
         # `.git/` can never become formatting input or a sandbox dependency.
