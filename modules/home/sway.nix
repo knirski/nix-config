@@ -33,7 +33,7 @@
           # the steady-state equality check below exact for selections that
           # end in one or more newlines (e.g. multi-line code selections).
           text=$(cat && printf x)
-          text=${text%x}
+          text=''${text%x}
           # Build a `--primary`-only flag array so we never pass an empty
           # string as a positional argument. `wl-copy ""` would interpret the
           # empty string as the text to copy (and ignore stdin); `wl-paste ""`
@@ -46,7 +46,7 @@
           # Skip empty payloads (the selection has been cleared).
           [ -n "$text" ] || exit 0
           current=$(wl-paste "''${opts[@]}" 2>/dev/null && printf x || true)
-          current=${current%x}
+          current=''${current%x}
           # Steady-state short-circuit — see the Nix-side comment above.
           [ "$text" != "$current" ] || exit 0
           printf %s "$text" | wl-copy "''${opts[@]}"
