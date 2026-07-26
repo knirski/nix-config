@@ -52,6 +52,14 @@ Host assemblers (in `modules/parts/`) toggle aspects by name via `with config.as
 4. If it needs a LAN hostname, add it to `hosts/soyo/reservations.nix`.
 5. Back up its state via restic. Bulk data on NAS over NFS.
 6. Reassess RAM/CPU headroom and outage blast radius.
+7. **Stage new files before evaluation.** `import-tree` scans the filesystem — newly created `.nix` files under `modules/` won't be discovered until `git add` stages them. Run `git add modules/nixos/<name>.nix` before `nix flake check` or `just deploy`.
+
+### General runtimes vs role aspects
+
+Don't bundle role-neutral runtimes (Node.js, Python, language servers) into role aspects like `desktop` or `server`. A runtime is a general-purpose capability — it may serve backends on soyo *and* developer tooling on zbook. Make it a standalone opt-in aspect (`modules/nixos/<name>.nix`) so each host assembler toggles it independently.
+
+Existing examples:
+- `aspects.nixos.nodejs` (`modules/nixos/nodejs.nix`) — Node.js, bun, pnpm, yarn. Enabled on zbook; eligible for soyo if a backend needs it.
 
 ## Secrets
 
