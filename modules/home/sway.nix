@@ -288,31 +288,32 @@
       # KVM-backed invariant that proves this. Some compositors (notably
       # Mutter/GNOME) do not, which is why darkone-nixos-framework left the
       # same bridge commented out with a TODO.
-      systemd.user.services.clipboard-primary-sync = {
-        Unit = {
-          Description = "Copy PRIMARY text to CLIPBOARD";
-          After = [ "graphical-session.target" ];
-          PartOf = [ "graphical-session.target" ];
+      systemd.user.services = {
+        clipboard-primary-sync = {
+          Unit = {
+            Description = "Copy PRIMARY text to CLIPBOARD";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --primary --type text --watch ${clipboardBridge}/bin/clipboard-bridge --to-clipboard";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
         };
-        Service = {
-          ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --primary --type text --watch ${clipboardBridge}/bin/clipboard-bridge --to-clipboard";
-          Restart = "on-failure";
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
 
-      systemd.user.services.clipboard-clipboard-sync = {
-        Unit = {
-          Description = "Copy CLIPBOARD text to PRIMARY";
-          After = [ "graphical-session.target" ];
-          PartOf = [ "graphical-session.target" ];
+        clipboard-clipboard-sync = {
+          Unit = {
+            Description = "Copy CLIPBOARD text to PRIMARY";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${clipboardBridge}/bin/clipboard-bridge --to-primary";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
         };
-        Service = {
-          ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${clipboardBridge}/bin/clipboard-bridge --to-primary";
-          Restart = "on-failure";
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
 
       # Inhibit system sleep while any MPRIS media player (Spotify, etc.)
       # is actively playing.  Without this, DMS's acSuspendTimeout fires
@@ -322,52 +323,53 @@
       # playback is detected, and kills it when playback stops.  This avoids
       # the race window of the per-iteration pattern where the inhibitor
       # lock is briefly released between polling cycles.
-      systemd.user.services.media-sleep-inhibit = {
-        Unit = {
-          Description = "Inhibit sleep while MPRIS media is playing";
-          After = [ "graphical-session.target" ];
-          PartOf = [ "graphical-session.target" ];
-        };
-        Service = {
-          ExecStart = "${
-            pkgs.writeShellApplication {
-              name = "media-sleep-inhibit";
-              runtimeInputs = [
-                pkgs.playerctl
-                pkgs.systemd
-              ];
-              text = ''
-                INTERVAL=15
-                inhibitor_pid=""
+        media-sleep-inhibit = {
+          Unit = {
+            Description = "Inhibit sleep while MPRIS media is playing";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${
+              pkgs.writeShellApplication {
+                name = "media-sleep-inhibit";
+                runtimeInputs = [
+                  pkgs.playerctl
+                  pkgs.systemd
+                ];
+                text = ''
+                  INTERVAL=15
+                  inhibitor_pid=""
 
-                cleanup() {
-                  if [ -n "$inhibitor_pid" ]; then
-                    kill "$inhibitor_pid" 2>/dev/null || true
-                  fi
-                }
-                trap cleanup EXIT
-
-                while true; do
-                  if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
-                    if [ -z "$inhibitor_pid" ]; then
-                      systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
-                      inhibitor_pid=$!
-                    fi
-                  else
+                  cleanup() {
                     if [ -n "$inhibitor_pid" ]; then
                       kill "$inhibitor_pid" 2>/dev/null || true
-                      wait "$inhibitor_pid" 2>/dev/null || true
-                      inhibitor_pid=""
                     fi
-                  fi
-                  sleep "$INTERVAL"
-                done
-              '';
-            }
-          }/bin/media-sleep-inhibit";
-          Restart = "on-failure";
+                  }
+                  trap cleanup EXIT
+
+                  while true; do
+                    if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
+                      if [ -z "$inhibitor_pid" ]; then
+                        systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
+                        inhibitor_pid=$!
+                      fi
+                    else
+                      if [ -n "$inhibitor_pid" ]; then
+                        kill "$inhibitor_pid" 2>/dev/null || true
+                        wait "$inhibitor_pid" 2>/dev/null || true
+                        inhibitor_pid=""
+                      fi
+                    fi
+                    sleep "$INTERVAL"
+                  done
+                '';
+              }
+            }/bin/media-sleep-inhibit";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
         };
-        Install.WantedBy = [ "graphical-session.target" ];
       };
 
       services.wlsunset = {
