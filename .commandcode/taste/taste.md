@@ -4,10 +4,7 @@ See [github/taste.md](github/taste.md)
 - For macOS tiling window management on nix-darwin hosts, use Aerospace (not yabai/skhd, Rectangle, or other alternatives) — the user wants max similarity with their Sway setup. Confidence: 0.55
 
 # general
-- When adding new cross-platform hosts (macOS, Ubuntu Linux), maximize desktop experience parity with existing NixOS hosts (zbook's Sway+DMS+Kitty+Starship+Zsh setup) to the extent sensible given platform constraints — prefer equivalent tools (Aerospace over Mac native tiling, DMS on all platforms, same shell/terminal/prompt/config) rather than diverging to platform-native defaults. Confidence: 0.65
-- Prefer precise, targeted fixes over broad workarounds — identify exactly which UI layer is broken (e.g., native menu bar via GTK vs. web content via Chromium's blink renderer) and fix only that layer. Don't apply workarounds for symptoms that don't exist. Confidence: 0.75
-- When fixing Electron app theming issues (dark theme not applying to menu bars, title bars, etc.), prefer a single global user session environment variable (e.g., `GTK_THEME=Adwaita:dark`) over patching each Electron app's wrapper script individually via Nixpkgs overlays/overrideAttrs. The global env var covers all apps at once, requires zero per-app maintenance, and is simpler to reason about. Confidence: 0.95
-
+See [general/taste.md](general/taste.md)
 # Taste (Continuously Learned by [CommandCode][cmd])
 
 [cmd]: https://commandcode.ai/
