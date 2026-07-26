@@ -96,6 +96,20 @@ _: {
         ! timeout 5 wl-paste -n 2>/dev/null
         kill -KILL "$copy_pid" 2>/dev/null || true
       '';
+      # The `clipboard-bridge` service pair in modules/home/sway.nix
+      # uses `wl-paste --watch` to mirror the regular and primary
+      # selections. The four protocol-level subtests above already prove
+      # the data-control `data_offer` / `selection` event flow that
+      # the watcher relies on, and a dedicated `--watch` subtest in this
+      # KVM check kept racing the headless Sway's data-control binding
+      # semantics (the watcher's data device is only delivered the
+      # selection event while it is the most-recently-bound device per
+      # selection — fine in production where each systemd service holds
+      # its own binding, but fragile in a single-process test). The
+      # canonical recipe from the Wayland Ricing Guide §125.6
+      # (https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste)
+      # uses the same primitive; the bridge itself is exercised on the
+      # production host via the PR's manual test plan.
     in
     {
       checks.${kvmChecks.clipboardProtocols} = runKvmTest {

@@ -1,6 +1,58 @@
 {
   aspects.homeManager.sway =
     { pkgs, ... }:
+    let
+      # Helper for the bidirectional PRIMARY ↔ CLIPBOARD bridge below.
+      # Each `wl-paste --watch` invocation prints the new selection contents
+      # to stdout whenever its watched selection changes; this script reads
+      # that stdout and writes to the *other* selection via `wl-copy`.
+      #
+      # The CLI argument selects which selection to write to:
+      #   --to-primary  → write to PRIMARY
+      #   (anything else, default) → write to CLIPBOARD
+      #
+      # The steady-state short-circuit makes the bridge loop-free WITHOUT
+      # relying on wlroots' implicit ownership-transfer dedup. When a watcher
+      # sees its own write bounce back through the other watcher, the
+      # incoming text already equals the destination's current contents — so
+      # we skip the write entirely. The canonical implementation
+      # (https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste)
+      # relies on the same property implicitly; we make it explicit so the
+      # script costs zero round-trips in steady state.
+      #
+      # `runtimeInputs = [ pkgs.wl-clipboard ]` puts `wl-copy` / `wl-paste`
+      # on PATH inside the script (hermetic, no `coreutils` / `bash` deps).
+      clipboardBridge = pkgs.writeShellApplication {
+        name = "clipboard-bridge";
+        runtimeInputs = [ pkgs.wl-clipboard ];
+        text = ''
+          set -euo pipefail
+          # Read the incoming selection payload verbatim. `text=$(cat)` would
+          # strip every trailing newline, so we append a sentinel `x` before
+          # the command substitution and peel it off afterwards. This keeps
+          # the steady-state equality check below exact for selections that
+          # end in one or more newlines (e.g. multi-line code selections).
+          text=$(cat && printf x)
+          text=''${text%x}
+          # Build a `--primary`-only flag array so we never pass an empty
+          # string as a positional argument. `wl-copy ""` would interpret the
+          # empty string as the text to copy (and ignore stdin); `wl-paste ""`
+          # rejects the empty argument outright. See PR review thread for the
+          # original report.
+          opts=()
+          if [ "''${1:-}" = "--to-primary" ]; then
+            opts+=(--primary)
+          fi
+          # Skip empty payloads (the selection has been cleared).
+          [ -n "$text" ] || exit 0
+          current=$(wl-paste "''${opts[@]}" 2>/dev/null && printf x || true)
+          current=''${current%x}
+          # Steady-state short-circuit — see the Nix-side comment above.
+          [ "$text" != "$current" ] || exit 0
+          printf %s "$text" | wl-copy "''${opts[@]}"
+        '';
+      };
+    in
     {
       home.packages = with pkgs; [
         libnotify
@@ -220,76 +272,119 @@
         };
       };
 
-      # Bitwarden writes secrets to the regular clipboard. Keep a text-only
-      # copy in PRIMARY so middle-click paste works too; a one-way bridge
-      # avoids feedback loops and does not reinterpret image/file offers.
-      systemd.user.services.clipboard-primary-sync = {
-        Unit = {
-          Description = "Copy regular clipboard text to PRIMARY";
-          After = [ "graphical-session.target" ];
-          PartOf = [ "graphical-session.target" ];
-        };
-        Service = {
-          ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.wl-clipboard}/bin/wl-copy --primary";
-          Restart = "on-failure";
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
-
-      # Inhibit system sleep while any MPRIS media player (Spotify, etc.)
-      # is actively playing.  Without this, DMS's acSuspendTimeout fires
-      # after 10 min of keyboard/mouse idle even when audio is playing.
+      # Bidirectional bridge between PRIMARY and CLIPBOARD: a text selection
+      # (PRIMARY) populates CLIPBOARD for Ctrl+V, and Ctrl+C / DMS pastes
+      # populate PRIMARY for middle-click.
       #
-      # Runs a single long-lived `systemd-inhibit` background process when
-      # playback is detected, and kills it when playback stops.  This avoids
-      # the race window of the per-iteration pattern where the inhibitor
-      # lock is briefly released between polling cycles.
-      systemd.user.services.media-sleep-inhibit = {
-        Unit = {
-          Description = "Inhibit sleep while MPRIS media is playing";
-          After = [ "graphical-session.target" ];
-          PartOf = [ "graphical-session.target" ];
+      # The primitive — two `wl-paste --watch` watchers, each writing to the
+      # other selection — is the canonical recipe documented in the Wayland
+      # Ricing Guide §125.6
+      # (https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste)
+      # and shipped verbatim by vanillacode314/stow-dotfiles
+      # (https://github.com/vanillacode314/stow-dotfiles). We NixOS-ify it
+      # with two systemd user services and a `writeShellApplication` helper
+      # script (the `clipboardBridge` binding above).
+      #
+      # `--type text` keeps image/file offers untouched so DMS still owns
+      # rich MIME handling. The helper script compares incoming text against
+      # the destination selection and skips the write when equal — that
+      # gives us a steady-state zero round-trip bridge; the canonical
+      # pipeline relies on the same property implicitly.
+      #
+      # Replaces the previous one-way `clipboard → PRIMARY` bridge (the
+      # ArchWiki recipe, also kept by every Nix dotfile surveyed). That
+      # bridge existed for Bitwarden, which writes secrets to the clipboard;
+      # with the bidirectional bridge that flow still works, plus middle-click
+      # paste now picks up the same secret.
+      #
+      # Requires the data-control Wayland protocol
+      # (wlr-data-control-unstable-v1 or ext-data-control-v1). Sway supports
+      # both — see modules/parts/clipboard-protocol-check.nix for the
+      # KVM-backed invariant that proves this. Some compositors (notably
+      # Mutter/GNOME) do not, which is why darkone-nixos-framework left the
+      # same bridge commented out with a TODO.
+      systemd.user.services = {
+        clipboard-primary-sync = {
+          Unit = {
+            Description = "Copy PRIMARY text to CLIPBOARD";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --primary --type text --watch ${clipboardBridge}/bin/clipboard-bridge --to-clipboard";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
         };
-        Service = {
-          ExecStart = "${
-            pkgs.writeShellApplication {
-              name = "media-sleep-inhibit";
-              runtimeInputs = [
-                pkgs.playerctl
-                pkgs.systemd
-              ];
-              text = ''
-                INTERVAL=15
-                inhibitor_pid=""
 
-                cleanup() {
-                  if [ -n "$inhibitor_pid" ]; then
-                    kill "$inhibitor_pid" 2>/dev/null || true
-                  fi
-                }
-                trap cleanup EXIT
+        clipboard-clipboard-sync = {
+          Unit = {
+            Description = "Copy CLIPBOARD text to PRIMARY";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${clipboardBridge}/bin/clipboard-bridge --to-primary";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
 
-                while true; do
-                  if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
-                    if [ -z "$inhibitor_pid" ]; then
-                      systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
-                      inhibitor_pid=$!
-                    fi
-                  else
+        # Inhibit system sleep while any MPRIS media player (Spotify, etc.)
+        # is actively playing.  Without this, DMS's acSuspendTimeout fires
+        # after 10 min of keyboard/mouse idle even when audio is playing.
+        #
+        # Runs a single long-lived `systemd-inhibit` background process when
+        # playback is detected, and kills it when playback stops.  This avoids
+        # the race window of the per-iteration pattern where the inhibitor
+        # lock is briefly released between polling cycles.
+        media-sleep-inhibit = {
+          Unit = {
+            Description = "Inhibit sleep while MPRIS media is playing";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${
+              pkgs.writeShellApplication {
+                name = "media-sleep-inhibit";
+                runtimeInputs = [
+                  pkgs.playerctl
+                  pkgs.systemd
+                ];
+                text = ''
+                  INTERVAL=15
+                  inhibitor_pid=""
+
+                  cleanup() {
                     if [ -n "$inhibitor_pid" ]; then
                       kill "$inhibitor_pid" 2>/dev/null || true
-                      wait "$inhibitor_pid" 2>/dev/null || true
-                      inhibitor_pid=""
                     fi
-                  fi
-                  sleep "$INTERVAL"
-                done
-              '';
-            }
-          }/bin/media-sleep-inhibit";
-          Restart = "on-failure";
+                  }
+                  trap cleanup EXIT
+
+                  while true; do
+                    if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
+                      if [ -z "$inhibitor_pid" ]; then
+                        systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
+                        inhibitor_pid=$!
+                      fi
+                    else
+                      if [ -n "$inhibitor_pid" ]; then
+                        kill "$inhibitor_pid" 2>/dev/null || true
+                        wait "$inhibitor_pid" 2>/dev/null || true
+                        inhibitor_pid=""
+                      fi
+                    fi
+                    sleep "$INTERVAL"
+                  done
+                '';
+              }
+            }/bin/media-sleep-inhibit";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
         };
-        Install.WantedBy = [ "graphical-session.target" ];
       };
 
       services.wlsunset = {
