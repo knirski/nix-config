@@ -1,58 +1,6 @@
 {
   aspects.homeManager.sway =
     { pkgs, ... }:
-    let
-      # Helper for the bidirectional PRIMARY ↔ CLIPBOARD bridge below.
-      # Each `wl-paste --watch` invocation prints the new selection contents
-      # to stdout whenever its watched selection changes; this script reads
-      # that stdout and writes to the *other* selection via `wl-copy`.
-      #
-      # The CLI argument selects which selection to write to:
-      #   --to-primary  → write to PRIMARY
-      #   (anything else, default) → write to CLIPBOARD
-      #
-      # The steady-state short-circuit makes the bridge loop-free WITHOUT
-      # relying on wlroots' implicit ownership-transfer dedup. When a watcher
-      # sees its own write bounce back through the other watcher, the
-      # incoming text already equals the destination's current contents — so
-      # we skip the write entirely. The canonical implementation
-      # (https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste)
-      # relies on the same property implicitly; we make it explicit so the
-      # script costs zero round-trips in steady state.
-      #
-      # `runtimeInputs = [ pkgs.wl-clipboard ]` puts `wl-copy` / `wl-paste`
-      # on PATH inside the script (hermetic, no `coreutils` / `bash` deps).
-      clipboardBridge = pkgs.writeShellApplication {
-        name = "clipboard-bridge";
-        runtimeInputs = [ pkgs.wl-clipboard ];
-        text = ''
-          set -euo pipefail
-          # Read the incoming selection payload verbatim. `text=$(cat)` would
-          # strip every trailing newline, so we append a sentinel `x` before
-          # the command substitution and peel it off afterwards. This keeps
-          # the steady-state equality check below exact for selections that
-          # end in one or more newlines (e.g. multi-line code selections).
-          text=$(cat && printf x)
-          text=''${text%x}
-          # Build a `--primary`-only flag array so we never pass an empty
-          # string as a positional argument. `wl-copy ""` would interpret the
-          # empty string as the text to copy (and ignore stdin); `wl-paste ""`
-          # rejects the empty argument outright. See PR review thread for the
-          # original report.
-          opts=()
-          if [ "''${1:-}" = "--to-primary" ]; then
-            opts+=(--primary)
-          fi
-          # Skip empty payloads (the selection has been cleared).
-          [ -n "$text" ] || exit 0
-          current=$(wl-paste "''${opts[@]}" 2>/dev/null && printf x || true)
-          current=''${current%x}
-          # Steady-state short-circuit — see the Nix-side comment above.
-          [ "$text" != "$current" ] || exit 0
-          printf %s "$text" | wl-copy "''${opts[@]}"
-        '';
-      };
-    in
     {
       home.packages = with pkgs; [
         libnotify
@@ -272,37 +220,24 @@
         };
       };
 
-      # Bidirectional bridge between PRIMARY and CLIPBOARD: a text selection
-      # (PRIMARY) populates CLIPBOARD for Ctrl+V, and Ctrl+C / DMS pastes
-      # populate PRIMARY for middle-click.
+      # Bidirectional PRIMARY ↔ CLIPBOARD bridge.  Two `wl-paste --watch`
+      # watchers, each piping directly to `wl-copy` for the other selection
+      # — verbatim from the canonical recipe (Wayland Ricing Guide §125.6):
+      # https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste
       #
-      # The primitive — two `wl-paste --watch` watchers, each writing to the
-      # other selection — is the canonical recipe documented in the Wayland
-      # Ricing Guide §125.6
-      # (https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste)
-      # and shipped verbatim by vanillacode314/stow-dotfiles
-      # (https://github.com/vanillacode314/stow-dotfiles). We NixOS-ify it
-      # with two systemd user services and a `writeShellApplication` helper
-      # script (the `clipboardBridge` binding above).
+      # Selecting text anywhere copies it (PRIMARY → CLIPBOARD) and Ctrl+C
+      # also populates PRIMARY for middle-click (CLIPBOARD → PRIMARY).
       #
       # `--type text` keeps image/file offers untouched so DMS still owns
-      # rich MIME handling. The helper script compares incoming text against
-      # the destination selection and skips the write when equal — that
-      # gives us a steady-state zero round-trip bridge; the canonical
-      # pipeline relies on the same property implicitly.
-      #
-      # Replaces the previous one-way `clipboard → PRIMARY` bridge (the
-      # ArchWiki recipe, also kept by every Nix dotfile surveyed). That
-      # bridge existed for Bitwarden, which writes secrets to the clipboard;
-      # with the bidirectional bridge that flow still works, plus middle-click
-      # paste now picks up the same secret.
+      # rich MIME handling. The protocol-level loop that would arise (
+      # PRIMARY → CLIPBOARD → PRIMARY → …) terminates naturally because
+      # wlroots does not fire the watch event when the owning process
+      # itself set the selection.
       #
       # Requires the data-control Wayland protocol
       # (wlr-data-control-unstable-v1 or ext-data-control-v1). Sway supports
       # both — see modules/parts/clipboard-protocol-check.nix for the
-      # KVM-backed invariant that proves this. Some compositors (notably
-      # Mutter/GNOME) do not, which is why darkone-nixos-framework left the
-      # same bridge commented out with a TODO.
+      # KVM-backed invariant that proves this.
       systemd.user.services = {
         clipboard-primary-sync = {
           Unit = {
@@ -311,7 +246,7 @@
             PartOf = [ "graphical-session.target" ];
           };
           Service = {
-            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --primary --type text --watch ${clipboardBridge}/bin/clipboard-bridge --to-clipboard";
+            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --primary --watch ${pkgs.wl-clipboard}/bin/wl-copy";
             Restart = "on-failure";
           };
           Install.WantedBy = [ "graphical-session.target" ];
@@ -324,7 +259,7 @@
             PartOf = [ "graphical-session.target" ];
           };
           Service = {
-            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${clipboardBridge}/bin/clipboard-bridge --to-primary";
+            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --watch ${pkgs.wl-clipboard}/bin/wl-copy --primary";
             Restart = "on-failure";
           };
           Install.WantedBy = [ "graphical-session.target" ];
