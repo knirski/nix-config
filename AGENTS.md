@@ -1,262 +1,111 @@
-# AGENTS.md — guidelines and guardrails for this repo
+# AGENTS.md — guidelines and guardrails
 
-A multi-host NixOS/nix-darwin flake.
+A multi-host NixOS/nix-darwin/standalone-HM flake.
 
-| Host | Role | System | Status |
-| ---- | ---- | ------ | ------ |
-| **soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | NixOS (stable) | M1/M2 complete, M3 complete (Secure Boot on), M4 deferred |
-| **zbook** (HP ZBook Studio 16" G10) | Workstation/gaming laptop, 32 GB, NVIDIA RTX 4000 Ada | NixOS (unstable) | M4 complete |
-| **macbook** (Apple Silicon) | Professional workstation laptop | nix-darwin (unstable) | Assembler + CI evaluation/build only; hardware deploy pending (verified 2026-07-23, see [`docs/workstation-setup.md`](docs/workstation-setup.md)) |
-| **ubuntu** (Ubuntu 24.04 LTS) | Professional work laptop | Standalone HM (unstable) | Assembler + CI evaluation/build only; hardware deploy pending (verified 2026-07-23, see [`docs/workstation-setup.md`](docs/workstation-setup.md)) |
+## Hosts
 
-## Machine Roles
+| Host | Role | System | Assembler | Data dir | Status |
+| ---- | ---- | ------ | --------- | -------- | ------ |
+| **soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | NixOS `release-26.05` | `modules/parts/soyo.nix` | `hosts/soyo/` | M1–M3 complete; M4 appliance items deferred |
+| **zbook** (HP ZBook Studio 16" G10) | Workstation/gaming laptop, 32 GB, NVIDIA RTX 4000 Ada | NixOS unstable | `modules/parts/zbook.nix` | `hosts/zbook/` | M4 complete |
+| **macbook** (Apple Silicon) | Professional workstation laptop | nix-darwin unstable | `modules/parts/macbook.nix` | `hosts/macbook/` | CI only; hardware deploy pending |
+| **ubuntu** (Ubuntu 24.04 LTS) | Professional work laptop | Standalone HM unstable | `modules/parts/ubuntu.nix` | *(data in assembler)* | CI only; hardware deploy pending |
 
-| Role | Hosts | Description |
-| ---- | ----- | ----------- |
-| **LAN appliance** | soyo | Headless server. DNS, DHCP, backups, observability. No GUI. |
-| **Workstation/gaming laptop** | zbook | Full desktop with Sway, NVIDIA, gaming. |
-| **Professional workstation laptop** | macbook, ubuntu | Desktop with tiling WM (Aerospace/Sway), no gaming. Closest possible experience to zbook. |
+See [`docs/workstation-setup.md`](docs/workstation-setup.md) for macbook/ubuntu deploy status.
+See [`docs/superpowers/specs/soyo-dns-dhcp-appliance.md`](docs/superpowers/specs/soyo-dns-dhcp-appliance.md) for the canonical design doc.
 
-The existing NixOS role aspects (`server.nix`, `workstation.nix`) set a role marker at `/etc/nix-config/role` for healthchecks. Darwin and standalone HM hosts don't need role markers.
+## Aspect namespaces
 
-## Aspect Namespace
+| Namespace | Source dir |
+| --------- | ---------- |
+| `aspects.nixos.*` | `modules/nixos/*.nix` |
+| `aspects.darwin.*` | `modules/darwin/*.nix` |
+| `aspects.homeManager.*` | `modules/home/*.nix` |
 
-| Namespace | Purpose | Modules |
-| --------- | ------- | ------- |
-| `aspects.nixos.*` | NixOS system config | `modules/nixos/*.nix` |
-| `aspects.darwin.*` | nix-darwin system config | `modules/darwin/*.nix` |
-| `aspects.homeManager.*` | Home Manager user config | `modules/home/*.nix` |
+Host assemblers (in `modules/parts/`) toggle aspects by name via `with config.aspects.nixos; [ … ]`. HM aspects are shared across all host types.
 
-Host assemblers select aspects by name. The HM aspects are shared across all host types (NixOS, darwin, standalone HM).
+## Hard invariants (never violate without a design-doc decision)
 
-**Read first:** [`docs/superpowers/specs/soyo-dns-dhcp-appliance.md`](docs/superpowers/specs/soyo-dns-dhcp-appliance.md)
-is the canonical design — decisions, hardware facts, the M1–M4 roadmap, and an
-alternatives appendix. This file is the short rulebook; the design doc is the why.
-
-This is also a **learning project**: idiomatic Nix/NixOS from basics. The code
-and its docs must teach (see "Learning docs" below).
-
-## Hard invariants (do not violate without an explicit decision in the design doc)
-
-1. **DNS and DHCP are the only critical roles.** Everything else is a guest.
-   Never let another service compromise them.
-2. **Guest services are opt-in and resource-isolated** — systemd `MemoryMax`,
-   `CPUQuota`, lowered `Nice`/`IOWeight`. Limits constrain, not guarantee; a
-   genuinely heavy workload belongs on another host, not Soyo.
-3. **`modules/nixos/base.nix` and `modules/home/base.nix` stay role-neutral** — no network
-   backend, no swap policy, no GUI/display assumptions. Role-specific config
-   lives in a role module or the host.
-4. **Kernel follows `linuxPackages_latest`** (7.1.1+). The NIC uses the in-tree
-   `dwmac_motorcomm` driver. Do not pin to an older kernel without confirming
-   `enp1s0` comes up, and do not regress to the out-of-tree `yt6801` module
-   unless a kernel regression forces it.
-5. **Secrets via agenix-rekey (rekeyFile flow).** See [`docs/secrets.md`](docs/secrets.md)
-   for the full walkthrough. Never commit plaintext secrets; passwords are
-   hashed-password secrets. MAC/IP addresses are *not* secrets (plaintext fine).
-   - Master-encrypted `.age` files live in `secrets/`.
-   - Host-specific rekeyed files live in `secrets/rekeyed/<host>/`.
-   - The master identity is the operator's SSH key (`secrets/agenix-master.pub`).
-   - Each host's age public key is derived from its SSH host key at install time.
-6. **DNS ownership is split:** Blocky owns forward A records; dnsmasq owns
-   reverse/PTR (lease-aware, Blocky forwards the reverse zone to it). Static
-   hosts come from `hosts/soyo/reservations.nix` — the single source of truth.
-7. **TPM unlock phasing:** Phase 1 binds PCR 7 (no Secure Boot); Phase 2 binds
-   PCR 0+2+7 with Limine Secure Boot. Never bind PCR 9 (kernel image) or PCR 8
-   (store paths) — they break unattended auto-unlock. Always keep the passphrase
-   keyslot as fallback.
-8. **flake-parts + the dendritic pattern.** `flake.nix` passes
-   `inputs.import-tree ./modules` to flake-parts, so eligible `.nix` files under
-   `modules/` are auto-imported as flake-parts modules. `_`-prefixed paths such
-   as `modules/_pkgs/` are excluded. Aspects expose `aspects.nixos.<aspect>`
-   (and `aspects.homeManager.<aspect>`), but importing an aspect file does not
-   enable it: hosts opt in via `with config.aspects.nixos; [ … ]` in their
-   assembler, not via sibling `imports`. Keep reusable non-module helpers under
-   `lib/`, outside the imported tree. The assembler (`modules/parts/soyo.nix`)
-   is also a flake-parts module; `hosts/soyo/` holds hardware/data only.
-9. **Reproducible + recoverable.** Everything declarative. Root is impermanent:
-   wiped to a blank Btrfs snapshot (`root`/`root-blank`) in systemd initrd each
-   boot, durable state only under `/persist` via the `preservation` module; the
-   persisted-path inventory is part of the design. Hardware is declarative via
-   `nixos-facter` (`hosts/soyo/facter.json`), not `nixos-generate-config`. Do not
-   break TPM auto-unlock or the break-glass paths (local console, LAN initrd SSH,
-   direct-link rescue). The agenix host key is read from `/persist` before
-   decryption (`age.identityPaths`); `/persist` is `neededForBoot`.
-10. **Backups via `restic`** (`services.restic.backups` — the first-class module;
-    not rustic/kopia) plus local `btrbk` snapshots. Day-2 remote deploy uses
-    `deploy .#hostname` via deploy-rs (deploy checks, magic rollback); native
-    `nixos-rebuild --target-host` also works as a fallback.
+1. **DNS and DHCP are the only critical roles.** Never let another service compromise them.
+2. **Guest services are resource-isolated** — every guest gets `MemoryMax`, `CPUQuota`, lowered `Nice`/`IOWeight`.
+3. **`base.nix` aspects stay role-neutral** — no network backend, swap policy, or GUI assumptions.
+4. **Kernel follows `linuxPackages_latest`** with in-tree `dwmac_motorcomm` NIC driver.
+5. **Secrets via agenix-rekey rekeyFile flow** — see [docs/secrets.md](docs/secrets.md) and the secrets section below. Never commit plaintext secrets.
+6. **DNS split:** Blocky owns forward A records; dnsmasq owns reverse/PTR (lease-aware). Static hosts from [`hosts/soyo/reservations.nix`](hosts/soyo/reservations.nix).
+7. **TPM unlock phasing:** PCR 7 first (no Secure Boot), then PCR 0+2+7 with Limine Secure Boot. Never bind PCR 8 or 9. Always keep passphrase fallback.
+8. **flake-parts + dendritic pattern.** `import-tree` discovers modules; aspects opt in via host assembler, not sibling `imports`. Reusable helpers under `lib/`. Host assemblers are also flake-parts modules.
+9. **Impermanent root** — wiped to a blank Btrfs snapshot each boot; durable state under `/persist` via `preservation`. Hardware via `nixos-facter`. Agenix host key at `/persist/etc/ssh/`.
+10. **Backups via `restic`** (`services.restic.backups` — not rustic/kopia) + `btrbk` snapshots. Deploy with `deploy .#hostname`, `nixos-rebuild --target-host`, or `just deploy`.
 
 ## Anti-goals (keep off Soyo)
 
-- local LLM inference (no usable GPU, fixed 16 GB) — API-based agents are fine
+- local LLM inference (no usable GPU, fixed 16 GB)
 - ZFS, NetworkManager on the server
 - WAN-inbound services — reach in via Tailscale
 - CPU-bursty workloads (game servers, CI runners, heavy DBs)
 
 ## Adding a service
 
-1. Prefer a native NixOS module (e.g. `services.jellyfin`); a container only
-   where no module exists.
-2. Own aspect module under `modules/nixos/<name>.nix` exposing
-   `aspects.nixos.<name>`, toggled on per host in the assembler.
-   Use the `lanAppliance.services.<name>` option namespace for host-specific data.
-3. Resource-isolate it (invariant 2) — every guest service gets `MemoryMax`,
-   `CPUQuota`, and a lowered `Nice`.
-4. If the service needs a LAN hostname, add it to `hosts/soyo/reservations.nix`
-   (the single source of truth drives both Blocky forward-A and dnsmasq PTR).
-   Put a reverse proxy (Caddy, internal TLS) in front once there is more than
-   one web service.
-5. Back up its state as class 3 (restic). Bulk data lives on the NAS over NFS.
-6. Reassess RAM/CPU headroom and the widened outage blast radius.
+1. Prefer a native NixOS module; container only where none exists.
+2. Create `modules/nixos/<name>.nix` exposing `aspects.nixos.<name>`. Use `lanAppliance.services.<name>` options for host-specific data.
+3. Resource-isolate it (invariant 2).
+4. If it needs a LAN hostname, add it to `hosts/soyo/reservations.nix`.
+5. Back up its state via restic. Bulk data on NAS over NFS.
+6. Reassess RAM/CPU headroom and outage blast radius.
 
-## Secrets quick-reference
+## Secrets
 
 - All secrets are `agenix-rekey` rekeyFile flow (never plaintext).
-- Master-encrypted `.age` files live in `secrets/`; host-specific rekeyed copies
-  live under `secrets/rekeyed/<host>/` (auto-generated by `agenix rekey`).
-- The master key (`~/.ssh/agenix_master`) is separate from the SSH login key
-  (`krzysiek-authorized-key.pub`). Only the master key can decrypt master `.age`
-  files; only the login key is deployed to hosts for SSH access.
-- **Adding a new secret:**
-  1. Create the master-encrypted `.age` file with `agenix edit secrets/<name>.age`
-     (uses the master key via `/etc/agenix-rekey/master-identity`).
-  2. Register it in `modules/nixos/users.nix` with `rekeyFile = ../../secrets/<name>.age;`
-     and optionally set `owner`/`group` for service access.
-  3. Run `agenix rekey` to generate per-host copies.
-  4. Commit both `secrets/<name>.age` and the updated `secrets/rekeyed/`.
+- Master-encrypted `.age` files in `secrets/`; host-specific rekeyed copies in `secrets/rekeyed/<host>/` (auto-generated).
+- The master key (`~/.ssh/agenix_master`, symlinked as `/etc/agenix-rekey/master-identity`) is separate from the SSH login key (`krzysiek-authorized-key.pub`). Only master key decrypts `.age` files; only login key goes on hosts.
+- **Adding a secret:**
+  1. `agenix edit secrets/<name>.age`
+  2. Register the `rekeyFile`:
+     - **User/password/ntfy secrets** → `modules/nixos/users.nix` (`rekeyFile = ../../secrets/<name>.age;`)
+     - **Service/host-specific secrets** (restic passwords, Tailscale auth keys, dev tokens) → the host assembler `modules/parts/<host>.nix` inside its `age.secrets` block
+     - Optionally set `owner`/`group`/`mode` for service access
+  3. `agenix rekey` → generates per-host copies
+  4. Commit `secrets/<name>.age` and the updated `secrets/rekeyed/`
 - Password secrets are SHA-512 hashes from `mkpasswd -m sha-512`.
 - MAC/IP addresses are *not* secrets — plaintext in `reservations.nix`.
 
 ## Adding a host
 
-- `hosts/<name>/` with its own `facter.json`, `boot.nix`, `disko.nix`,
-  `networking.nix`; a host assembler in `modules/parts/<name>.nix`.
-- Reuse the `base`, `users`, `home.base`, and `backup` aspects and the disko
-  pattern. Do **not** toggle on server-only aspects (DNS, DHCP, remote-unlock)
-  for a non-server host.
-- New agenix host key: generate an SSH host key, save its public key as
-  `secrets/<host>.pub`, set `age.rekey.hostPubkey` in the host assembler to
-  that path, run `agenix rekey` to generate per-host rekeyed secrets, then
-  commit the new pubkey and rekeyed files.
-- **Darwin hosts:** Use `inputs.nix-darwin.lib.darwinSystem` and
-  `config.aspects.darwin.*`. Host data goes in `hosts/<name>/` (no disko, boot,
-  or persistence — macOS uses APFS natively).
-- **Standalone HM hosts:** Use `inputs.home-manager.lib.homeManagerConfiguration`.
-  Only HM aspects apply (no `aspects.nixos.*` or `aspects.darwin.*`). Set
-  `home.username`, `home.homeDirectory` explicitly. Activate with
-  `home-manager switch --flake .#<host>`.
-  Standalone HM hosts do not need a `hosts/<name>/` directory — the assembler
-  module (`modules/parts/<name>.nix`) encodes the host data directly.
+- `hosts/<name>/` gets `facter.json`, `boot.nix`, `disko.nix`, `networking.nix`; assembler at `modules/parts/<name>.nix`.
+- Reuse `base`, `users`, `home.base`, `backup`. Don't toggle server-only aspects (DNS, DHCP, remote-unlock) on non-server hosts.
+- New agenix host key: generate SSH host key, save public key as `secrets/<host>.pub`, set `age.rekey.hostPubkey` in assembler, `agenix rekey`, commit.
+- **Darwin hosts:** `inputs.nix-darwin.lib.darwinSystem` + `config.aspects.darwin.*`. No disko/boot/persistence. Data in `hosts/<name>/`.
+- **Standalone HM hosts:** `inputs.home-manager.lib.homeManagerConfiguration`. Only HM aspects. No `hosts/<name>/` dir — data in assembler. Activate with `home-manager switch --flake .#<host>`.
 
-## Learning docs (required output)
+## Workflow
 
-- [`docs/secrets.md`](docs/secrets.md) is the canonical introduction to the
-  agenix-rekey rekeyFile workflow, written for beginners. Keep it in sync
-  with any secrets-related changes.
-- Comment modules with the *why* and the idiom, not just the *what*.
-- Introduce one concept at a time along the M1–M4 roadmap.
-- When a concept first appears, explain it briefly and link a canonical source:
-  [nix.dev](https://nix.dev), the [NixOS](https://nixos.org/manual/nixos/stable/)
-  and [Nixpkgs](https://nixos.org/manual/nixpkgs/stable/) manuals,
-  [Home Manager](https://nix-community.github.io/home-manager/),
-  [flake.parts](https://flake.parts),
-  [search.nixos.org](https://search.nixos.org/options).
-- Readability over cleverness — it is part of the deliverable.
-
-## Commit message convention
-
-Conventional commits: `type(scope): message`. No period.
+- Run [`just`](justfile) to list all recipes (self-documenting). Key ones: `deploy <host>` (everyday deploy), `check` (full `nix flake check`), `lint` (pre-commit + gitleaks), `healthcheck`, `rekey`, `topology`.
+- Pre-commit hooks auto-install via `nix develop`. Run `just lint` before committing.
+- After deploy or after touching boot/unlock/networking/services, run `just healthcheck <host>`. Expect all \[PASS\].
+- The following require **manual verification** (reboot / physical access / destructive action):
+  TPM auto-unlock, break-glass passphrase unlock, LAN initrd SSH unlock, direct-link rescue unlock, DHCP client DNS, forced unit failure → ntfy, restic restore drill, tampered boot rejection, TPM re-enrollment.
+- Keep host directories thin; push reusable logic into modules.
 
 ## Boundary rules (never modify these)
 
 - `flake.lock` — update only via `nix flake update <input>`.
-- `secrets/rekeyed/` — auto-generated by `agenix rekey`; edit the master
-  `.age` file, rekey, then commit both.
-- `hosts/*/facter.json` — generated by `nixos-facter` on the target hardware;
-  never edit by hand.
+- `secrets/rekeyed/` — auto-generated by `agenix rekey`.
+- `hosts/*/facter.json` — generated by `nixos-facter`; never edit by hand.
 
-## SSH access
+## Learning docs (required output)
 
-SSH into any machine via Tailscale: `ssh krzysiek@<machine-dns-name>` (e.g. `ssh krzysiek@soyo`, `ssh krzysiek@zbook`).
-
-## Workflow
-
-- Build order follows the design doc's roadmap; M1 + M2 are the production
-  cut-line, M3 hardens (Secure Boot), M4 expands (laptop, services).
-- Pre-commit hooks auto-install via `nix develop`.
-  Hooks: deadnix, statix, typos, treefmt, end-of-file-fixer, check-merge-conflicts,
-  actionlint (GitHub Actions), shellcheck (shell scripts), markdownlint (docs),
-  ruff (Python).
-  Before committing: run `just check` and `just lint` (includes gitleaks).
-  A `gitleaks` pre-commit hook (git-hooks.nix, default rule set) also blocks
-  plaintext secrets on every commit.
-- Use and define/modify `just` commands for frequent tasks (e.g. deployment,
-  healthchecks). Prefer wrapping complex or repeated shell invocations in
-  `justfile` recipes rather than inlining them in AGENTS.md or relying on
-  memory. Always prefer `just <recipe>` over the equivalent inline command
-  (e.g. `just deploy zbook` instead of `nix develop '.#' -c deploy .#zbook`).
-- Everyday deploy: `just deploy <host>` (auto-detects local vs remote).
-- When waiting for PR checks to complete, use `gh run watch` to stream status
-  instead of `sleep` — it shows real-time progress and exits when the run
-  finishes.
-- After deploy or after changes that touch boot, unlock, networking, or
-  services, run the automated healthcheck:
-
-  ```bash
-  just healthcheck <host> [role] [nic]
-  ```
-
-  This checks DNS, services, metrics, timers, secrets, Secure Boot, and more
-  over SSH. Expect all \[PASS\]; investigate any \[FAIL\].
-- The following **can only be verified manually** (reboot, physical access, or
-  destructive action):
-  - TPM auto-unlock (reboot, should unlock without passphrase)
-  - Break-glass passphrase unlock (wipe TPM slot, reboot with passphrase)
-  - LAN initrd SSH unlock (reboot, SSH port 2222)
-  - Direct-link rescue unlock (physical connection, static IP)
-  - DHCP client receives correct DNS/search domain
-  - Forced unit failure sends ntfy notification
-  - restic restore drill
-  - Tampered boot fails checksum verification (M3)
-  - TPM re-enrollment restores auto-unlock after PCR change
-- Keep host directories thin; push reusable logic into modules.
+- [`docs/secrets.md`](docs/secrets.md) is the canonical agenix-rekey walkthrough for beginners. Keep in sync with secrets changes.
+- Comment modules with the *why* and the idiom, not just the *what*.
+- Introduce one concept at a time along the M1–M4 roadmap.
+- When a concept first appears, explain it briefly and link a canonical source: [nix.dev](https://nix.dev), the [NixOS](https://nixos.org/manual/nixos/stable/) and [Nixpkgs](https://nixos.org/manual/nixpkgs/stable/) manuals, [Home Manager](https://nix-community.github.io/home-manager/), [flake.parts](https://flake.parts), [search.nixos.org](https://search.nixos.org/options).
+- Readability over cleverness — it is part of the deliverable.
 
 ## Zbook known issues
 
-- **disabling lid-close suspend while on the move.** The `disable-lid` command
-  (`modules/home/desktop.nix`) wraps `systemd-inhibit --what=handle-lid-switch
-  sleep infinity`.  Run it in a terminal before closing the lid to override
-  logind's lid-close action.  Cancel with Ctrl+C to restore normal behaviour.
-  Useful when carrying the laptop between rooms while media is playing or a
-  long-running task is in progress.
-
-- **First boot: nouveau instead of NVIDIA.** The flake sets `services.xserver.videoDrivers = [ "nvidia" ]`
-  which makes `hardware.nvidia.enabled = true`, but this requires a reboot
-  (nouveau claims the GPU first; kernel modules can't hot-swap). Run
-  `nixos-rebuild switch --flake .#zbook` then `sudo reboot` after first install.
-- **Suspend: no deep S3 on this firmware.** The HP firmware can enter S3
-  but wake events aren't routed (PCH configured for S0ix-native wake).
-  `mem_sleep_default=deep` was removed from `hosts/zbook/boot.nix`; s2idle
-  is used instead. If immediate wake happens after suspend, the dock's
-  Realtek RTL8153 Ethernet may be the cause — a udev rule in
-  `modules/nixos/laptop.nix` disables wake on that specific device.
-- **Logitech receiver stutter.** powertop's `--auto-tune` suspends the
-  Unifying/Bolt receiver, causing keyboard/mouse disconnects. Fixed by
-  `usbcore.quirks` kernel parameter in `modules/nixos/laptop.nix`
-  (`boot.kernelParams`). Requires a reboot after parameter change.
-- **NVIDIA GSP firmware crash (Xid 120) on s2idle resume.** The GSP RISC-V
-  firmware shipped across 570–610+ panics on the first s2idle resume,
-  permanently wedging `/proc/driver/nvidia/suspend` and blocking all future
-  suspend attempts with "Input/output error". Fixed by
-  `NVreg_EnableGpuFirmware=0` in `modules/nixos/nvidia.nix`. Requires a reboot
-  (the crashed module state is stuck until cold boot).
-- **DMS auto-suspend while media playing.** DMS's `acSuspendTimeout: 600`
-  fires after 10 minutes of keyboard/mouse idle regardless of audio playback.
-  Fixed by `media-sleep-inhibit` systemd user service in
-  `modules/home/sway.nix` — polls MPRIS players every 15s via `playerctl`
-  and holds a `systemd-inhibit --what=sleep` lock while media is playing.
-- **NetworkManager "connected" but no internet after s2idle resume.** The
-  data path (DNS resolution, interface state, route table) is often broken
-  after wake — common with USB-C dock Ethernet and s2idle on modern laptops.
-  Fixed by `powerManagement.resumeCommands` in `modules/nixos/laptop.nix`
-  which runs `systemctl try-restart NetworkManager.service` on resume.
+- **Disabling lid-close suspend.** `disable-lid` in `modules/home/desktop.nix` wraps `systemd-inhibit --what=handle-lid-switch sleep infinity`. Cancel with Ctrl+C.
+- **First boot: nouveau instead of NVIDIA.** Reboot after first `nixos-rebuild switch`.
+- **Suspend: no deep S3.** HP firmware can't route S3 wake events; s2idle used instead. If immediate wake after suspend, a udev rule in `modules/nixos/laptop.nix` disables wake on the dock's RTL8153 Ethernet.
+- **Logitech receiver stutter.** Fixed by `usbcore.quirks` in `modules/nixos/laptop.nix` (`boot.kernelParams`). Requires reboot.
+- **NVIDIA GSP firmware crash on s2idle resume.** Fixed by `NVreg_EnableGpuFirmware=0` in `modules/nixos/nvidia.nix`. Requires cold reboot.
+- **DMS auto-suspend while media playing.** Fixed by `media-sleep-inhibit` systemd user service in `modules/home/sway.nix` (polls MPRIS via `playerctl` every 15s).
+- **NetworkManager "connected" but no internet after s2idle.** Fixed by `powerManagement.resumeCommands` in `modules/nixos/laptop.nix` (restarts NetworkManager on resume).
