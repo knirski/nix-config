@@ -25,6 +25,7 @@ in
         laptop
         gaming
         workstation
+        nodejs
         users
         persistence
         maintenance
