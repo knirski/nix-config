@@ -87,6 +87,7 @@ Existing examples:
 
 ## Workflow
 
+- **Check your context first.** Before running a command that targets a host, check the local hostname with `hostname`. If it matches the target, run commands locally instead of via SSH. This avoids unnecessary SSH loopback and ensures local hardware detection (GPUs, displays, sensors) works correctly.
 - Run [`just`](justfile) to list all recipes (self-documenting). Key ones: `deploy <host>` (everyday deploy), `check` (full `nix flake check`), `lint` (pre-commit + gitleaks), `healthcheck`, `rekey`, `topology`.
 - Pre-commit hooks auto-install via `nix develop`. Run `just lint` before committing.
 - After deploy or after touching boot/unlock/networking/services, run `just healthcheck <host>`. Expect all \[PASS\].
