@@ -220,104 +220,90 @@
         };
       };
 
-      # Bidirectional PRIMARY ↔ CLIPBOARD bridge.  Two `wl-paste --watch`
-      # watchers, each piping directly to `wl-copy` for the other selection
-      # — verbatim from the canonical recipe (Wayland Ricing Guide §125.6):
-      # https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste
+      # ── Clipboard architecture ────────────────────────────────────────────
       #
-      # Selecting text anywhere copies it (PRIMARY → CLIPBOARD) and Ctrl+C
-      # also populates PRIMARY for middle-click (CLIPBOARD → PRIMARY).
-      # The protocol-level loop that would arise (
-      # PRIMARY → CLIPBOARD → PRIMARY → …) terminates naturally because
-      # wlroots does not fire the watch event when the owning process
-      # itself set the selection.
+      # DMS owns the regular Wayland CLIPBOARD selection (history at Mod4+v).
+      # PRIMARY remains compositor-owned for middle-click paste — no bridge
+      # needed between the two on Sway.
       #
-      # Requires the data-control Wayland protocol
-      # (wlr-data-control-unstable-v1 or ext-data-control-v1). Sway supports
-      # both — see modules/parts/clipboard-protocol-check.nix for the
-      # KVM-backed invariant that proves this.
-      systemd.user.services = {
-        clipboard-primary-sync = {
-          Unit = {
-            Description = "Copy PRIMARY text to CLIPBOARD";
-            After = [ "graphical-session.target" ];
-            PartOf = [ "graphical-session.target" ];
-          };
-          Service = {
-            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --primary --watch ${pkgs.wl-clipboard}/bin/wl-copy";
-            Restart = "on-failure";
-          };
-          Install.WantedBy = [ "graphical-session.target" ];
+      # Canonical bridge from the Wayland Ricing Guide §125.6:
+      #   https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste
+      #
+      #   wl-paste --primary --watch wl-copy           # PRIMARY → CLIPBOARD
+      #   wl-paste --watch wl-copy --primary           # CLIPBOARD → PRIMARY
+      #
+      # These were removed because they raced with each other (and with
+      # DMS's clipboard watcher) when an XWayland app like Bitwarden copied
+      # to the clipboard — both watchers fired simultaneously, each calling
+      # `wl-copy` for the opposite selection, and wlroots could leave both
+      # selections ownerless. This made pasting into Firefox (native Wayland)
+      # silently fail.
+      #
+      # The trade-off: without the bridge, Bitwarden (XWayland Electron) sets
+      # the clipboard through X11's protocol, which XWayland forwards but not
+      # in a way that triggers DMS's Wayland-native clipboard monitor. So
+      # passwords copied from Bitwarden won't appear in DMS's clipboard
+      # history. They paste correctly — but aren't recorded.
+      #
+      # If you need both: restore the bridge and accept the race window
+      # (typically resolves on retry), or switch to the Bitwarden browser
+      # extension which works entirely inside Firefox (native Wayland) and
+      # is visible to DMS.
+
+      # Inhibit system sleep while any MPRIS media player (Spotify, etc.)
+      # is actively playing.  Without this, DMS's acSuspendTimeout fires
+      # after 10 min of keyboard/mouse idle even when audio is playing.
+      #
+      # Runs a single long-lived `systemd-inhibit` background process when
+      # playback is detected, and kills it when playback stops.  This avoids
+      # the race window of the per-iteration pattern where the inhibitor
+      # lock is briefly released between polling cycles.
+      systemd.user.services.media-sleep-inhibit = {
+        Unit = {
+          Description = "Inhibit sleep while MPRIS media is playing";
+          After = [ "graphical-session.target" ];
+          PartOf = [ "graphical-session.target" ];
         };
+        Service = {
+          ExecStart = "${
+            pkgs.writeShellApplication {
+              name = "media-sleep-inhibit";
+              runtimeInputs = [
+                pkgs.playerctl
+                pkgs.systemd
+              ];
+              text = ''
+                INTERVAL=15
+                inhibitor_pid=""
 
-        clipboard-clipboard-sync = {
-          Unit = {
-            Description = "Copy CLIPBOARD text to PRIMARY";
-            After = [ "graphical-session.target" ];
-            PartOf = [ "graphical-session.target" ];
-          };
-          Service = {
-            ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --watch ${pkgs.wl-clipboard}/bin/wl-copy --primary";
-            Restart = "on-failure";
-          };
-          Install.WantedBy = [ "graphical-session.target" ];
-        };
+                cleanup() {
+                  if [ -n "$inhibitor_pid" ]; then
+                    kill "$inhibitor_pid" 2>/dev/null || true
+                  fi
+                }
+                trap cleanup EXIT
 
-        # Inhibit system sleep while any MPRIS media player (Spotify, etc.)
-        # is actively playing.  Without this, DMS's acSuspendTimeout fires
-        # after 10 min of keyboard/mouse idle even when audio is playing.
-        #
-        # Runs a single long-lived `systemd-inhibit` background process when
-        # playback is detected, and kills it when playback stops.  This avoids
-        # the race window of the per-iteration pattern where the inhibitor
-        # lock is briefly released between polling cycles.
-        media-sleep-inhibit = {
-          Unit = {
-            Description = "Inhibit sleep while MPRIS media is playing";
-            After = [ "graphical-session.target" ];
-            PartOf = [ "graphical-session.target" ];
-          };
-          Service = {
-            ExecStart = "${
-              pkgs.writeShellApplication {
-                name = "media-sleep-inhibit";
-                runtimeInputs = [
-                  pkgs.playerctl
-                  pkgs.systemd
-                ];
-                text = ''
-                  INTERVAL=15
-                  inhibitor_pid=""
-
-                  cleanup() {
+                while true; do
+                  if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
+                    if [ -z "$inhibitor_pid" ]; then
+                      systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
+                      inhibitor_pid=$!
+                    fi
+                  else
                     if [ -n "$inhibitor_pid" ]; then
                       kill "$inhibitor_pid" 2>/dev/null || true
+                      wait "$inhibitor_pid" 2>/dev/null || true
+                      inhibitor_pid=""
                     fi
-                  }
-                  trap cleanup EXIT
-
-                  while true; do
-                    if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
-                      if [ -z "$inhibitor_pid" ]; then
-                        systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
-                        inhibitor_pid=$!
-                      fi
-                    else
-                      if [ -n "$inhibitor_pid" ]; then
-                        kill "$inhibitor_pid" 2>/dev/null || true
-                        wait "$inhibitor_pid" 2>/dev/null || true
-                        inhibitor_pid=""
-                      fi
-                    fi
-                    sleep "$INTERVAL"
-                  done
-                '';
-              }
-            }/bin/media-sleep-inhibit";
-            Restart = "on-failure";
-          };
-          Install.WantedBy = [ "graphical-session.target" ];
+                  fi
+                  sleep "$INTERVAL"
+                done
+              '';
+            }
+          }/bin/media-sleep-inhibit";
+          Restart = "on-failure";
         };
+        Install.WantedBy = [ "graphical-session.target" ];
       };
 
       services.wlsunset = {

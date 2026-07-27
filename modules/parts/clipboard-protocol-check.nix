@@ -105,11 +105,11 @@ _: {
       # semantics (the watcher's data device is only delivered the
       # selection event while it is the most-recently-bound device per
       # selection — fine in production where each systemd service holds
-      # its own binding, but fragile in a single-process test). The
-      # canonical recipe from the Wayland Ricing Guide §125.6
-      # (https://github.com/jreuben11/wayland-ricing-guide/blob/main/part-07-wayland-programming/ch125-data-control-clipboard.md#1256-primary-selection-middle-click-paste)
-      # uses the same primitive; the bridge itself is exercised on the
-      # production host via the PR's manual test plan.
+      # its own binding, but fragile in a single-process test).
+      #
+      # Production desktop does not use dedicated bridge services — DMS
+      # (Dank Material Shell) owns the regular clipboard. See
+      # modules/home/sway.nix.
     in
     {
       checks.${kvmChecks.clipboardProtocols} = runKvmTest {
