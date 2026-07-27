@@ -53,6 +53,14 @@
     # that script is authored here. Keep the exception scoped to this unit.
     systemd.services.greetd.enableStrictShellChecks = false;
 
+    # greetd authenticates via PAM, but unlike GDM there's no built-in
+    # gnome-keyring unlock.  When the user logs in, pam_gnome_keyring
+    # automatically unlocks the login keyring with the password just typed.
+    # Without this, the keyring files survive (they're in /persist via
+    # ~/.local/share/keyrings) but stay locked, so NetworkManager can't
+    # retrieve saved WiFi passwords and prompts for them again.
+    security.pam.services.greetd.enableGnomeKeyring = true;
+
     environment.sessionVariables = {
       NIXOS_OZONE_WL = "1";
       MOZ_ENABLE_WAYLAND = "1";
