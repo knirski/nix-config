@@ -418,9 +418,10 @@
               # Remove stale read-only cached completions left by the docker
               # plugin's background cp (which preserves 0444 permissions from
               # the nix store). On the next shell start, cp would fail
-              # overwriting them.
+              # overwriting them. Use a glob to cover both _docker and
+              # _docker-compose (and any future docker-related completions).
               if [ -d "$__ohmyzsh_cache/completions" ]; then
-                rm -f "$__ohmyzsh_cache/completions/_docker"
+                rm -f "$__ohmyzsh_cache/completions"/_docker*
               fi
               mkdir -p "$__ohmyzsh_cache/completions"
 
