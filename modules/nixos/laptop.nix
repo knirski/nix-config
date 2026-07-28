@@ -58,7 +58,7 @@
         # the stale data path without breaking D-Bus consumers.
         resumeCommands = ''
           ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true
-          for dev in $(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | grep ':ethernet\|:wifi' | cut -d: -f1); do
+          for dev in $(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gnugrep}/bin/grep ':ethernet\|:wifi' | ${pkgs.coreutils}/bin/cut -d: -f1); do
             ${pkgs.networkmanager}/bin/nmcli device reapply "$dev" 2>/dev/null || true
           done
           ${pkgs.systemd}/bin/resolvectl flush-caches 2>/dev/null || true
