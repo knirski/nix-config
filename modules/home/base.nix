@@ -395,17 +395,36 @@
           # cached completion files on every shell start. The source files in the
           # nix store are 0444, and `cp` preserves that mode, leaving the cached
           # copies read-only. This makes the subsequent overwrite attempt fail
-          # with "Permission denied" on every terminal open.
+          # with "Permission denied" on the next terminal open.
           # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/docker/docker.plugin.zsh
           #
-          # Fix: ensure the cache dir is writable on every shell start before
-          # oh-my-zsh loads its plugins.
-          initContent =
+          # The docker plugin runs its cp(1) in a disowned background process
+          # (&|). On the first shell start the background cp finishes *after*
+          # any post-hoc chmod, so the next shell always finds a read-only file.
+          # On the second shell start the cp runs *before* any post-hoc chmod,
+          # hitting "Permission denied" immediately.
+          #
+          # Fix (two-pronged):
+          #   1. Remove stale read-only cached completions before oh-my-zsh
+          #      loads, so cp always creates a fresh file.
+          #   2. Run this code block *before* oh-my-zsh (order 750, below
+          #      oh-my-zsh's order 800) via lib.mkOrder.
+          initContent = lib.mkOrder 750 (
             let
               sharedEnv = builtins.readFile ../../lib/shared-env.zsh;
             in
             ''
               __ohmyzsh_cache="${config.xdg.cacheHome}/oh-my-zsh"
+              # Remove stale read-only cached completions left by the docker
+              # plugin's background cp (which preserves 0444 permissions from
+              # the nix store). On the next shell start, cp would fail
+              # overwriting them.
+              if [ -d "$__ohmyzsh_cache/completions" ]; then
+                rm -f "$__ohmyzsh_cache/completions/_docker"
+              fi
+              mkdir -p "$__ohmyzsh_cache/completions"
+
+              # Also make the whole cache dir writable as a safety net.
               if [ -d "$__ohmyzsh_cache" ]; then
                 chmod -R u+w "$__ohmyzsh_cache"
               fi
@@ -447,7 +466,8 @@
                 weather() { curl -s "wttr.in/$1?format=3"; }
                 cheat() { curl -s "cheat.sh/$1"; }
               fi
-            '';
+            ''
+          );
           oh-my-zsh = {
             enable = true;
             plugins = [
