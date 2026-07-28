@@ -29,6 +29,7 @@ rec {
   bestEffort = [
     ".local/share/direnv"
     ".cache/DankMaterialShell"
+    ".cache/quickshell"
     ".local/share/applications"
     "tmp"
     "Pictures/Screenshots"
