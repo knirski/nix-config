@@ -1,15 +1,15 @@
 {
   aspects.nixos.power-profiles = { lib, ... }: {
     # power-profiles-daemon is a lightweight sysfs service that doesn't need
-    # the display manager. Use unitConfig.After with empty-string reset to
-    # fully replace the upstream After= (drop-in semantics are additive for
-    # list directives), and pull in via multi-user.target instead of
-    # graphical.target so it starts ~1m42s earlier.
+    # the display manager or the full graphical target. Ordering it after
+    # dbus.service (it is Type=dbus) with an empty-string reset avoids a
+    # systemd ordering cycle that occurs when a WantedBy= target also
+    # appears in After=.
     systemd.services.power-profiles-daemon = {
       unitConfig = {
         After = lib.mkForce [
           ""
-          "multi-user.target"
+          "dbus.service"
         ];
       };
       wantedBy = lib.mkForce [ "multi-user.target" ];
