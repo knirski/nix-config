@@ -44,26 +44,13 @@
         sqlite
         systemd
         util-linux
-        xorg.libICE
-        xorg.libSM
-        xorg.libX11
-        xorg.libXau
-        xorg.libxcb
-        xorg.libXcomposite
-        xorg.libXcursor
-        xorg.libXdamage
-        xorg.libXdmcp
-        xorg.libXext
-        xorg.libXfixes
-        xorg.libXi
-        xorg.libXinerama
-        xorg.libXrandr
-        xorg.libXrender
-        xorg.libXt
-        xorg.libXtst
-        xorg.libXv
-        xorg.libXxf86vm
-        xorg.libpciaccess
+        krb5
+        linux-pam
+        lz4
+        openssl
+        postgresql.lib
+        readline
+        zstd
         xz
         zlib
       ];
