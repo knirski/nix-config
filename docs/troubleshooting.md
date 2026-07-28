@@ -117,11 +117,13 @@ sudo journalctl -b | grep -i wake
 
 **Cause**: USB-C dock Ethernet data path broken after s2idle resume.
 
-**Solution**: Already fixed via `powerManagement.resumeCommands` in `modules/nixos/laptop.nix` which restarts NetworkManager on resume.
+**Solution**: Already fixed via `powerManagement.resumeCommands` in `modules/nixos/laptop.nix` which reloads NM connection profiles, reapplies active devices, and flushes the DNS cache on resume.
 
-**Manual fix**:
+**Manual fix** (if automation doesn't help):
 ```bash
-sudo systemctl restart NetworkManager
+sudo nmcli connection reload
+sudo nmcli device reapply <interface>
+sudo resolvectl flush-caches
 ```
 
 ## Input Devices
