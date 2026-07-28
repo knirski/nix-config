@@ -26,6 +26,7 @@ in
         gaming
         workstation
         nodejs
+        nix-ld
         users
         persistence
         maintenance
