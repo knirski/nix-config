@@ -76,7 +76,7 @@
                     pkgs.tailscale
                   ];
                   text = ''
-                    if ! tailscale status 2>/dev/null | grep -qE '^\d+\.\d+\.\d+\.\d+\s'; then
+                    if ! tailscale status 2>/dev/null | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\s'; then
                       tailscale up --auth-key "$(cat ${cfg.authKeyFile})" ${builtins.concatStringsSep " " cfg.extraArgs}
                     fi
                   '';

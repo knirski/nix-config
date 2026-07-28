@@ -30,6 +30,7 @@ in
         persistence
         maintenance
         backup
+        power-profiles
       ])
       ++ [
         inputs.disko.nixosModules.disko
