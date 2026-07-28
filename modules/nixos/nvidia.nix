@@ -44,20 +44,24 @@
         services.xserver.videoDrivers = [ "nvidia" ];
 
         hardware = {
-          # Stable production-branch NVIDIA driver (595.x series).  The New
-          # Feature Branch (610.x) had an ABBA rw-semaphore deadlock in
+          # Stable production-branch NVIDIA driver (595.x series).  Both
+          # 595.x and 610.x have an ABBA rw-semaphore deadlock in
           # rm_acpi_nvpcf_notify (the ACPI handler for USB-C dock events)
-          # that blocks suspend and requires a cold power-cycle.
+          # that permanently wedges the GPU and requires a cold power-cycle.
           nvidia = {
             package = config.boot.kernelPackages.nvidiaPackages.stable;
             modesetting.enable = true;
             nvidiaSettings = true;
             powerManagement.enable = true;
-            # TODO: finegrained = false was needed on driver 610.43.03 to work
-            # around an ABBA rw-semaphore deadlock in rm_acpi_nvpcf_notify.
-            # The stable 595.x branch may not have this bug — confirm and
-            # either drop this TODO or restore the workaround if it does.
-            powerManagement.finegrained = true;
+            # finegrained = true enables per-engine power-gating, but
+            # triggers an ABBA rw-semaphore deadlock in the ACPI notify
+            # handler (rm_acpi_nvpcf_notify) when the NVIDIA driver receives
+            # a USB-C dock hotplug ACPI event.  The nv_queue thread waits on
+            # a mutex while ACPI kworkers pile up waiting for the same rwlock
+            # — permanent wedge, requires cold power-cycle.
+            # Confirmed on both 595.x (stable) and 610.x (new feature).
+            # Keep finegrained = false as a blanket workaround.
+            powerManagement.finegrained = false;
             open = false; # Proprietary driver (RTX 4000 Ada needs this)
             # In offload mode the GPU powers down — persistenced isn't needed
             # and just fails trying to query the sleeping device.
