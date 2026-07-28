@@ -15,7 +15,7 @@
       # leaving the system with "connected" but no usable data path.
       #
       # This dispatcher script fires on any "up" event for physical ethernet
-      # interfaces (en*) and reloads NM profiles + flushes DNS — same fix
+      # interfaces (en*) and reapplies the device + flushes DNS — same idea
       # as the s2idle resumeCommands below, but triggered on hotplug too.
       networking.networkmanager.dispatcherScripts = [
         {
@@ -52,10 +52,15 @@
         # Material Shell) connects to NM via D-Bus and has no reconnection
         # logic — once NM restarts, DMS's signal subscriptions are permanently
         # lost and it shows "not connected" even when WiFi is working.
-        # Instead, reload NM connections and flush DNS, which is sufficient
-        # to fix the stale data path without breaking D-Bus consumers.
+        # Instead of restarting NM, reload connection profiles, reapply the
+        # active devices (this pushes DNS servers to systemd-resolved, which
+        # gets lost on s2idle), and flush the DNS cache — sufficient to fix
+        # the stale data path without breaking D-Bus consumers.
         resumeCommands = ''
           ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true
+          for dev in $(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | grep ':ethernet\|:wifi' | cut -d: -f1); do
+            ${pkgs.networkmanager}/bin/nmcli device reapply "$dev" 2>/dev/null || true
+          done
           ${pkgs.systemd}/bin/resolvectl flush-caches 2>/dev/null || true
         '';
       };
