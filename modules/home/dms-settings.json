@@ -715,6 +715,13 @@
     },
     "dms_settings_search": {
       "trigger": "?"
+    },
+    "dankBitwarden": {
+      "trigger": "bw",
+      "loginAction": "autotype",
+      "cardAction": "type:number",
+      "identityAction": "copy:name",
+      "sshKeyAction": "copy:public_key"
     }
   },
   "clipboardClickToPaste": false,

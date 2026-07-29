@@ -211,6 +211,7 @@
             dankBatteryAlerts.enable = true;
             calculator.enable = true;
             emojiLauncher.enable = true;
+            dankBitwarden.enable = true;
           };
         };
 

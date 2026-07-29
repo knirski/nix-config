@@ -32,6 +32,7 @@
           ]
           ++ lib.optionals stdenv.isLinux [
             bitwarden-desktop
+            rbw
             wl-clipboard
             loupe
             freetube
