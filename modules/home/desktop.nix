@@ -13,6 +13,10 @@
           # (the env var is simply unused).
           lib.mkIf pkgs.stdenv.isLinux {
             GTK_THEME = "Adwaita:dark";
+            # rbw spawns pinentry directly (not through gpg-agent) to read the
+            # master password. Point it at the GTK3 pinentry we already have
+            # configured for gpg-agent below.
+            PINENTRY = "${pkgs.pinentry-gnome3}/bin/pinentry-gnome3";
           };
 
         # Neovim clipboard integration (requires wl-clipboard on Wayland)
@@ -33,7 +37,6 @@
           ++ lib.optionals stdenv.isLinux [
             bitwarden-desktop
             rbw
-            pinentry
             wl-clipboard
             loupe
             freetube
