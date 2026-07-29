@@ -404,71 +404,83 @@
           # On the second shell start the cp runs *before* any post-hoc chmod,
           # hitting "Permission denied" immediately.
           #
-          # Fix (two-pronged):
+          # Fix (three-pronged):
           #   1. Remove stale read-only cached completions before oh-my-zsh
           #      loads, so cp always creates a fresh file.
           #   2. Run this code block *before* oh-my-zsh (order 750, below
           #      oh-my-zsh's order 800) via lib.mkOrder.
-          initContent = lib.mkOrder 750 (
-            let
-              sharedEnv = builtins.readFile ../../lib/shared-env.zsh;
-            in
-            ''
-              __ohmyzsh_cache="${config.xdg.cacheHome}/oh-my-zsh"
-              # Remove stale read-only cached completions left by the docker
-              # plugin's background cp (which preserves 0444 permissions from
-              # the nix store). On the next shell start, cp would fail
-              # overwriting them. Use a glob to cover both _docker and
-              # _docker-compose (and any future docker-related completions).
-              if [ -d "$__ohmyzsh_cache/completions" ]; then
-                rm -f "$__ohmyzsh_cache/completions"/_docker*
-              fi
-              mkdir -p "$__ohmyzsh_cache/completions"
+          #   3. Late chmod at order 799 (immediately before oh-my-zsh at 800)
+          #      to handle the race where a concurrent shell's background cp
+          #      creates a read-only file between order 750 and 800.
+          initContent = lib.mkMerge [
+            (lib.mkOrder 750 (
+              let
+                sharedEnv = builtins.readFile ../../lib/shared-env.zsh;
+              in
+              ''
+                __ohmyzsh_cache="${config.xdg.cacheHome}/oh-my-zsh"
+                # Remove stale read-only cached completions left by the docker
+                # plugin's background cp (which preserves 0444 permissions from
+                # the nix store). Use the (N) glob qualifier to silently expand
+                # to nothing when no files match (avoids zsh NOMATCH errors).
+                if [ -d "$__ohmyzsh_cache/completions" ]; then
+                  rm -f "$__ohmyzsh_cache/completions"/_docker*(N)
+                fi
+                mkdir -p "$__ohmyzsh_cache/completions"
 
-              # Also make the whole cache dir writable as a safety net.
-              if [ -d "$__ohmyzsh_cache" ]; then
-                chmod -R u+w "$__ohmyzsh_cache"
-              fi
-              unset __ohmyzsh_cache
+                # Also make the whole cache dir writable as a safety net.
+                if [ -d "$__ohmyzsh_cache" ]; then
+                  chmod -R u+w "$__ohmyzsh_cache"
+                fi
+                unset __ohmyzsh_cache
 
-              ${sharedEnv}
+                ${sharedEnv}
 
-              # Custom functions (interactive shells only)
-              if [[ $- == *i* ]]; then
-                mkcd() { mkdir -p "$1" && cd "$1"; }
-                extract() {
-                  if [ -f "$1" ]; then
-                    case "$1" in
-                      *.tar.bz2) tar xjf "$1" ;;
-                      *.tar.gz) tar xzf "$1" ;;
-                      *.tar.xz) tar xJf "$1" ;;
-                      *.bz2) bunzip2 "$1" ;;
-                      *.rar) unrar x "$1" ;;
-                      *.gz) gunzip "$1" ;;
-                      *.tar) tar xf "$1" ;;
-                      *.tbz2) tar xjf "$1" ;;
-                      *.tgz) tar xzf "$1" ;;
-                      *.zip) unzip "$1" ;;
-                      *.Z) uncompress "$1" ;;
-                      *.7z) 7z x "$1" ;;
-                      *) echo "'$1' cannot be extracted" ;;
-                    esac
-                  else
-                    echo "'$1' is not a valid file"
-                  fi
-                }
-                portkill() {
-                  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                    ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill
-                  elif [[ "$OSTYPE" == "darwin"* ]]; then
-                    lsof -i tcp:"$1" -t | xargs kill
-                  fi
-                }
-                weather() { curl -s "wttr.in/$1?format=3"; }
-                cheat() { curl -s "cheat.sh/$1"; }
+                # Custom functions (interactive shells only)
+                if [[ $- == *i* ]]; then
+                  mkcd() { mkdir -p "$1" && cd "$1"; }
+                  extract() {
+                    if [ -f "$1" ]; then
+                      case "$1" in
+                        *.tar.bz2) tar xjf "$1" ;;
+                        *.tar.gz) tar xzf "$1" ;;
+                        *.tar.xz) tar xJf "$1" ;;
+                        *.bz2) bunzip2 "$1" ;;
+                        *.rar) unrar x "$1" ;;
+                        *.gz) gunzip "$1" ;;
+                        *.tar) tar xf "$1" ;;
+                        *.tbz2) tar xjf "$1" ;;
+                        *.tgz) tar xzf "$1" ;;
+                        *.zip) unzip "$1" ;;
+                        *.Z) uncompress "$1" ;;
+                        *.7z) 7z x "$1" ;;
+                        *) echo "'$1' cannot be extracted" ;;
+                      esac
+                    else
+                      echo "'$1' is not a valid file"
+                    fi
+                  }
+                  portkill() {
+                    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                      ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill
+                    elif [[ "$OSTYPE" == "darwin"* ]]; then
+                      lsof -i tcp:"$1" -t | xargs kill
+                    fi
+                  }
+                  weather() { curl -s "wttr.in/$1?format=3"; }
+                  cheat() { curl -s "cheat.sh/$1"; }
+                fi
+              ''
+            ))
+            (lib.mkOrder 799 ''
+              # Late chmod right before oh-my-zsh (order 800). Handles the
+              # race where a concurrent shell's background cp creates a
+              # read-only file between the order 750 cleanup and now.
+              if [ -d "${config.xdg.cacheHome}/oh-my-zsh" ]; then
+                chmod -R u+w "${config.xdg.cacheHome}/oh-my-zsh"
               fi
-            ''
-          );
+            '')
+          ];
           oh-my-zsh = {
             enable = true;
             plugins = [
