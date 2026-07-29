@@ -423,8 +423,13 @@
                 # plugin's background cp (which preserves 0444 permissions from
                 # the nix store). Use the (N) glob qualifier to silently expand
                 # to nothing when no files match (avoids zsh NOMATCH errors).
+                # Iterate via for loop because BSD rm (macOS) errors when called
+                # with no file arguments, unlike GNU rm (Linux).
                 if [ -d "$__ohmyzsh_cache/completions" ]; then
-                  rm -f "$__ohmyzsh_cache/completions"/_docker*(N)
+                  for __f in "$__ohmyzsh_cache/completions"/_docker*(N); do
+                    [ -f "$__f" ] && rm -f "$__f"
+                  done
+                  unset __f
                 fi
                 mkdir -p "$__ohmyzsh_cache/completions"
 
