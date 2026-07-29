@@ -26,6 +26,8 @@ in
         gaming
         workstation
         nodejs
+        python
+        rust
         nix-ld
         users
         persistence
