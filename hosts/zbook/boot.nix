@@ -1,10 +1,9 @@
 { pkgs, ... }:
 {
   boot = {
-    # NVIDIA's 595-series release notes reference validation on RHEL 10's
-    # 6.12 kernels while diagnosing the ACPI-notification crash seen on 7.1.x:
-    # https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-595-71-05/index.html
-    kernelPackages = pkgs.linuxPackages_6_12;
+    # Investigation A/B test: 6.12.97 still hung during s2idle suspend, so
+    # test the newer maintained LTS with the same NVIDIA driver configuration.
+    kernelPackages = pkgs.linuxPackages_6_18;
     kernelParams = [
       "nvidia_drm.modeset=1"
     ];
