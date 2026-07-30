@@ -65,6 +65,9 @@
               finegrained = false;
             };
             open = true;
+            # The old ZBook fix disabled GSP for the proprietary path; the
+            # open kernel module needs GSP, so we keep it enabled here and use
+            # the kernel suspend-notifier path instead.
             # In offload mode the GPU powers down — persistenced isn't needed
             # and just fails trying to query the sleeping device.
             nvidiaPersistenced = false;
