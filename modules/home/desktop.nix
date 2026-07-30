@@ -32,6 +32,7 @@
           ]
           ++ lib.optionals stdenv.isLinux [
             bitwarden-desktop
+            bitwarden-cli
             rbw
             # rbw spawns `pinentry` directly (not through gpg-agent). The
             # nixpkgs `pinentry` meta-package was removed; provide a thin
