@@ -32,6 +32,16 @@
           ]
           ++ lib.optionals stdenv.isLinux [
             bitwarden-desktop
+            bitwarden-cli
+            rbw
+            # rbw spawns `pinentry` directly (not through gpg-agent). The
+            # nixpkgs `pinentry` meta-package was removed; provide a thin
+            # wrapper that delegates to the GTK3 pinentry we already have.
+            (pkgs.writeShellApplication {
+              name = "pinentry";
+              runtimeInputs = [ pkgs.pinentry-gnome3 ];
+              text = ''exec pinentry-gnome3 "$@"'';
+            })
             wl-clipboard
             loupe
             freetube

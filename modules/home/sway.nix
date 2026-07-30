@@ -211,6 +211,16 @@
             dankBatteryAlerts.enable = true;
             calculator.enable = true;
             emojiLauncher.enable = true;
+            dankBitwarden = {
+              enable = true;
+              settings = {
+                trigger = "bw";
+                loginAction = "autotype";
+                cardAction = "type:number";
+                identityAction = "copy:name";
+                sshKeyAction = "copy:public_key";
+              };
+            };
           };
         };
 
