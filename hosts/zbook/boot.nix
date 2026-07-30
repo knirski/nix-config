@@ -1,7 +1,10 @@
 { pkgs, ... }:
 {
   boot = {
-    kernelPackages = pkgs.linuxPackages_latest;
+    # NVIDIA's 595-series release notes reference validation on RHEL 10's
+    # 6.12 kernels while diagnosing the ACPI-notification crash seen on 7.1.x:
+    # https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-595-71-05/index.html
+    kernelPackages = pkgs.linuxPackages_6_12;
     kernelParams = [
       "nvidia_drm.modeset=1"
     ];
