@@ -24,7 +24,7 @@ setup() { setup_contract_test; }
 }
 
 @test "platform roles run platform checks without NixOS service probes" {
-  export SSH_HOSTNAME=macbook SSH_PLATFORM_NAME=macOS
+  export SSH_HOSTNAME=macbook.local SSH_PLATFORM_NAME=macOS
   run "$HEALTHCHECK" macbook darwin
   assert_status 0
   assert_output_has 'macOS platform detected'

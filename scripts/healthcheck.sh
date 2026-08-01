@@ -89,7 +89,7 @@ esac
 if [[ -n "$PLATFORM_ROLE" ]]; then
   current_host=$(hostname 2>/dev/null || true)
   local_target=false
-  if [[ "${HEALTHCHECK_LOCAL:-0}" == "1" || "$current_host" == "$HOST" || "$current_host" == "${HOST%%.*}" ]]; then
+  if [[ "${HEALTHCHECK_LOCAL:-0}" == "1" || "${current_host%%.*}" == "${HOST%%.*}" ]]; then
     local_target=true
   fi
   if ! $local_target && ! "$SSH_BIN" -o ConnectTimeout=5 -o LogLevel=QUIET "krzysiek@$HOST" true 2>/dev/null; then
