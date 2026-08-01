@@ -28,7 +28,7 @@ setup() { setup_contract_test; }
   run "$HEALTHCHECK" macbook darwin
   assert_status 0
   assert_output_has 'macOS platform detected'
-  assert_log_has 'hostname -s'
+  assert_log_has 'hostname'
   assert_log_lacks 'systemctl'
   assert_log_lacks '/persist'
 
@@ -37,7 +37,7 @@ setup() { setup_contract_test; }
   run "$HEALTHCHECK" ubuntu standalone-hm
   assert_status 0
   assert_output_has 'Ubuntu platform detected'
-  assert_log_has 'hostname -s'
+  assert_log_has 'hostname'
   assert_log_lacks 'systemctl'
   assert_log_lacks '/persist'
 }

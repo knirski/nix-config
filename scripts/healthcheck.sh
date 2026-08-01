@@ -99,10 +99,18 @@ if [[ -n "$PLATFORM_ROLE" ]]; then
 
   run_platform() {
     local command=$1
+    shift
     if $local_target; then
-      bash -c "$command"
+      bash -c "$command" -- "$@"
     else
-      "$SSH_BIN" -o ConnectTimeout=10 -o LogLevel=QUIET "krzysiek@$HOST" "$command"
+      local remote_command
+      local quoted_arg
+      printf -v remote_command 'bash -c %q --' "$command"
+      for arg in "$@"; do
+        printf -v quoted_arg ' %q' "$arg"
+        remote_command+="$quoted_arg"
+      done
+      "$SSH_BIN" -o ConnectTimeout=10 -o LogLevel=QUIET "krzysiek@$HOST" "$remote_command"
     fi
   }
   PASS=0
@@ -115,7 +123,7 @@ if [[ -n "$PLATFORM_ROLE" ]]; then
     if "$@" > /dev/null 2>&1; then pass "$desc"; else fail "$desc"; fi
   }
   check "Nix is installed" run_platform 'command -v nix'
-  check "hostname matches $HOST" run_platform "test \"\$(hostname -s)\" = \"${HOST%%.*}\""
+  check "hostname matches $HOST" run_platform 'test "$(hostname -s)" = "$1"' _ "${HOST%%.*}"
   check "Home Manager profile exists" run_platform 'test -e "$HOME/.local/state/home-manager/gcroots/current-home" || test -e "$HOME/.nix-profile"'
   check "SSH configuration exists" run_platform 'test -f "$HOME/.ssh/config"'
   check "Zsh configuration exists" run_platform 'test -f "$HOME/.zshrc"'
