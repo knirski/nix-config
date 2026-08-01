@@ -68,11 +68,14 @@ deploy host="soyo":
 healthcheck host="soyo" role="" nic="":
     #!/usr/bin/env bash
     set -euo pipefail
-    case "{{host}}:{{role}}" in
+    HOST={{ quote(host) }}
+    ROLE={{ quote(role) }}
+    NIC={{ quote(nic) }}
+    case "$HOST:$ROLE" in
       soyo:|soyo:appliance|soyo:nixos-appliance|zbook:|zbook:workstation|zbook:nixos-workstation|macbook:|macbook:darwin|ubuntu:|ubuntu:standalone-hm)
-        nix run .#healthcheck -- {{host}} {{role}} {{nic}} ;;
+        nix run .#healthcheck -- "$HOST" "$ROLE" "$NIC" ;;
       *)
-        echo "unsupported healthcheck host/role: {{host}} / {{role}}" >&2
+        echo "unsupported healthcheck host/role: $HOST / $ROLE" >&2
         echo "use soyo[ appliance], zbook[ workstation], macbook[ darwin], or ubuntu[ standalone-hm]" >&2
         exit 2 ;;
     esac
