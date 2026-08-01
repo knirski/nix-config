@@ -47,11 +47,11 @@ let
 in
 buildNpmPackage rec {
   pname = "command-code";
-  version = "1.4.1";
+  version = "1.7.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/command-code/-/command-code-${version}.tgz";
-    hash = "sha512-/1zqOIKvBXDvPsQYowITXTF03zzLx/Irm2WWij0fXA1v2kLx1gMBb3Njx/NccgIDrK7lw9diAwuY8laDtn0GZw==";
+    hash = "sha512-q+l1cKKR5QbYRm43FM4MSW2+iDfXFRxXoIboVIFg49sNWIVqh7CutwzvJ2uFuKPfgpY9C7A1LNIY1qqS/peZ2Q==";
   };
 
   dontNpmBuild = true;
@@ -66,7 +66,7 @@ buildNpmPackage rec {
     sed -i ${overrideSedArgs} package.json
   '';
 
-  npmDepsHash = "sha256-YciFmJoA7e03VLjPA321GqouSgGeImVPltdY0+iA2FY=";
+  npmDepsHash = "sha256-wd5b6bhGx4gZnipcallwMrYUOYqoAEIj1+hg/irfk28=";
 
   nativeBuildInputs = [
     makeWrapper
