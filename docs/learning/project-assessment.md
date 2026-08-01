@@ -305,7 +305,7 @@ have the NixOS systemd, DNS/DHCP, or appliance NIC checks.
 | **restic repository corruption** | Low | Backup loss | `restic check --read-data` and local snapshot restore in the VM test; weekly check timer; NAS-side snapshots; production restore remains a manual drill |
 | **agenix master key compromise** | Low | All secrets exposed | Master key = operator SSH key (hardware-backed, e.g., YubiKey); rotation procedure in `secrets.md` |
 | **Single-person bus factor** | High | Knowledge loss | All procedures documented; learning path teaches architecture |
-| **Upstream `command-code` dependency advisories** (tracked, 2026-08-01) | Current vendored tree is scanned by the scheduled OSV workflow | Upstream release timing controls remediation | Do not add a local OpenTelemetry override. Run `just update-command-code <version>`, rebuild, and re-run OSV when upstream publishes the dependency update. Details: [`docs/security/supply-chain.md`](../security/supply-chain.md#dependency-automation-decisions). |
+| **Upstream `command-code` dependency advisories** (tracked, 2026-08-01) | Medium | Vulnerable transitive dependencies remain in the PR Agent toolchain until upstream publishes a fixed release | The scheduled OSV scan keeps the exposure visible. Do not add a local OpenTelemetry override; run `just update-command-code <version>`, rebuild, and re-run OSV when upstream publishes the dependency update. Details: [`docs/security/supply-chain.md`](../security/supply-chain.md#dependency-automation-decisions). |
 
 ### 6.2 Technical Debt / Improvement Opportunities
 
@@ -340,6 +340,9 @@ have the NixOS systemd, DNS/DHCP, or appliance NIC checks.
   `build-ubuntu` job (builds `homeConfigurations.ubuntu.activationPackage`);
   `checks.macbook-desktop-invariants` and `checks.ubuntu-desktop-invariants`
   run in the evaluation tier.
+- The evaluated host-role contract proves macbook selects Aerospace rather
+  than Sway and Ubuntu selects Sway rather than Aerospace, in addition to the
+  NixOS host option namespace checks.
 - `just deploy macbook`/`just deploy ubuntu` and `just build-macbook`/
   `just build-ubuntu` exist and dispatch to `darwin-rebuild switch` and
   `home-manager switch`, respectively.
@@ -359,9 +362,6 @@ scope):
   aspects (see the frozen
   [`repository-gaps-and-improvements.md`](../superpowers/specs/repository-gaps-and-improvements.md)'s
   H1 finding, still accurate).
-- The evaluated host-role contract now proves macbook selects Aerospace rather
-  than Sway and Ubuntu selects Sway rather than Aerospace, in addition to the
-  NixOS host option namespace checks.
 - Hardware validation itself — first `darwin-rebuild switch`, first
   `home-manager switch --flake .#ubuntu`, and confirming the documented login
   shell/terminal/desktop-session/application matrix on real hardware — is
