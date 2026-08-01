@@ -98,7 +98,19 @@ Change the `backup-restic-integration` row in `docs/testing.md` from “initiali
 
 Update the backup coverage entry in `docs/learning/project-assessment.md` to mention both the existing `restic check --read-data` and the new local restore assertion, without claiming production restore coverage.
 
-- [x] **Step 5: Run the focused check and verify it passes**
+- [x] **Step 5: Run the evaluation-only preflight**
+
+Run the no-build flake gate before building the focused VM check. This verifies
+that the flake evaluates, but deliberately does not build the checks.
+
+```bash
+nix flake check path:. --no-build --show-trace
+```
+
+Expected: evaluation succeeds; only the repository’s documented tool-owned
+flake output warnings may appear.
+
+- [x] **Step 6: Run the focused check and verify it passes**
 
 Run:
 
@@ -108,19 +120,20 @@ nix build --no-link path:.#checks.x86_64-linux.backup-unit-vm
 
 Expected: exit 0, including successful backup, restore-after-deletion, wrong-password failure handoff, and later-success subtests.
 
-- [x] **Step 6: Run repository verification**
+- [x] **Step 7: Run repository verification after the focused check**
 
 Run:
 
 ```bash
-nix flake check path:. --no-build --show-trace
+nix flake check path:. --show-trace
 nix build path:.#checks.x86_64-linux.pre-commit path:.#checks.x86_64-linux.docs-correctness --no-link
 git diff --check
 ```
 
-Expected: all commands pass; only the repository’s documented tool-owned flake output warnings may appear.
+Expected: the full repository gate builds and passes; only the repository’s
+documented tool-owned flake output warnings may appear.
 
-- [x] **Step 7: Commit the implementation**
+- [x] **Step 8: Commit the implementation**
 
 ```bash
 git add modules/parts/backup-integration-check.nix docs/testing.md docs/learning/project-assessment.md
