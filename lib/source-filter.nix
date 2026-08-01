@@ -9,7 +9,7 @@ src:
 lib.cleanSourceWith {
   inherit src;
   filter =
-    path: _type:
+    path: type:
     let
       root = toString src;
       value = toString path;
@@ -27,5 +27,5 @@ lib.cleanSourceWith {
       ];
       isExcluded = item: relative == item || lib.hasPrefix "${item}/" relative;
     in
-    !(builtins.any isExcluded excluded);
+    lib.cleanSourceFilter path type && !(builtins.any isExcluded excluded);
 }

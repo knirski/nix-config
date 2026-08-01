@@ -186,7 +186,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `script-contracts` | Operator commands (healthcheck, recover-secrets, set-tailscale-keys) handle valid/invalid/dry-run/interrupted args correctly | `script-tests.nix` | Shell (Bats) |
 | `service-aspect-invariants` | The shared backup and observability aspects carry no Soyo-specific values (hostname, `czworaczki`, `enp1s0`) when evaluated against alternate-host fixtures; the built lan-inventory-exporter script queries the fixture's own NIC, not Soyo's | `service-aspect-invariants.nix` | Pure eval + shell script |
 | `shell-boundaries` | No `writeShellScript` calls; generated unit fragments have strict checking | `shell-checks.nix` | Pure eval |
-| `source-filter-contract` | Nix-backed checks preserve tracked taste files while excluding local agent settings/worktrees and cache artifacts | `perSystem.nix` | Pure eval |
+| `source-filter-contract` | Nix-backed checks preserve tracked taste files while excluding local agent settings, nested worktree metadata, and cache artifacts | `perSystem.nix` | Pure eval |
 | `soyo-guest-isolation` | Guest services on Soyo have MemoryMax, CPUQuota, Nice applied | `soyo-guest-isolation.nix` | Pure eval |
 | `systemd-hardening-invariants` | Applicable systemd services have basic hardening (ProtectSystem, PrivateTmp, etc.) | `systemd-hardening-checks.nix` | Pure eval |
 | `topology-freshness` | Committed `docs/topology/overview.svg` matches the current stable state | `topology-checks.nix` | Pure eval |

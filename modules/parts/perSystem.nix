@@ -247,13 +247,25 @@ in
         # false`) so it can't reappear as an unfiltered duplicate.
         formatting = config.treefmt.build.check filteredSource;
 
-        source-filter-contract = pkgs.runCommand "source-filter-contract" { } ''
-          test -f ${filteredSource}/.commandcode/taste/taste.md
-          test ! -e ${filteredSource}/.git
-          test ! -e ${filteredSource}/.commandcode/settings.json
-          test ! -e ${filteredSource}/.claude
-          touch "$out"
-        '';
+        source-filter-contract =
+          let
+            nestedWorktreeSource = pkgs.runCommand "source-filter-nested-worktree-fixture" { } ''
+              mkdir -p "$out/.commandcode/agent/.git/worktrees/example"
+              mkdir -p "$out/.commandcode/taste"
+              touch "$out/.commandcode/agent/.git/worktrees/example/HEAD"
+              touch "$out/.commandcode/taste/taste.md"
+            '';
+            filteredNestedWorktreeSource = sourceFilter nestedWorktreeSource;
+          in
+          pkgs.runCommand "source-filter-contract" { } ''
+            test -f ${filteredSource}/.commandcode/taste/taste.md
+            test ! -e ${filteredSource}/.git
+            test ! -e ${filteredSource}/.commandcode/settings.json
+            test ! -e ${filteredSource}/.claude
+            test -f ${filteredNestedWorktreeSource}/.commandcode/taste/taste.md
+            test ! -e ${filteredNestedWorktreeSource}/.commandcode/agent/.git
+            touch "$out"
+          '';
 
         # Contract check for the justfile `fmt` recipe's doc comment and
         # docs/testing.md's `formatting` row, both of which document treefmt
