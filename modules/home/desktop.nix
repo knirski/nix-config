@@ -55,7 +55,6 @@
             gimp
             inkscape
             obsidian
-            localsend
             (writeShellApplication {
               name = "disable-lid";
               runtimeInputs = [ systemd ];
