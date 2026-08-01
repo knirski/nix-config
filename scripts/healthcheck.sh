@@ -123,7 +123,7 @@ if [[ -n "$PLATFORM_ROLE" ]]; then
     if "$@" > /dev/null 2>&1; then pass "$desc"; else fail "$desc"; fi
   }
   check "Nix is installed" run_platform 'command -v nix'
-  check "hostname matches $HOST" run_platform 'test "$(hostname -s)" = "$1"' _ "${HOST%%.*}"
+  check "hostname matches $HOST" run_platform 'test "$(hostname -s)" = "$1"' "${HOST%%.*}"
   check "Home Manager profile exists" run_platform 'test -e "$HOME/.local/state/home-manager/gcroots/current-home" || test -e "$HOME/.nix-profile"'
   check "SSH configuration exists" run_platform 'test -f "$HOME/.ssh/config"'
   check "Zsh configuration exists" run_platform 'test -f "$HOME/.zshrc"'

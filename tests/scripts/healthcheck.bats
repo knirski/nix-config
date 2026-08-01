@@ -29,6 +29,8 @@ setup() { setup_contract_test; }
   assert_status 0
   assert_output_has 'macOS platform detected'
   assert_log_has 'hostname'
+  assert_log_has '-- macbook'
+  assert_log_lacks '-- _ macbook'
   assert_log_lacks 'systemctl'
   assert_log_lacks '/persist'
 
