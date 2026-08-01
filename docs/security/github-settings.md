@@ -13,8 +13,14 @@ the remediation changes described here.
   not automatically merged.
 - Private vulnerability reporting is enabled and linked from `SECURITY.md`.
 - The active `Protect main` ruleset requires pull requests, dismisses stale
-  reviews, requires conversation resolution, blocks deletion and force pushes,
-  and preserves a repository-administrator break-glass bypass.
+  reviews, requires conversation resolution and code-owner approval, blocks
+  deletion and force pushes, and preserves a repository-administrator
+  break-glass bypass.
+
+The secret-bearing [PR Agent workflow](../../.github/workflows/pr-agent.yml) is
+owned by [`.github/CODEOWNERS`](../../.github/CODEOWNERS). The ruleset's
+`require_code_owner_review` setting is part of the security boundary; a
+CODEOWNERS entry without that enforcement would only be advisory.
 
 Base provider-pattern secret scanning runs automatically for public
 repositories and is enabled here. Secret-scanning validity checks and generic

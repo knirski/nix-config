@@ -20,10 +20,14 @@ These checks complement each other.
 The PR Agent workflow uses the documented `pull_request` integration and keeps
 the action pinned by commit SHA. Its checkout is explicitly the pull request's
 trusted base revision, solely so the repository's `.pr_agent.toml` is present;
-the PR head is never checked out for this secret-bearing action. Fork-triggered
-`pull_request` runs do not receive repository secrets from GitHub, so the
-Gemini-backed review is intentionally limited to runs that can access the
-configured repository secret.
+the PR head is never checked out for this secret-bearing action. The workflow
+file itself is protected by [`.github/CODEOWNERS`](../../.github/CODEOWNERS),
+and the `Protect main` ruleset must enforce a required code-owner review before
+workflow changes can merge. The base checkout protects repository content;
+CODEOWNERS plus required review protects the workflow definition for
+same-repository pull requests. Fork-triggered `pull_request` runs do not
+receive repository secrets from GitHub, so the Gemini-backed review is
+intentionally limited to runs that can access the configured repository secret.
 
 Cachix is a performance layer, not an authority boundary. Every job that
 needs Cachix substitution passes a `cachix-auth-token` input to the local
