@@ -6,6 +6,15 @@
     kernelPackages = pkgs.linuxPackages_6_18;
     kernelParams = [
       "nvidia_drm.modeset=1"
+      # ramoops/pstore: preserve panic, console, and ftrace logs across
+      # unclean reboots. 16 MiB — lowest safe address in System RAM (above
+      # BIOS reservations at 1 MiB, below the crash kernel at 608 MiB).
+      "ramoops.mem_address=0x01000000"
+      "ramoops.mem_size=0x100000"
+      "ramoops.console_size=0x10000"
+      "ramoops.ftrace_size=0x10000"
+      "ramoops.pmsg_size=0x10000"
+      "ramoops.record_size=0x10000"
     ];
     crashDump = {
       enable = true;
