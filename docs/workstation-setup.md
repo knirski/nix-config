@@ -435,14 +435,16 @@ Local Btrfs snapshots:
 ## SSH Configuration
 
 - **Multiplexing**: ControlMaster/ControlPath for connection reuse
-- **Agent forwarding**: Enabled for trusted homelab hosts (soyo, zbook)
+- **Agent forwarding**: Disabled by default; opt in with `ssh -A` for a deliberate session
 - **Host key verification**: StrictHostKeyChecking enabled by default
 - **Key management**: AddKeysToAgent for automatic key loading
 
 ### Security Notes
 
-- ForwardAgent is enabled for trusted homelab LAN hosts only
-- Use `ssh -A` for ad-hoc forwarding to untrusted hosts
+- Agent forwarding is disabled by default for all shared host aliases
+- Use `ssh -A` only for a deliberate, short-lived forwarding session
+- GitHub uses the normal OpenSSH agent/default-key discovery on each platform;
+  the shared config does not assume zbook's private-key filename
 - GitHub uses `accept-new` for host key verification
 
 ## Networking

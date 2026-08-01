@@ -9,22 +9,21 @@
 # The upstream tarball ships no package-lock.json, so one is vendored in
 # command-code-lock/. That lockfile is a real, owned npm dependency tree:
 # see docs/security/supply-chain.md's "Dependency automation decisions" for
-# how it's reviewed, updated and scanned, and command-code-lock/
-# opentelemetry-overrides.json for the single source of truth for the
-# security override applied below.
+# how it's reviewed, updated and scanned. The lockfile is refreshed by the
+# repository's command-code update script and scanned as-is.
 #
 # Ref: https://nixos.org/manual/nixpkgs/stable/#buildNpmPackage
 #
 # Updating to a newer version: run `just update-command-code <version>`
 # (scripts/update-command-code.sh). It fetches the upstream tarball, prints
 # the `fetchurl` hash, regenerates command-code-lock/package-lock.json with
-# the same devDeps-stripping and OpenTelemetry-override transformation
-# applied here, and prints the `npmDepsHash` a human pastes below -- it does
+# the same devDeps-stripping transformation applied here, and prints the
+# `npmDepsHash` a human pastes below -- it does
 # not edit this file itself, touch flake.lock, or commit anything. After
 # pasting the printed `version`/`hash`/`npmDepsHash`, confirm with
 # `nix build path:.#command-code` and `nix build
-# path:.#checks.x86_64-linux.command-code-security`, then review and commit
-# the regenerated lockfile. See that script's header for the manual dance
+# path:.#command-code`, then review and commit the regenerated lockfile. See
+# that script's header for the manual dance
 # this automates, if you ever need to do it by hand.
 {
   lib,
@@ -36,15 +35,6 @@
   vips,
 }:
 
-let
-  # Data, not code: see command-code-lock/opentelemetry-overrides.json for
-  # why this list is the single place to add/remove a dependency-range bump.
-  opentelemetryOverrides =
-    (builtins.fromJSON (builtins.readFile ./command-code-lock/opentelemetry-overrides.json)).overrides;
-  overrideSedArgs = lib.concatMapStringsSep " " (
-    o: "-e 's|\"${o.package}\": \"[^\"]*\"|\"${o.package}\": \"${o.range}\"|'"
-  ) opentelemetryOverrides;
-in
 buildNpmPackage rec {
   pname = "command-code";
   version = "1.7.0";
@@ -59,14 +49,9 @@ buildNpmPackage rec {
   postPatch = ''
     cp ${./command-code-lock/package-lock.json} package-lock.json
     sed -i '/^  "devDependencies": {/,/^  }/d' package.json
-    # Bump OpenTelemetry deps to fix CVE-2026-54285 (GHSA-8988-4f7v-96qf).
-    # The exact package/range pairs come from command-code-lock/
-    # opentelemetry-overrides.json (see above) so this list can never drift
-    # from what scripts/update-command-code.sh and the security check use.
-    sed -i ${overrideSedArgs} package.json
   '';
 
-  npmDepsHash = "sha256-wd5b6bhGx4gZnipcallwMrYUOYqoAEIj1+hg/irfk28=";
+  npmDepsHash = "sha256-P9kkYQ6KL+CInwuVhnQfBoxINhi//z3gbcNk7qKW958=";
 
   nativeBuildInputs = [
     makeWrapper

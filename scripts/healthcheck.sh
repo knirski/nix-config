@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2029
+# shellcheck disable=SC2016,SC2029,SC2329
 # Automated health check for any host in this flake.
 #
 # Usage:
 #   healthcheck.sh [host] [role] [nic]
 #     host  — SSH destination (default: soyo)
-#     role  — "appliance" (DNS/DHCP + observability) or "workstation"
+#     role  — "appliance", "workstation", "darwin", or "standalone-hm"
 #             (default: read from the host's declarative role marker)
 #     nic   — primary network interface (default: auto-detected on the host)
 #
@@ -26,7 +26,7 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       echo "Usage: healthcheck.sh [host] [role] [nic]"
       echo "  host  SSH destination (default: soyo)"
-      echo "  role  appliance | workstation (default: auto-detect)"
+      echo "  role  appliance | workstation | darwin | standalone-hm (default: auto-detect)"
       echo "  nic   primary interface (default: auto-detect)"
       exit 0
       ;;
@@ -47,9 +47,86 @@ if [[ -n "$NIC" && ! "$NIC" =~ ^[A-Za-z0-9_.:-]+$ ]]; then
   echo "Invalid network interface '$NIC'" >&2
   exit 2
 fi
-if [[ -n "$ROLE" && "$ROLE" != "appliance" && "$ROLE" != "workstation" ]]; then
-  echo "Unknown role '$ROLE' (expected appliance or workstation)" >&2
+case "$ROLE" in
+  nixos-appliance) ROLE="appliance" ;;
+  nixos-workstation) ROLE="workstation" ;;
+esac
+if [[ -n "$ROLE" && "$ROLE" != "appliance" && "$ROLE" != "workstation" && "$ROLE" != "darwin" && "$ROLE" != "standalone-hm" ]]; then
+  echo "Unknown role '$ROLE' (expected appliance, workstation, darwin, or standalone-hm)" >&2
   exit 2
+fi
+
+expected_role_for_host() {
+  case "$1" in
+    soyo) echo appliance ;;
+    zbook) echo workstation ;;
+    macbook) echo darwin ;;
+    ubuntu) echo standalone-hm ;;
+    *) echo "" ;;
+  esac
+}
+
+EXPECTED_ROLE=$(expected_role_for_host "$HOST")
+if [[ -n "$EXPECTED_ROLE" && -n "$ROLE" && "$ROLE" != "$EXPECTED_ROLE" ]]; then
+  echo "Host '$HOST' requires role '$EXPECTED_ROLE'" >&2
+  exit 2
+fi
+if [[ -n "$EXPECTED_ROLE" && -z "$ROLE" ]]; then
+  ROLE="$EXPECTED_ROLE"
+fi
+
+# macbook and ubuntu are not NixOS appliances: they have no systemd service
+# graph, role marker, or appliance NIC contract for the Linux checks below.
+# Give them a useful first-class check instead of attempting a misleading SSH
+# probe for dnsmasq, Blocky, and Prometheus. The same code works locally (the
+# recommended path for hardware-specific checks) or through SSH when the host
+# is reachable remotely.
+PLATFORM_ROLE=""
+case "$HOST" in
+  macbook) PLATFORM_ROLE="darwin" ;;
+  ubuntu) PLATFORM_ROLE="standalone-hm" ;;
+esac
+if [[ -n "$PLATFORM_ROLE" ]]; then
+  current_host=$(hostname 2>/dev/null || true)
+  local_target=false
+  if [[ "${HEALTHCHECK_LOCAL:-0}" == "1" || "$current_host" == "$HOST" || "$current_host" == "${HOST%%.*}" ]]; then
+    local_target=true
+  fi
+  if ! $local_target && ! "$SSH_BIN" -o ConnectTimeout=5 -o LogLevel=QUIET "krzysiek@$HOST" true 2>/dev/null; then
+    echo "Error: Cannot connect to $HOST via SSH" >&2
+    exit 1
+  fi
+
+  run_platform() {
+    local command=$1
+    if $local_target; then
+      bash -c "$command"
+    else
+      "$SSH_BIN" -o ConnectTimeout=10 -o LogLevel=QUIET "krzysiek@$HOST" "$command"
+    fi
+  }
+  PASS=0
+  FAIL=0
+  pass() { echo "  [PASS] $*"; ((PASS++)) || true; }
+  fail() { echo "  [FAIL] $*"; ((FAIL++)) || true; }
+  check() {
+    local desc=$1
+    shift
+    if "$@" > /dev/null 2>&1; then pass "$desc"; else fail "$desc"; fi
+  }
+  check "Nix is installed" run_platform 'command -v nix'
+  check "hostname matches $HOST" run_platform "test \"\$(hostname -s)\" = \"${HOST%%.*}\""
+  check "Home Manager profile exists" run_platform 'test -e "$HOME/.local/state/home-manager/gcroots/current-home" || test -e "$HOME/.nix-profile"'
+  check "SSH configuration exists" run_platform 'test -f "$HOME/.ssh/config"'
+  check "Zsh configuration exists" run_platform 'test -f "$HOME/.zshrc"'
+  if [[ "$ROLE" == "darwin" ]]; then
+    check "macOS platform detected" run_platform 'command -v sw_vers >/dev/null && sw_vers -productName | grep -q macOS'
+  else
+    check "Ubuntu platform detected" run_platform '. /etc/os-release && test "$ID" = ubuntu'
+  fi
+  echo "Healthcheck: $PASS passed, $FAIL failed"
+  [[ "$FAIL" -eq 0 ]]
+  exit $?
 fi
 
 # Fail once, quickly, before optional discovery would multiply connection
@@ -132,6 +209,10 @@ check_nonempty() {
 run_ssh()  { "$SSH_BIN" "${SSH_OPTS[@]}" "krzysiek@$HOST" "$@"; }
 # shellcheck disable=SC2329
 run_sudo() { "$SSH_BIN" "${SSH_OPTS[@]}" "krzysiek@$HOST" sudo "$@"; }
+
+if [[ -n "$EXPECTED_ROLE" ]]; then
+  check_val "hostname matches $HOST" "${HOST%%.*}" run_ssh hostname -s
+fi
 
 # Both restic (modules/nixos/backup.nix: timerConfig.OnCalendar default
 # "daily", RandomizedDelaySec up to 1h) and btrbk (onCalendar = "daily") run

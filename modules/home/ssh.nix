@@ -15,12 +15,12 @@
           # Security: reject connections to unknown hosts by default
           StrictHostKeyChecking = "ask";
         };
-        # Select the GitHub key explicitly.  The global NixOS
-        # AddKeysToAgent yes loads it into the running agent on first use.
+        # Let OpenSSH use the platform's normal agent/default-key discovery.
+        # A host-specific workstation key is not guaranteed to exist on
+        # macbook or Ubuntu, so the shared aspect must not hardcode zbook's
+        # private-key filename.
         "github.com" = {
           User = "git";
-          IdentityFile = "~/.ssh/zbook_ed25519";
-          IdentitiesOnly = true;
           # GitHub's host keys are well-known
           StrictHostKeyChecking = "accept-new";
         };
@@ -29,16 +29,16 @@
           User = "krzysiek";
           IdentityFile = "~/.ssh/soyo_ed25519";
           IdentitiesOnly = true;
-          # ForwardAgent is acceptable on a trusted homelab LAN.
-          # Use `ssh -A` for ad-hoc forwarding if you prefer not to set this.
-          ForwardAgent = true;
+          # Agent forwarding is opt-in (`ssh -A`) because a compromised remote
+          # host can use a forwarded agent to authenticate elsewhere.
+          ForwardAgent = false;
         };
 
         zbook = {
           User = "krzysiek";
           IdentityFile = "~/.ssh/zbook_ed25519";
           IdentitiesOnly = true;
-          ForwardAgent = true;
+          ForwardAgent = false;
         };
       };
     };

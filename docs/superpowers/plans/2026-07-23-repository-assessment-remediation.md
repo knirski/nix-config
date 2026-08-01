@@ -996,7 +996,7 @@ canonical progress record for this plan — do not duplicate it elsewhere.
 12. `feat(supply-chain): own command-code dependency updates` — S3. Landed.
     The `@opentelemetry/propagator-jaeger` CVE it surfaced remains open for
     human triage — see
-    [`docs/security/supply-chain.md`](../../security/supply-chain.md#override-ownership-and-lifecycle).
+    [`docs/security/supply-chain.md`](../../security/supply-chain.md#dependency-automation-decisions).
 13. `refactor(nixpkgs): scope package policy exceptions` — S4. Landed.
 14. `fix(macbook): align desktop bindings and install contract` — H1. Landed
     (plus a follow-up correcting the Terminal.app launch flag and

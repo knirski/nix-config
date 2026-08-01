@@ -116,6 +116,7 @@
       # back to "" so callers can use lib.hasPrefix without a null check.
       pinentryPackageName = pkg: if pkg == null then "" else pkg.pname or pkg.name or "";
       yaziOpenCommand = home: (lib.head home.programs.yazi.settings.opener.open).run;
+      sshSettings = home: home.programs.ssh.settings;
 
       soyoHome = soyo.home-manager.users.krzysiek;
       zbookHome = zbook.home-manager.users.krzysiek;
@@ -176,9 +177,13 @@
 
         macbook-has-development-packages = homeHasDevelopmentPackages macbookHome;
         macbook-has-development-programs = developmentProgramsEnabled macbookHome;
+        macbook-selects-aerospace-not-sway =
+          macbookHome.programs.aerospace.enable && !macbookHome.wayland.windowManager.sway.enable;
 
         ubuntu-has-development-packages = homeHasDevelopmentPackages ubuntuHome;
         ubuntu-has-development-programs = developmentProgramsEnabled ubuntuHome;
+        ubuntu-selects-sway-not-aerospace =
+          ubuntuHome.wayland.windowManager.sway.enable && !ubuntuHome.programs.aerospace.enable;
 
         # R2: the headless Linux base (soyo-equivalent — homeBaseOnly has no
         # desktop aspect imported) must get a terminal-safe pinentry, never
@@ -226,6 +231,31 @@
           !(lib.hasPrefix "pinentry-gnome3" (
             pinentryPackageName macbookHome.services.gpg-agent.pinentry.package
           ));
+
+        # The shared SSH aspect must work on every workstation platform: the
+        # GitHub block cannot force zbook's private-key filename, and remote
+        # aliases must not expose the local agent unless an operator opts in
+        # with `ssh -A`.
+        ssh-github-does-not-force-zbook-key =
+          builtins.all
+            (home: lib.attrByPath [ "github.com" "data" "IdentityFile" ] null (sshSettings home) == null)
+            [
+              zbookHome
+              macbookHome
+              ubuntuHome
+            ];
+        ssh-host-aliases-do-not-forward-agent =
+          builtins.all
+            (
+              home:
+              lib.attrByPath [ "soyo" "data" "ForwardAgent" ] null (sshSettings home) == false
+              && lib.attrByPath [ "zbook" "data" "ForwardAgent" ] null (sshSettings home) == false
+            )
+            [
+              zbookHome
+              macbookHome
+              ubuntuHome
+            ];
       };
 
       failed = builtins.attrNames (lib.filterAttrs (_: passed: !passed) testResults);

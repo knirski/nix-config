@@ -1,5 +1,12 @@
 # Testing and verification
 
+`nix flake check` may print `unknown flake output 'agenix-rekey'` (and on Nix
+versions that inspect the deploy-rs namespace, `deploy`). These are
+intentional tool-owned namespaces consumed by `agenix rekey` and `deploy-rs`,
+not omitted standard `packages`, `apps`, `checks`, or host outputs. The check
+still evaluates/builds the repository-owned outputs below; treat any other
+unknown-output warning as a regression.
+
 The repository treats generated configuration, executable behavior, and
 operator-only recovery as different evidence classes. The complete local gate
 is `nix flake check path:. --keep-going`; focused checks are useful during
@@ -153,7 +160,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `boot-generation-invariants` | Limine's `maxGenerations` is set, positive, and within the documented upper bound on every host | `boot-generation-invariants.nix` | Pure eval |
 | `btrfs-alert-metric-contract` | The Btrfs usage/threshold Prometheus metric names emitted by `free-space-check` and consumed by the Grafana alert never drift apart | `observability-contract-checks.nix` | Pure eval + shell script |
 | `clipboard-protocols` | Primary clipboard data-paste in Wayland | `clipboard-protocol-check.nix` | KVM |
-| `dendritic-options` | Every `lanAppliance.services.*` option declared by the hosts that toggle it | `perSystem.nix` | Pure eval |
+| `dendritic-options` | Every `lanAppliance.services.*` option declared by the NixOS hosts that toggle it, and every selected Darwin/Home Manager aspect name exists | `perSystem.nix` | Pure eval |
 | `deploy-activate` | deploy-rs activation scripts don't error | `deploy.nix` (deploy-rs) | Pure eval |
 | `deploy-schema` | deploy-rs node schema is valid | `deploy.nix` (deploy-rs) | Pure eval |
 | `dns-dhcp-config` | Generated Blocky + dnsmasq config is valid; reservations match | `dns-dhcp-checks.nix` | Pure eval |
@@ -179,6 +186,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `script-contracts` | Operator commands (healthcheck, recover-secrets, set-tailscale-keys) handle valid/invalid/dry-run/interrupted args correctly | `script-tests.nix` | Shell (Bats) |
 | `service-aspect-invariants` | The shared backup and observability aspects carry no Soyo-specific values (hostname, `czworaczki`, `enp1s0`) when evaluated against alternate-host fixtures; the built lan-inventory-exporter script queries the fixture's own NIC, not Soyo's | `service-aspect-invariants.nix` | Pure eval + shell script |
 | `shell-boundaries` | No `writeShellScript` calls; generated unit fragments have strict checking | `shell-checks.nix` | Pure eval |
+| `source-filter-contract` | Nix-backed checks preserve tracked taste files while excluding local agent settings/worktrees and cache artifacts | `perSystem.nix` | Pure eval |
 | `soyo-guest-isolation` | Guest services on Soyo have MemoryMax, CPUQuota, Nice applied | `soyo-guest-isolation.nix` | Pure eval |
 | `systemd-hardening-invariants` | Applicable systemd services have basic hardening (ProtectSystem, PrivateTmp, etc.) | `systemd-hardening-checks.nix` | Pure eval |
 | `topology-freshness` | Committed `docs/topology/overview.svg` matches the current stable state | `topology-checks.nix` | Pure eval |

@@ -23,6 +23,32 @@ setup() { setup_contract_test; }
   [[ ! -s "$OPERATOR_TEST_LOG" ]]
 }
 
+@test "platform roles run platform checks without NixOS service probes" {
+  export SSH_HOSTNAME=macbook SSH_PLATFORM_NAME=macOS
+  run "$HEALTHCHECK" macbook darwin
+  assert_status 0
+  assert_output_has 'macOS platform detected'
+  assert_log_has 'hostname -s'
+  assert_log_lacks 'systemctl'
+  assert_log_lacks '/persist'
+
+  : >"$OPERATOR_TEST_LOG"
+  export SSH_HOSTNAME=ubuntu SSH_OS_RELEASE='ID=ubuntu'
+  run "$HEALTHCHECK" ubuntu standalone-hm
+  assert_status 0
+  assert_output_has 'Ubuntu platform detected'
+  assert_log_has 'hostname -s'
+  assert_log_lacks 'systemctl'
+  assert_log_lacks '/persist'
+}
+
+@test "known hosts reject a mismatched role before SSH" {
+  run "$HEALTHCHECK" macbook workstation
+  assert_status 2
+  assert_output_has "Host 'macbook' requires role 'darwin'"
+  [[ ! -s "$OPERATOR_TEST_LOG" ]]
+}
+
 @test "explicit arguments preserve one remote command argument and skip discovery" {
   run "$HEALTHCHECK" custom-host workstation eth-explicit
   assert_status 0

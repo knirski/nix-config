@@ -100,7 +100,7 @@
               pkgs.python3
               pkgs.shellcheck
             ];
-            src = lib.cleanSource inputs.self;
+            src = (import ../../lib/source-filter.nix { inherit lib; }) inputs.self;
           }
           ''
             cp -R "$src" source

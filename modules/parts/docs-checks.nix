@@ -6,7 +6,8 @@
   perSystem =
     { pkgs, ... }:
     let
-      source = pkgs.lib.cleanSource inputs.self;
+      sourceFilter = import ../../lib/source-filter.nix { inherit (pkgs) lib; };
+      source = sourceFilter inputs.self;
       docsCheck = pkgs.writeShellApplication {
         name = "docs-check";
         runtimeInputs = [ pkgs.python3 ];
