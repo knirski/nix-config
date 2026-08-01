@@ -21,8 +21,8 @@
 # `npmDepsHash` a human pastes below -- it does
 # not edit this file itself, touch flake.lock, or commit anything. After
 # pasting the printed `version`/`hash`/`npmDepsHash`, confirm with
-# `nix build path:.#command-code` and `nix build
-# path:.#command-code`, then review and commit the regenerated lockfile. See
+# `nix build path:.#command-code`, then review and commit the regenerated
+# lockfile. See
 # that script's header for the manual dance
 # this automates, if you ever need to do it by hand.
 {
