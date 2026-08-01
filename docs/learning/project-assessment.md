@@ -302,7 +302,7 @@ have the NixOS systemd, DNS/DHCP, or appliance NIC checks.
 |------|------------|--------|------------|
 | **NixOS unstable breaks zbook** | Medium | Workstation unusable | Pin `nixpkgs-unstable` in flake.lock; `just check` catches eval failures; rollback via `nixos-rebuild switch --flake .#zbook --rollback` |
 | **TPM PCR 0+2+7 binding fails after kernel/UEFI update** | Medium | Auto-unlock breaks, manual unlock required | Documented re-enrollment procedure; passphrase fallback always retained |
-| **restic repository corruption** | Low | Backup loss | `restic check --read-data` in VM test; weekly check timer; NAS-side snapshots |
+| **restic repository corruption** | Low | Backup loss | `restic check --read-data` and local snapshot restore in the VM test; weekly check timer; NAS-side snapshots; production restore remains a manual drill |
 | **agenix master key compromise** | Low | All secrets exposed | Master key = operator SSH key (hardware-backed, e.g., YubiKey); rotation procedure in `secrets.md` |
 | **Single-person bus factor** | High | Knowledge loss | All procedures documented; learning path teaches architecture |
 | **Upstream `command-code` dependency advisories** (tracked, 2026-08-01) | Current vendored tree is scanned by the scheduled OSV workflow | Upstream release timing controls remediation | Do not add a local OpenTelemetry override. Run `just update-command-code <version>`, rebuild, and re-run OSV when upstream publishes the dependency update. Details: [`docs/security/supply-chain.md`](../security/supply-chain.md#dependency-automation-decisions). |

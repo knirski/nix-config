@@ -155,8 +155,8 @@ This table is the canonical index — when adding a check, add a row here.
 
 | Check | What it asserts | Source | Type |
 | ----- | --------------- | ------ | ---- |
-| `backup-restic-integration` | restic can initialise a repo, backup, and check a snapshot | `backup-integration-check.nix` | Pure eval + shell script |
-| `backup-unit-vm` | KVM VM: backup creates repo snapshots, readiness gates work | `backup-integration-check.nix` | KVM |
+| `backup-restic-integration` | restic can initialise a repo, backup, restore, and check a snapshot | `backup-integration-check.nix` | Pure eval + shell script |
+| `backup-unit-vm` | KVM VM: backup creates and restores repo snapshots, readiness gates work | `backup-integration-check.nix` | KVM |
 | `boot-generation-invariants` | Limine's `maxGenerations` is set, positive, and within the documented upper bound on every host | `boot-generation-invariants.nix` | Pure eval |
 | `btrfs-alert-metric-contract` | The Btrfs usage/threshold Prometheus metric names emitted by `free-space-check` and consumed by the Grafana alert never drift apart | `observability-contract-checks.nix` | Pure eval + shell script |
 | `clipboard-protocols` | Primary clipboard data-paste in Wayland | `clipboard-protocol-check.nix` | KVM |
@@ -256,10 +256,13 @@ has unusual prerequisites (e.g. `dev/kvm`), confirm which tier fits.
 
 ## Evidence limits
 
-VM checks cover isolated software behaviour, including DNS/DHCP, backup, and
-impermanence. They do not prove physical TPM measurements, Secure Boot firmware
-behaviour, real LAN recovery, or restore operations against production data.
-Those remain explicit operator-led drills in the relevant runbooks.
+VM checks cover isolated software behaviour, including DNS/DHCP, backup,
+local snapshot restoration, and impermanence. The backup VM proves restoration
+from its local fixture repository, but does not prove SFTP transport, NAS
+availability, production credentials, or a restore against production data.
+VMs also do not prove physical TPM measurements, Secure Boot firmware
+behaviour, or real LAN recovery. Those remain explicit operator-led drills in
+the relevant runbooks.
 
 Automated checks (pure evaluation, VM, shell contract) are the first line of
 confidence. Anything that depends on hardware, physical access, or production

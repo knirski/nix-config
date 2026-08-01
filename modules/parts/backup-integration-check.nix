@@ -90,9 +90,30 @@
                 machine.succeed("install -d /run/restic-fixture /var/lib/restic-fixture/source/nested")
                 machine.succeed("printf 'fixture password\\n' > /run/restic-fixture/password")
                 machine.succeed("printf 'payload\\n' > /var/lib/restic-fixture/source/nested/file")
+                machine.succeed("chmod 0640 /var/lib/restic-fixture/source/nested/file")
                 machine.succeed("systemctl start restic-backups-fixture.service")
                 machine.succeed("grep -Fx 'restic_backup_ran 1' /var/lib/prometheus/textfiles/backup.prom")
                 machine.succeed("grep -Fx 'restic_backup_success 1' /var/lib/prometheus/textfiles/backup.prom")
+
+            with subtest("a successful snapshot restores after source loss"):
+                machine.succeed("rm -rf /var/lib/restic-fixture/source")
+                machine.succeed("rm -rf /var/lib/restic-fixture/restore")
+                machine.succeed("install -d -m 0755 /var/lib/restic-fixture/restore")
+                machine.succeed("test ! -e /var/lib/restic-fixture/source/nested/file")
+                machine.succeed(
+                    "RESTIC_REPOSITORY=/var/lib/restic-fixture/repository "
+                    "RESTIC_PASSWORD_FILE=/run/restic-fixture/password "
+                    "restic restore latest "
+                    "--target /var/lib/restic-fixture/restore "
+                    "--include /var/lib/restic-fixture/source"
+                )
+                restored = "/var/lib/restic-fixture/restore/var/lib/restic-fixture/source/nested/file"
+                machine.succeed(f'test "$(cat {restored})" = payload')
+                machine.succeed(f'test "$(stat -c %a {restored})" = 640')
+                machine.succeed(
+                    "cp -a /var/lib/restic-fixture/restore/var/lib/restic-fixture/source "
+                    "/var/lib/restic-fixture/source"
+                )
 
             with subtest("wrong password reports failure and invokes the local handoff"):
                 machine.succeed("printf 'wrong password\\n' > /run/restic-fixture/password")

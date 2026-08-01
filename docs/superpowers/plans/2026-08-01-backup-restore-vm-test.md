@@ -30,7 +30,7 @@
 - Consumes: the existing `restic-backups-fixture.service`, local repository at `/var/lib/restic-fixture/repository`, password file at `/run/restic-fixture/password`, and source at `/var/lib/restic-fixture/source`.
 - Produces: a passing `backup-unit-vm` check that proves restoration into `/var/lib/restic-fixture/restore/var/lib/restic-fixture/source`.
 
-- [ ] **Step 1: Add the failing restore assertion first**
+- [x] **Step 1: Add the failing restore assertion first**
 
 Immediately after the existing successful-backup assertions, add a subtest that models source loss and checks the restored path before adding the restore command:
 
@@ -42,7 +42,7 @@ with subtest("a successful snapshot restores after source loss"):
     machine.succeed("test -e /var/lib/restic-fixture/restore/var/lib/restic-fixture/source/nested/file")
 ```
 
-- [ ] **Step 2: Run the focused check to verify the new assertion fails for the intended reason**
+- [x] **Step 2: Run the focused check to verify the new assertion fails for the intended reason**
 
 Run with elevated KVM access:
 
@@ -53,7 +53,7 @@ nix build --no-link path:.#checks.x86_64-linux.backup-unit-vm
 
 Expected: the VM test fails at the new restored-path assertion because no restore operation has been added yet.
 
-- [ ] **Step 3: Implement the minimal restore flow and preserve later cases**
+- [x] **Step 3: Implement the minimal restore flow and preserve later cases**
 
 Replace the temporary assertion-only block with this complete sequence after the successful backup assertions:
 
@@ -71,8 +71,8 @@ with subtest("a successful snapshot restores after source loss"):
         "--include /var/lib/restic-fixture/source"
     )
     restored = "/var/lib/restic-fixture/restore/var/lib/restic-fixture/source/nested/file"
-    machine.succeed(f"test \\\"$(cat {restored})\\\" = 'payload'")
-    machine.succeed(f"test \\\"$(stat -c %a {restored})\\\" = 640")
+    machine.succeed(f'test "$(cat {restored})" = payload')
+    machine.succeed(f'test "$(stat -c %a {restored})" = 640')
     machine.succeed(
         "cp -a /var/lib/restic-fixture/restore/var/lib/restic-fixture/source "
         "/var/lib/restic-fixture/source"
@@ -92,13 +92,13 @@ stale files cannot satisfy the assertions. Keep the
 existing wrong-password case after this block; the copy-back restores its
 precondition without changing the repository or password semantics.
 
-- [ ] **Step 4: Update documentation to distinguish automated and manual restore evidence**
+- [x] **Step 4: Update documentation to distinguish automated and manual restore evidence**
 
 Change the `backup-restic-integration` row in `docs/testing.md` from “initialise a repo, backup, and check a snapshot” to “initialise a repo, backup, restore, and check a snapshot”. In the evidence-limits section, state that the VM proves local snapshot restoration while SFTP/NAS transport and a production restore remain manual.
 
 Update the backup coverage entry in `docs/learning/project-assessment.md` to mention both the existing `restic check --read-data` and the new local restore assertion, without claiming production restore coverage.
 
-- [ ] **Step 5: Run the focused check and verify it passes**
+- [x] **Step 5: Run the focused check and verify it passes**
 
 Run:
 
@@ -108,7 +108,7 @@ nix build --no-link path:.#checks.x86_64-linux.backup-unit-vm
 
 Expected: exit 0, including successful backup, restore-after-deletion, wrong-password failure handoff, and later-success subtests.
 
-- [ ] **Step 6: Run repository verification**
+- [x] **Step 6: Run repository verification**
 
 Run:
 
@@ -120,7 +120,7 @@ git diff --check
 
 Expected: all commands pass; only the repository’s documented tool-owned flake output warnings may appear.
 
-- [ ] **Step 7: Commit the implementation**
+- [x] **Step 7: Commit the implementation**
 
 ```bash
 git add modules/parts/backup-integration-check.nix docs/testing.md docs/learning/project-assessment.md

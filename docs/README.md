@@ -78,6 +78,7 @@ enforcement belongs to the documentation-check layer.
 - [LAN observability design](superpowers/specs/2026-07-04-lan-observability-design.md)
 - [CI pipeline design](superpowers/specs/2026-07-05-ci-pipeline-design.md)
 - [Repository remediation design](superpowers/specs/2026-08-01-repository-remediation-design.md)
+- [Backup restore VM test design](superpowers/specs/2026-08-01-backup-restore-vm-test-design.md)
 
 ## Contribute
 
@@ -87,6 +88,8 @@ enforcement belongs to the documentation-check layer.
 - [Completed repository assessment remediation plan](superpowers/plans/2026-08-01-repository-remediation.md)
   — completed implementation record for the security, CI, portability,
   source-hygiene, and observability fixes.
+- [Completed backup restore VM test plan](superpowers/plans/2026-08-01-backup-restore-vm-test.md)
+  — implementation record for local snapshot recovery coverage.
 - [Superseded correctness and resilience plan](superpowers/plans/2026-07-12-correctness-resilience-docs.md)
   — frozen record of the previous implementation phase.
 - [Superseded repository gaps and improvements](superpowers/specs/repository-gaps-and-improvements.md)
