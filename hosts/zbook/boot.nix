@@ -7,8 +7,10 @@
     kernelParams = [
       "nvidia_drm.modeset=1"
       # ramoops/pstore: preserve panic, console, and ftrace logs across
-      # unclean reboots. 16 MiB — lowest safe address in System RAM (above
-      # BIOS reservations at 1 MiB, below the crash kernel at 608 MiB).
+      # unclean reboots. 1 MiB buffer at physical address 16 MiB — lowest
+      # safe address in System RAM (above BIOS reservations at 1 MiB,
+      # below the crash kernel at 608 MiB).
+      "memmap=1M$16M"
       "ramoops.mem_address=0x01000000"
       "ramoops.mem_size=0x100000"
       "ramoops.console_size=0x10000"
