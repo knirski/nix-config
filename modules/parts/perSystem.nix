@@ -80,6 +80,7 @@ in
         text = builtins.readFile ../../scripts/update-command-code.sh;
       };
       sourceFilter = import ../../lib/source-filter.nix { inherit (pkgs) lib; };
+      sourceFilterPredicate = import ../../lib/source-filter-predicate.nix { inherit (pkgs) lib; };
       filteredSource = sourceFilter inputs.self;
     in
     {
@@ -249,21 +250,19 @@ in
 
         source-filter-contract =
           let
-            nestedWorktreeSource = pkgs.runCommand "source-filter-nested-worktree-fixture" { } ''
-              mkdir -p "$out/.commandcode/agent/.git/worktrees/example"
-              mkdir -p "$out/.commandcode/taste"
-              touch "$out/.commandcode/agent/.git/worktrees/example/HEAD"
-              touch "$out/.commandcode/taste/taste.md"
-            '';
-            filteredNestedWorktreeSource = sourceFilter nestedWorktreeSource;
+            syntheticRoot = "/source-filter-contract";
+            nestedWorktreeMetadata = "${syntheticRoot}/.commandcode/agent/.git/worktrees/example";
+            nestedTasteFile = "${syntheticRoot}/.commandcode/taste/taste.md";
+            nestedMetadataExcluded = !(sourceFilterPredicate syntheticRoot nestedWorktreeMetadata "directory");
+            nestedTastePreserved = sourceFilterPredicate syntheticRoot nestedTasteFile "regular";
           in
           pkgs.runCommand "source-filter-contract" { } ''
             test -f ${filteredSource}/.commandcode/taste/taste.md
             test ! -e ${filteredSource}/.git
             test ! -e ${filteredSource}/.commandcode/settings.json
             test ! -e ${filteredSource}/.claude
-            test -f ${filteredNestedWorktreeSource}/.commandcode/taste/taste.md
-            test ! -e ${filteredNestedWorktreeSource}/.commandcode/agent/.git
+            test "${if nestedMetadataExcluded then "true" else "false"}" = true
+            test "${if nestedTastePreserved then "true" else "false"}" = true
             touch "$out"
           '';
 
