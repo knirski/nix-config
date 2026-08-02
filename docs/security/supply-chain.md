@@ -17,6 +17,18 @@ expression correctness. Structural policy is parsed as YAML, while immutable
 fixtures cover scalar, flow-mapping, comment, quoting and trigger variants.
 These checks complement each other.
 
+The PR Agent workflow uses the documented `pull_request` integration and keeps
+the action pinned by commit SHA. Its checkout is explicitly the pull request's
+trusted base revision, solely so the repository's `.pr_agent.toml` is present;
+the PR head is never checked out for this secret-bearing action. The workflow
+file itself is protected by [`.github/CODEOWNERS`](../../.github/CODEOWNERS),
+and the `Protect main` ruleset must enforce a required code-owner review before
+workflow changes can merge. The base checkout protects repository content;
+CODEOWNERS plus required review protects the workflow definition for
+same-repository pull requests. Fork-triggered `pull_request` runs do not
+receive repository secrets from GitHub, so the Gemini-backed review is
+intentionally limited to runs that can access the configured repository secret.
+
 Cachix is a performance layer, not an authority boundary. Every job that
 needs Cachix substitution passes a `cachix-auth-token` input to the local
 `setup-nix` composite action; the value itself is what is gated, not merely
@@ -63,7 +75,7 @@ does not invalidate a credential already copied elsewhere.
 
 ## Dependency automation decisions
 
-This repository has two owned dependency-tree surfaces, not one:
+This repository has two owned dependency-tree surfaces:
 
 - **Nix inputs**, pinned by `flake.lock` and updated via Renovate's `flake`
   manager (see `renovate.json`) or `nix flake update <input>`.
@@ -73,33 +85,26 @@ This repository has two owned dependency-tree surfaces, not one:
   `command-code` is an unfree, third-party npm package
   (`aspects.homeManager.development`, i.e. zbook/macbook/ubuntu — see task
   R1). Its upstream tarball ships no lockfile, so this repository generates
-  and owns one, including a manually reviewed OpenTelemetry dependency-range
-  override (`command-code-lock/opentelemetry-overrides.json`) that fixes
-  CVE-2026-54285 (GHSA-8988-4f7v-96qf), which upstream's own `package.json`
-  does not ship fixed. **This is a real, supported package-manager lock
-  file with its own transitive dependency risk** — an earlier revision of
-  this document incorrectly claimed the opposite ("this repository has no
-  npm, Cargo, Go, Maven, Gradle or supported package-manager lock file") to
-  justify deferring GitHub's dependency-review action. That claim was false
-  and has been corrected.
+  and owns one. **This is a real, supported package-manager lock file with
+  its own transitive dependency risk** — an earlier revision of this document
+  incorrectly claimed the opposite ("this repository has no npm, Cargo, Go,
+  Maven, Gradle or supported package-manager lock file") to justify deferring
+  GitHub's dependency-review action. That claim was false and has been
+  corrected.
 
 That said, GitHub's dependency-review action still does not understand
 `flake.lock` (the Nix-input surface), and reviewing `flake.lock` diffs
 remains the manual process described above — nothing about correcting the
 npm claim changes that. Dependency review also cannot substitute for the
 npm-specific tooling below: it flags advisories on a PR diff, but has no way
-to run the `postPatch` security-override transformation this repository
-already applies, or to regenerate a lockfile the way `just update-command-code`
-does. Given that, dependency review remains out of scope; the npm surface
-instead gets its own purpose-built process:
+to regenerate a lockfile the way `just update-command-code` does. Given that,
+dependency review remains out of scope; the npm surface instead gets its own
+purpose-built process:
 
 - **Update process**: `just update-command-code <version>`
   (`scripts/update-command-code.sh`) fetches the named upstream tarball,
   prints the `fetchurl` hash, regenerates
-  `command-code-lock/package-lock.json` in place (seeded from the
-  currently-vendored lockfile so already-pinned resolutions are preserved),
-  reapplies the OpenTelemetry override from
-  `command-code-lock/opentelemetry-overrides.json`, and runs the documented
+  `command-code-lock/package-lock.json` in place and runs the documented
   fakeHash-then-build dance to print the resulting `npmDepsHash`. It never
   edits `command-code.nix`'s `version`/`hash`/`npmDepsHash` fields, never
   touches `flake.lock`, and never commits — a human pastes the printed
@@ -137,63 +142,23 @@ instead gets its own purpose-built process:
   not merely `flake.lock`. Its default `scan source` mode queries deps.dev
   over the network for every resolved package, so it cannot be part of
   `nix flake check` (which must stay offline). It instead runs only in the
-  new scheduled `.github/workflows/security-scan.yml`
-  (`on: schedule` + `workflow_dispatch`), offset from Renovate's Monday
-  flake-input schedule. A representative run during this task's
-  implementation found a real, currently unaddressed high-severity finding
-  — `@opentelemetry/propagator-jaeger@2.8.0` (GHSA-45rx-2jwx-cxfr, fixed in
-  2.9.0) — distinct from the CVE-2026-54285 override already applied above,
-  confirming the scan surfaces real advisories rather than passing
-  vacuously. That specific finding is left for a human to triage (add a
-  fifth entry to `opentelemetry-overrides.json` and re-run
-  `just update-command-code`, or confirm it doesn't affect a code path this
-  package actually exercises) rather than fixed silently as part of adding
-  the scanning pipeline itself.
-- **Offline build/smoke check**: `checks.command-code-security`
-  (`modules/parts/command-code-security-checks.nix`) builds
-  `packages.command-code`, smoke-tests the wrapped `cmd --version`, and
-  proves the four OpenTelemetry packages in the built output's
-  `node_modules` actually resolved to versions satisfying
-  `opentelemetry-overrides.json`'s floors — not merely that `postPatch`
-  claims to bump them. The same verification predicate
-  (`tests/security/check_command_code_overrides.py`) is also run against
-  checked-in negative fixtures under
-  `tests/security/command-code-overrides/{pass,reject-*}/`, proving it
-  actually rejects a vulnerable version and a dropped override, not just
-  that it accepts the real build. This check is pure/offline and runs in
-  ordinary `nix flake check`.
+  scheduled `.github/workflows/security-scan.yml`
+  (`on: schedule` + `workflow_dispatch`). The scan remains authoritative:
+  this repository does not carry a local OpenTelemetry advisory override, and
+  the current 1.7.0 tree still reports `@opentelemetry/core` 2.0.0/2.7.1 and
+  `@opentelemetry/propagator-jaeger` 2.7.1. The next upstream `command-code`
+  update is expected to refresh those transitive packages. Re-run the scan
+  after every command-code update and record any remaining upstream advisories
+  rather than suppressing them.
+- **Offline build/smoke check**: `nix build path:.#command-code` builds the
+  package and validates the Nix dependency hash. The normal package build is
+  intentionally separate from the networked OSV scan; it does not claim that
+  all upstream advisories are resolved.
 
-### Override ownership and lifecycle
-
-This is a personal, single-operator repository: the repository owner is the
-sole owner of the OpenTelemetry CVE-2026-54285 override (and any future
-override added to `opentelemetry-overrides.json`). There is no separate
-security team to hand this off to.
-
-An override like this is expected to last until upstream `command-code`
-ships a release whose own `package.json` already satisfies the bumped
-range — i.e. until a `just update-command-code` run to a newer upstream
-version no longer needs the `sed` bump because upstream's own pinned range
-already clears the security floor. There is no fixed calendar expiry beyond
-the 180-day freshness window above, which forces a periodic look regardless
-of whether upstream has caught up.
-
-To remove an override once it's no longer needed:
-
-1. Delete the corresponding entry from
-   `command-code-lock/opentelemetry-overrides.json` (this is the single
-   place both `command-code.nix`'s `postPatch` and
-   `scripts/update-command-code.sh` read from, so no other file needs a
-   matching edit).
-2. Run `just update-command-code <version>` to regenerate the lockfile
-   without that override applied, and rebuild:
-   `nix build path:.#command-code`.
-3. Confirm `nix build path:.#checks.x86_64-linux.command-code-security`
-   still verifies successfully with the override removed — it will, since
-   upstream's own now-current range already satisfies the same floor
-   recorded in the (now-shorter) overrides list.
-4. Update `command-code-lock/last-reviewed.json`'s `date` and commit
-   the override-list, lockfile, and freshness-record changes together.
+There is no repository-local advisory override lifecycle. Upstream owns the
+dependency ranges, `scripts/update-command-code.sh` owns regeneration, and
+`osv-scanner` owns current vulnerability visibility. The 180-day freshness
+check forces a human review even when no command-code version bump is needed.
 
 OpenSSF Scorecard is also deferred until the repository settings in
 [GitHub security settings](github-settings.md) are enabled and the operator has

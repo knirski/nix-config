@@ -1,0 +1,4 @@
+# PR Agent can read GEMINI_API_KEY, so changes to its workflow require the
+# repository owner’s review. The Protect main ruleset must enforce this entry.
+/.github/workflows/pr-agent.yml @knirski
+/.github/CODEOWNERS @knirski

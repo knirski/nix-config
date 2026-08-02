@@ -1,5 +1,8 @@
 # flake-parts module: dev shell, formatter, and repo checks.
-{ inputs, ... }:
+{ inputs, config, ... }:
+let
+  flakeConfig = config;
+in
 {
   systems = [ "x86_64-linux" ];
   imports = [
@@ -28,7 +31,11 @@
         # The source-level directive documents the same intentional remote
         # argv expansion, but writeShellApplication prepends its own header so
         # ShellCheck no longer treats that directive as file-wide.
-        excludeShellChecks = [ "SC2029" ];
+        excludeShellChecks = [
+          "SC2016"
+          "SC2029"
+          "SC2329"
+        ];
         runtimeInputs = with pkgs; [
           curl
           dnsutils
@@ -72,6 +79,9 @@
         ];
         text = builtins.readFile ../../scripts/update-command-code.sh;
       };
+      sourceFilter = import ../../lib/source-filter.nix { inherit (pkgs) lib; };
+      sourceFilterPredicate = import ../../lib/source-filter-predicate.nix { inherit (pkgs) lib; };
+      filteredSource = sourceFilter inputs.self;
     in
     {
       pre-commit.settings = {
@@ -212,9 +222,9 @@
         # the `gitdir:` line, and tries to read the worktree metadata at
         # a path that does not exist in the sandbox -- so it refuses with
         # `fatal: not a git repository: .../.git/worktrees/<name>`.
-        # `pkgs.lib.cleanSource` strips the `.git` file and the rest of
-        # the VCS metadata, so the sandbox starts from a plain directory
-        # the same way CI's fresh-checkout source does. Pure CI usage is
+        # `sourceFilter` strips the `.git` file and known local agent/cache
+        # artifacts, so the sandbox starts from a plain directory the same
+        # way CI's fresh-checkout source does. Pure CI usage is
         # unaffected (CI's source has no `.git` either, the run uses
         # action/checkout which doesn't write the pointer file).
         #
@@ -226,7 +236,7 @@
         # `flakeModule`'s `checks.pre-commit = cfg.settings.run`.
         pre-commit = pkgs.lib.mkForce (
           config.pre-commit.settings.run.overrideAttrs (_: {
-            src = pkgs.lib.cleanSource inputs.self;
+            src = filteredSource;
           })
         );
 
@@ -236,7 +246,25 @@
         # This is the repo's only treefmt check derivation: treefmt-nix's own
         # auto-generated `checks.treefmt` is disabled above (`flakeCheck =
         # false`) so it can't reappear as an unfiltered duplicate.
-        formatting = config.treefmt.build.check (pkgs.lib.cleanSource inputs.self);
+        formatting = config.treefmt.build.check filteredSource;
+
+        source-filter-contract =
+          let
+            syntheticRoot = "/source-filter-contract";
+            nestedWorktreeMetadata = "${syntheticRoot}/.commandcode/agent/.git/worktrees/example";
+            nestedTasteFile = "${syntheticRoot}/.commandcode/taste/taste.md";
+            nestedMetadataExcluded = !(sourceFilterPredicate syntheticRoot nestedWorktreeMetadata "directory");
+            nestedTastePreserved = sourceFilterPredicate syntheticRoot nestedTasteFile "regular";
+          in
+          pkgs.runCommand "source-filter-contract" { } ''
+            test -f ${filteredSource}/.commandcode/taste/taste.md
+            test ! -e ${filteredSource}/.git
+            test ! -e ${filteredSource}/.commandcode/settings.json
+            test ! -e ${filteredSource}/.claude
+            test "${if nestedMetadataExcluded then "true" else "false"}" = true
+            test "${if nestedTastePreserved then "true" else "false"}" = true
+            touch "$out"
+          '';
 
         # Contract check for the justfile `fmt` recipe's doc comment and
         # docs/testing.md's `formatting` row, both of which document treefmt
@@ -293,9 +321,11 @@
               touch $out
             '';
 
-        # Option-namespace test: verify that each host declares the
-        # lanAppliance.services.* options matching the aspects it toggles.
-        # Missing = silent No-Op when a host data file sets a wrong namespace.
+        # Namespace test: verify that each NixOS host declares the
+        # lanAppliance.services.* options matching the aspects it toggles, and
+        # that Darwin/standalone-HM assemblers select real aspect names. A
+        # missing option/aspect is otherwise an easy-to-miss silent no-op when
+        # a host data file or assembler uses the wrong namespace.
         dendritic-options =
           let
             # Host → expected option list (matching host assembler toggles).
@@ -319,6 +349,18 @@
               ];
             };
 
+            aspectOpts = {
+              darwin = [ "base" ];
+              homeManager = [
+                "base"
+                "development"
+                "desktop"
+                "ssh"
+                "aerospace"
+                "sway"
+              ];
+            };
+
             missing =
               hostName: opt:
               let
@@ -329,10 +371,26 @@
 
             missingList = pkgs.lib.concatStringsSep "\n" (
               pkgs.lib.filter (x: x != null) (
-                pkgs.lib.concatMap (hostName: map (missing hostName) hostOpts.${hostName}) [
+                (pkgs.lib.concatMap (hostName: map (missing hostName) hostOpts.${hostName}) [
                   "soyo"
                   "zbook"
-                ]
+                ])
+                ++ (pkgs.lib.concatMap
+                  (
+                    namespace:
+                    map (
+                      name:
+                      if builtins.hasAttr name flakeConfig.aspects.${namespace} then
+                        null
+                      else
+                        "aspect:${namespace}.${name}"
+                    ) aspectOpts.${namespace}
+                  )
+                  [
+                    "darwin"
+                    "homeManager"
+                  ]
+                )
               )
             );
 

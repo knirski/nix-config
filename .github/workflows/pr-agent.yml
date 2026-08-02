@@ -1,8 +1,9 @@
 # AI-powered PR review using Qodo's PR Agent (Gemini backend).
-# Runs on every new PR and when a draft is marked ready for review.
 #
-# Requires the `GEMINI_API_KEY` repository secret (Google AI Studio).
-# Set it via: https://github.com/knirski/nix-config/settings/secrets/actions
+# PR Agent reads the pull request through GitHub's event/API context. The
+# checkout is deliberately pinned to the trusted base revision so the
+# repository's .pr_agent.toml is available without allowing PR changes to
+# configure this secret-bearing action.
 name: PR Agent
 
 on:
@@ -16,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-agent-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  group: pr-agent-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -31,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
       - name: Validate Gemini API key secret

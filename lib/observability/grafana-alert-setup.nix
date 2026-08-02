@@ -124,6 +124,11 @@ in
               }
 
               provision_rules() {
+                post_rule soyo_prometheus_scrape_failure \
+                  "📈 Prometheus scrape failure" \
+                  'sum by (job) (up{job=~"blocky|dnsmasq|loki|tempo"} == 0) > 0' \
+                  5m KeepLast "📈 One or more Prometheus scrape targets are down"
+
                 post_rule soyo_blocky_down \
                   "🧱 Blocky DNS down" \
                   'up{job="blocky"} == 0' \
@@ -143,6 +148,16 @@ in
                   "💽 Btrfs space low" \
                   '${btrfsMetrics.usagePercent}{${btrfsMetrics.hostLabel}="${config.networking.hostName}"} > ${btrfsMetrics.thresholdPercent}{${btrfsMetrics.hostLabel}="${config.networking.hostName}"}' \
                   5m KeepLast "💽 Btrfs filesystem usage is above the configured threshold"
+
+                post_rule soyo_loki_down \
+                  "📜 Loki down" \
+                  'up{job="loki"} == 0' \
+                  5m KeepLast "📜 Loki is unavailable; log ingestion and search are interrupted"
+
+                post_rule soyo_tempo_down \
+                  "🧵 Tempo down" \
+                  'up{job="tempo"} == 0' \
+                  5m KeepLast "🧵 Tempo is unavailable; trace ingestion and search are interrupted"
               }
 
               wait_ready

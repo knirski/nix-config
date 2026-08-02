@@ -62,9 +62,23 @@ deploy host="soyo":
         fi ;;
     esac
 
-# Run the on-host health check over SSH (e.g. `just healthcheck zbook`); host/role/nic default to soyo with auto-detection.
+# Run the health check (e.g. `just healthcheck zbook`). Host names are a
+# deliberate safety boundary: the recipe rejects a role/platform combination
+# that would run the wrong probe family against a real machine.
 healthcheck host="soyo" role="" nic="":
-    nix run .#healthcheck -- {{host}} {{role}} {{nic}}
+    #!/usr/bin/env bash
+    set -euo pipefail
+    HOST={{ quote(host) }}
+    ROLE={{ quote(role) }}
+    NIC={{ quote(nic) }}
+    case "$HOST:$ROLE" in
+      soyo:|soyo:appliance|soyo:nixos-appliance|zbook:|zbook:workstation|zbook:nixos-workstation|macbook:|macbook:darwin|ubuntu:|ubuntu:standalone-hm)
+        nix run .#healthcheck -- "$HOST" "$ROLE" "$NIC" ;;
+      *)
+        echo "unsupported healthcheck host/role: $HOST / $ROLE" >&2
+        echo "use soyo[ appliance], zbook[ workstation], macbook[ darwin], or ubuntu[ standalone-hm]" >&2
+        exit 2 ;;
+    esac
 
 # Recover historical encrypted secrets. Pass --dry-run first; never auto-commits.
 recover-secrets *args:

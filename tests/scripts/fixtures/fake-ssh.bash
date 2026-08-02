@@ -10,6 +10,9 @@ if [[ -n "${SSH_FAIL_PATTERN:-}" && "$command_line" == *"$SSH_FAIL_PATTERN"* ]];
   exit "${SSH_FAIL_STATUS:-1}"
 fi
 case "$command_line" in
+  *'hostname -s'*) printf '%s\n' "${SSH_HOSTNAME:-test-host}" ;;
+  *'sw_vers -productName'*) printf '%s\n' "${SSH_PLATFORM_NAME:-macOS}" ;;
+  *'. /etc/os-release'*) printf '%s\n' "${SSH_OS_RELEASE:-ID=ubuntu}" ;;
   *'ip -json link'*) printf '%s\n' "${SSH_NIC:-wlan-test}" ;;
   *'cat /etc/nix-config/role'*) printf '%s' "${SSH_ROLE_MARKER:-}" ;;
   *'tailscale status 2>/dev/null | grep -q "10.0.0.0/24"'*) [[ "${SSH_APPLIANCE_FALLBACK:-0}" == 1 ]] ;;

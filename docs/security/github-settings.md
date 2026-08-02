@@ -1,9 +1,7 @@
 # GitHub security settings
 
-The posture below was applied and read back through the GitHub API on
-2026-07-12. The "Required status checks" section was independently re-read
-on 2026-07-23 (task S2) and found to have drifted from that 2026-07-12
-snapshot; see that section for specifics.
+The posture below was read back through the GitHub API on 2026-08-01 after
+the remediation changes described here.
 
 ## Verified posture
 
@@ -15,8 +13,14 @@ snapshot; see that section for specifics.
   not automatically merged.
 - Private vulnerability reporting is enabled and linked from `SECURITY.md`.
 - The active `Protect main` ruleset requires pull requests, dismisses stale
-  reviews, requires conversation resolution, blocks deletion and force pushes,
-  and preserves a repository-administrator break-glass bypass.
+  reviews, requires conversation resolution and code-owner approval, blocks
+  deletion and force pushes, and preserves a repository-administrator
+  break-glass bypass.
+
+The secret-bearing [PR Agent workflow](../../.github/workflows/pr-agent.yml) is
+owned by [`.github/CODEOWNERS`](../../.github/CODEOWNERS). The ruleset's
+`require_code_owner_review` setting is part of the security boundary; a
+CODEOWNERS entry without that enforcement would only be advisory.
 
 Base provider-pattern secret scanning runs automatically for public
 repositories and is enabled here. Secret-scanning validity checks and generic
@@ -33,55 +37,35 @@ provider patterns.
 
 ## Required status checks
 
-### Currently enforced (re-verified read-only 2026-07-23)
+### Currently enforced (re-verified 2026-08-01)
 
-`gh api repos/knirski/nix-config/rulesets/18830833` was re-read on 2026-07-23
-while working task S2. Its `rules` array currently contains exactly:
-`deletion`, `non_fast_forward`, `pull_request` (0 required approvals, stale
-reviews dismissed, conversation resolution required, squash/merge only),
-`creation`, and `required_linear_history` — **no `required_status_checks`
-rule is present**. `gh api repos/knirski/nix-config/branches/main/protection`
-separately confirms there is no classic branch-protection record either
-(`404 Branch not protected`), so there is no other mechanism enforcing
-status checks on `main`.
+`gh api repos/knirski/nix-config/rulesets/18830833` was updated and read back
+on 2026-08-01. Its active `required_status_checks` rule requires these exact
+contexts: `Static and repository policy`, `Evaluation and pure invariants`,
+`Build soyo closure`, `Build zbook closure`, `Build ubuntu HM activation
+package`, `Build macbook darwin closure`, `Strict KVM behavior tests`, and
+`Publish sanitized topology`. The rule uses strict status checks and keeps the
+existing repository-administrator bypass.
 
-This means that, as of this reading, **no CI job's outcome currently gates
-merging to `main`** — a pull request satisfying the rules above (contents
-review dismissal/resolution, no force-push/deletion, linear history) can
-merge regardless of whether `static`, `evaluation`, `build`, or `resilience`
-passed. This contradicts the previous revision of this document (dated
-2026-07-12), which asserted five contexts were required. Either that rule
-was removed from the ruleset sometime after 2026-07-12, or the earlier
-verification was inaccurate; a human with repository-admin access should
-reconcile which is true and re-add the intended `required_status_checks`
-rule. Until that happens, treat `main`'s CI as advisory-only, not a merge
-gate, no matter what earlier prose in this repository implied.
+### Enforced required-check set
 
-### Recommended required-check set (not yet enacted)
-
-The table below is this task's (S2) recommendation for the
-`required_status_checks` rule's context list, to be added to ruleset
-`18830833` only as a separate, explicitly authorized action (see
-[Read-only verification](#read-only-verification) below for the inspection
-commands to run immediately before that change, and re-run
-`gh api repos/knirski/nix-config/rulesets/18830833` first to confirm the
-ruleset's rule set hasn't moved again since this reading). Context names are
-copied character-for-character from each job's `name:` field in
+The enforced contexts are copied character-for-character from each job's
+`name:` field in
 [`ci.yml`](../../.github/workflows/ci.yml), since that field — not the YAML
 job key — is what GitHub displays and matches against.
 
 | Context (from `ci.yml`'s job `name:`) | Status today | Recommendation |
 | --- | --- | --- |
-| `Static and repository policy` | Not enforced (see above) | Require — unchanged from the prior (stale) documented set |
-| `Evaluation and pure invariants` | Not enforced | Require — unchanged |
-| `Build soyo closure` | Not enforced | Require — unchanged |
-| `Build zbook closure` | Not enforced | Require — unchanged |
-| `Publish sanitized topology` | Not enforced | Require — unchanged |
-| `Build ubuntu HM activation package` | Not enforced, not previously recommended | **New recommendation: require** |
-| `Build macbook darwin closure` | Not enforced, not previously recommended | **New recommendation: require** |
-| `Strict KVM behavior tests` | Not enforced, previously explicitly excluded | **New recommendation: require** |
+| `Static and repository policy` | Enforced | Required |
+| `Evaluation and pure invariants` | Enforced | Required |
+| `Build soyo closure` | Enforced | Required |
+| `Build zbook closure` | Enforced | Required |
+| `Publish sanitized topology` | Enforced | Required |
+| `Build ubuntu HM activation package` | Enforced | Required |
+| `Build macbook darwin closure` | Enforced | Required |
+| `Strict KVM behavior tests` | Enforced | Required |
 
-Reasoning for the three additions:
+Reasoning for the complete enforced set:
 
 - **`Build ubuntu HM activation package`** runs on the same `ubuntu-24.04`
   runner as every other required job (`static`, `evaluation`, `build`); it
@@ -116,10 +100,8 @@ Reasoning for the three additions:
   test-resilience`.
 
 A critical DNS/DHCP, impermanence, backup, or clipboard KVM failure — or a
-macbook/ubuntu build failure — will only block a merge to `main` once a
-repository administrator applies this recommendation to ruleset `18830833`
-(or the currently-missing `required_status_checks` rule is otherwise
-restored). It does not block merges today.
+macbook/ubuntu build failure — now blocks a merge to `main`, subject only to
+the documented repository-administrator break-glass bypass.
 
 Retain the administrator break-glass bypass (`bypass_actors` on the
 ruleset) without weakening ordinary branch policy.

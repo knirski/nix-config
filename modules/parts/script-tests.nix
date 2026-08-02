@@ -34,7 +34,15 @@ _: {
         name: runtimeInputs: source:
         pkgs.writeShellApplication {
           inherit name runtimeInputs;
-          excludeShellChecks = pkgs.lib.optional (name == "healthcheck-test-subject") "SC2029";
+          excludeShellChecks =
+            if name == "healthcheck-test-subject" then
+              [
+                "SC2016"
+                "SC2029"
+                "SC2329"
+              ]
+            else
+              [ ];
           text = builtins.readFile source;
         };
       healthcheckTest = testSubject "healthcheck-test-subject" [

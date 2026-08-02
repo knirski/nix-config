@@ -61,6 +61,10 @@
       lanOverviewJson = import ../../lib/observability/lan-dashboard.nix {
         inherit pkgs;
       };
+      sloJson = import ../../lib/observability/slo-dashboard.nix {
+        inherit pkgs;
+        inherit builder;
+      };
 
       lanInventoryNetworkJson = pkgs.writeText "lan-network.json" (builtins.toJSON cfg.networkData);
       lanInventoryScript = pkgs.writeShellApplication {
@@ -465,6 +469,14 @@
                         job_name = "blocky";
                         static_configs = [ { targets = [ "localhost:4000" ]; } ];
                       }
+                      {
+                        job_name = "loki";
+                        static_configs = [ { targets = [ "localhost:3100" ]; } ];
+                      }
+                      {
+                        job_name = "tempo";
+                        static_configs = [ { targets = [ "localhost:3200" ]; } ];
+                      }
                     ];
                   };
                   loki = {
@@ -598,6 +610,7 @@
                               cp ${fleetJson} $out/001-fleet-overview.json
                               cp ${nodeExporterJson} $out/002-node-exporter-full.json
                               cp ${lanOverviewJson} $out/003-lan-overview.json
+                              cp ${sloJson} $out/004-slo-overview.json
                             '';
                           }
                           {

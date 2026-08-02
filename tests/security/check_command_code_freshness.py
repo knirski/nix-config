@@ -15,9 +15,8 @@ ci.yml's `static` job -- which reads the true wall clock fresh on every run
 
 The reviewed date is locally recorded in
 modules/_pkgs/command-code-lock/last-reviewed.json by whoever last ran
-`just update-command-code` (or manually re-confirmed the current pin and
-its overrides are still appropriate); this script never contacts the npm
-registry.
+`just update-command-code` (or manually re-confirmed the current pin); this
+script never contacts the npm registry.
 """
 
 from __future__ import annotations
@@ -50,7 +49,7 @@ def check(record_path: Path, today: datetime.date) -> list[str]:
             f"exceeding the {stale_after}-day staleness window. Run "
             "`just update-command-code <version>` (even a no-op re-run "
             "against the current version) to review the vendored npm tree "
-            "and OpenTelemetry override, then update this file's `date`."
+            "and dependency tree, then update this file's `date`."
         ]
     return []
 

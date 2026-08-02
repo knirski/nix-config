@@ -15,10 +15,8 @@ tree. Given a target upstream version, this:
      seeded from the currently-vendored lockfile (so already-resolved
      versions are preserved unless the new package.json's ranges force a
      change -- this is what makes a same-version re-run reproduce
-     byte-identical output). Strips devDependencies and reapplies the
-     OpenTelemetry CVE-2026-54285 override from command-code-lock/
-     opentelemetry-overrides.json (edit that JSON file to add or retire an
-     override; this script does not hardcode the override list).
+     byte-identical output). Strips devDependencies before running npm's
+     normal dependency resolution.
   3. Runs the same fakeHash-then-build-then-extract dance documented in
      command-code.nix's header, against a throwaway copy of that file, and
      prints the resulting npmDepsHash.
@@ -66,9 +64,7 @@ fi
 PKG_DIR="$REPO/modules/_pkgs"
 LOCK_DIR="$PKG_DIR/command-code-lock"
 LOCKFILE="$LOCK_DIR/package-lock.json"
-OVERRIDES_JSON="$LOCK_DIR/opentelemetry-overrides.json"
 [[ -f "$LOCKFILE" ]] || die "missing $LOCKFILE"
-[[ -f "$OVERRIDES_JSON" ]] || die "missing $OVERRIDES_JSON"
 
 tmpdir=$("${UPDATE_COMMAND_CODE_MKTEMP:-mktemp}" -d "${TMPDIR:-/tmp}/update-command-code.XXXXXX")
 trap 'rm -rf -- "$tmpdir"' EXIT
@@ -94,13 +90,6 @@ pkg_dir="$extract_dir/package"
 cp "$LOCKFILE" "$pkg_dir/package-lock.json"
 sed -i '/^  "devDependencies": {/,/^  }/d' "$pkg_dir/package.json"
 
-sed_args=()
-while IFS=$'\t' read -r override_package override_range; do
-  sed_args+=( -e "s|\"${override_package}\": \"[^\"]*\"|\"${override_package}\": \"${override_range}\"|" )
-done < <("${UPDATE_COMMAND_CODE_JQ:-jq}" -r '.overrides[] | "\(.package)\t\(.range)"' "$OVERRIDES_JSON")
-((${#sed_args[@]} > 0)) || die "opentelemetry-overrides.json has no overrides entries"
-sed -i "${sed_args[@]}" "$pkg_dir/package.json"
-
 (cd "$pkg_dir" && "$NPM_BIN" install --package-lock-only --ignore-scripts >&2)
 cp "$pkg_dir/package-lock.json" "$LOCKFILE"
 printf 'Regenerated %s in place.\n' "$LOCKFILE" >&2
@@ -110,7 +99,6 @@ probe_dir="$tmpdir/probe"
 mkdir -p "$probe_dir/command-code-lock"
 cp "$PKG_DIR/command-code.nix" "$probe_dir/command-code.nix"
 cp "$LOCKFILE" "$probe_dir/command-code-lock/package-lock.json"
-cp "$OVERRIDES_JSON" "$probe_dir/command-code-lock/opentelemetry-overrides.json"
 sed -i "s|version = \"[^\"]*\";|version = \"${VERSION}\";|" "$probe_dir/command-code.nix"
 # The hash contains '/' (base64), so '|' is used as the sed delimiter here.
 sed -i "s|hash = \"sha512-[^\"]*\";|hash = \"${src_hash}\";|" "$probe_dir/command-code.nix"
@@ -139,8 +127,7 @@ command-code update summary for version ${VERSION}
 This script did NOT edit modules/_pkgs/command-code.nix. Paste the values
 above into its version/hash/npmDepsHash fields, then:
   1. nix build path:.#command-code
-  2. nix build path:.#checks.x86_64-linux.command-code-security
-  3. Review 'git diff -- modules/_pkgs/command-code-lock/package-lock.json'
+  2. Review 'git diff -- modules/_pkgs/command-code-lock/package-lock.json'
      and update modules/_pkgs/command-code-lock/last-reviewed.json's date.
-  4. Commit modules/_pkgs/command-code.nix and command-code-lock/ together.
+  3. Commit modules/_pkgs/command-code.nix and command-code-lock/ together.
 SUMMARY

@@ -19,6 +19,16 @@
       # still typo the interpolation) is what proves the contract holds.
       producerScript = services.free-space-check.serviceConfig.ExecStart;
       alertScript = services.grafana-alert-setup.serviceConfig.ExecStart;
+      requiredAlertUids = [
+        "soyo_prometheus_scrape_failure"
+        "soyo_loki_down"
+        "soyo_tempo_down"
+      ];
+      requiredAlertExpressions = [
+        "sum by (job) (up{job=~\"blocky|dnsmasq|loki|tempo\"} == 0) > 0"
+        "up{job=\"loki\"} == 0"
+        "up{job=\"tempo\"} == 0"
+      ];
 
       # Exact-token membership, not substring matching: a naive `hasInfix
       # "btrfs_usage_percent" expr` would still "pass" for the actual bug this
@@ -107,6 +117,18 @@
               echo "alert script's ${btrfsMetrics.thresholdPercent} occurrence has no immediate ${btrfsMetrics.hostLabel} label match" >&2
               exit 1
             fi
+            for uid in ${lib.concatStringsSep " " requiredAlertUids}; do
+              if ! grep -qF "post_rule $uid" "$alertScript"; then
+                echo "alert script missing required rule $uid" >&2
+                exit 1
+              fi
+            done
+            ${lib.concatMapStringsSep "\n" (expression: ''
+              if ! grep -qF -- ${lib.escapeShellArg expression} "$alertScript"; then
+                echo "alert script missing exact expression: ${expression}" >&2
+                exit 1
+              fi
+            '') requiredAlertExpressions}
             touch "$out"
           '';
     };

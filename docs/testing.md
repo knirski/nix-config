@@ -1,5 +1,12 @@
 # Testing and verification
 
+`nix flake check` may print `unknown flake output 'agenix-rekey'` (and on Nix
+versions that inspect the deploy-rs namespace, `deploy`). These are
+intentional tool-owned namespaces consumed by `agenix rekey` and `deploy-rs`,
+not omitted standard `packages`, `apps`, `checks`, or host outputs. The check
+still evaluates/builds the repository-owned outputs below; treat any other
+unknown-output warning as a regression.
+
 The repository treats generated configuration, executable behavior, and
 operator-only recovery as different evidence classes. The complete local gate
 is `nix flake check path:. --keep-going`; focused checks are useful during
@@ -148,12 +155,12 @@ This table is the canonical index — when adding a check, add a row here.
 
 | Check | What it asserts | Source | Type |
 | ----- | --------------- | ------ | ---- |
-| `backup-restic-integration` | restic can initialise a repo, backup, and check a snapshot | `backup-integration-check.nix` | Pure eval + shell script |
-| `backup-unit-vm` | KVM VM: backup creates repo snapshots, readiness gates work | `backup-integration-check.nix` | KVM |
+| `backup-restic-integration` | restic can initialise a repo, backup, restore, and check a snapshot | `backup-integration-check.nix` | Pure eval + shell script |
+| `backup-unit-vm` | KVM VM: backup creates and restores repo snapshots, readiness gates work | `backup-integration-check.nix` | KVM |
 | `boot-generation-invariants` | Limine's `maxGenerations` is set, positive, and within the documented upper bound on every host | `boot-generation-invariants.nix` | Pure eval |
 | `btrfs-alert-metric-contract` | The Btrfs usage/threshold Prometheus metric names emitted by `free-space-check` and consumed by the Grafana alert never drift apart | `observability-contract-checks.nix` | Pure eval + shell script |
 | `clipboard-protocols` | Primary clipboard data-paste in Wayland | `clipboard-protocol-check.nix` | KVM |
-| `dendritic-options` | Every `lanAppliance.services.*` option declared by the hosts that toggle it | `perSystem.nix` | Pure eval |
+| `dendritic-options` | Every `lanAppliance.services.*` option declared by the NixOS hosts that toggle it, and every selected Darwin/Home Manager aspect name exists | `perSystem.nix` | Pure eval |
 | `deploy-activate` | deploy-rs activation scripts don't error | `deploy.nix` (deploy-rs) | Pure eval |
 | `deploy-schema` | deploy-rs node schema is valid | `deploy.nix` (deploy-rs) | Pure eval |
 | `dns-dhcp-config` | Generated Blocky + dnsmasq config is valid; reservations match | `dns-dhcp-checks.nix` | Pure eval |
@@ -179,6 +186,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `script-contracts` | Operator commands (healthcheck, recover-secrets, set-tailscale-keys) handle valid/invalid/dry-run/interrupted args correctly | `script-tests.nix` | Shell (Bats) |
 | `service-aspect-invariants` | The shared backup and observability aspects carry no Soyo-specific values (hostname, `czworaczki`, `enp1s0`) when evaluated against alternate-host fixtures; the built lan-inventory-exporter script queries the fixture's own NIC, not Soyo's | `service-aspect-invariants.nix` | Pure eval + shell script |
 | `shell-boundaries` | No `writeShellScript` calls; generated unit fragments have strict checking | `shell-checks.nix` | Pure eval |
+| `source-filter-contract` | Nix-backed checks preserve tracked taste files while excluding local agent settings, nested worktree metadata, and cache artifacts | `perSystem.nix` | Pure eval |
 | `soyo-guest-isolation` | Guest services on Soyo have MemoryMax, CPUQuota, Nice applied | `soyo-guest-isolation.nix` | Pure eval |
 | `systemd-hardening-invariants` | Applicable systemd services have basic hardening (ProtectSystem, PrivateTmp, etc.) | `systemd-hardening-checks.nix` | Pure eval |
 | `topology-freshness` | Committed `docs/topology/overview.svg` matches the current stable state | `topology-checks.nix` | Pure eval |
@@ -248,19 +256,13 @@ has unusual prerequisites (e.g. `dev/kvm`), confirm which tier fits.
 
 ## Evidence limits
 
-VM checks cover isolated software behaviour, including DNS/DHCP, backup, and
-impermanence. They do not prove physical TPM measurements, Secure Boot firmware
-behaviour, real LAN recovery, or restore operations against production data.
-Those remain explicit operator-led drills in the relevant runbooks.
-
-Automated checks (pure evaluation, VM, shell contract) are the first line of
-confidence. Anything that depends on hardware, physical access, or production
-state is explicitly listed as a manual-only verification in `AGENTS.md` and the
-host-specific runbooks.
-VM checks cover isolated software behaviour, including DNS/DHCP, backup, and
-impermanence. They do not prove physical TPM measurements, Secure Boot firmware
-behaviour, real LAN recovery, or restore operations against production data.
-Those remain explicit operator-led drills in the relevant runbooks.
+VM checks cover isolated software behaviour, including DNS/DHCP, backup,
+local snapshot restoration, and impermanence. The backup VM proves restoration
+from its local fixture repository, but does not prove SFTP transport, NAS
+availability, production credentials, or a restore against production data.
+VMs also do not prove physical TPM measurements, Secure Boot firmware
+behaviour, or real LAN recovery. Those remain explicit operator-led drills in
+the relevant runbooks.
 
 Automated checks (pure evaluation, VM, shell contract) are the first line of
 confidence. Anything that depends on hardware, physical access, or production

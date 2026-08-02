@@ -13,9 +13,10 @@ fixed. On `main`, that history is two squash-merged pull requests: #106
 (separately authorized
 live validation — deploy, reboot, rekey, GitHub settings change, live
 notification, live restore) was intentionally left out of scope for this
-plan; see `G2` below and the two findings it left open (missing
-`required_status_checks` ruleset rule; open `@opentelemetry/propagator-jaeger`
-CVE). This plan is retained as a historical record, not an active plan.
+plan; see `G2` below and the missing `required_status_checks` ruleset rule.
+The command-code advisories are intentionally left visible until the next
+upstream release. This plan is retained as a historical record, not an active
+plan.
 
 ## Goal
 
@@ -616,6 +617,13 @@ Suggested repository commit: `test(ci): make the complete behavior gate explicit
 
 Priority: P1
 
+> Historical reconciliation (2026-08-01): the original proposal below
+> included a repository-local advisory override. That approach was explicitly
+> superseded after the plan landed: the repository now relies on the next
+> upstream `command-code` update, keeps OSV findings visible, and carries no
+> local OpenTelemetry override. The current policy is documented in
+> [`docs/security/supply-chain.md`](../../security/supply-chain.md#dependency-automation-decisions).
+
 Dependencies: R1
 
 Likely files:
@@ -632,8 +640,8 @@ Steps:
 1. Correct the supply-chain document: the repository does contain a vendored
    npm lockfile and owns its transitive dependency risk.
 2. Add a deterministic `just update-command-code` workflow that fetches the
-   named upstream tarball, regenerates the lockfile, applies reviewed security
-   overrides, and prints the hashes that must be updated. It must not edit
+   named upstream tarball, regenerates the lockfile, and prints the hashes
+   that must be updated. It must not edit
    `flake.lock` or commit automatically.
 3. Configure Renovate with an explicit custom manager for the version and
    source URL if it can update this Nix expression safely. Otherwise document
@@ -642,17 +650,19 @@ Steps:
    vendored lockfile using a pinned Nix package/database strategy. If current
    data requires network access, isolate it in a scheduled security job and do
    not make ordinary evaluation impure.
-5. Add a build/smoke check for the wrapped binary and verify that the security
-   override is present in the resolved dependency tree.
-6. Document who owns exceptions, how long they last, and how a CVE override is
-   removed once upstream ships a fixed release.
+5. Add a build/smoke check for the wrapped binary and verify that OSV scans the
+   resolved dependency tree. No local security override is expected.
+6. **Superseded:** document a local CVE-override owner and removal schedule
+   only if a future exception is explicitly approved; the current policy has
+   no repository-local advisory override lifecycle.
 
 Acceptance:
 
 - Documentation no longer claims there is no supported lockfile.
 - The update process is reproducible from a version change and reviewed hashes.
 - The dependency scan examines the vendored npm tree, not only `flake.lock`.
-- A fixture vulnerable version or missing override fails the security check.
+- The vendored tree remains visible to OSV; a local advisory override is not a
+  required acceptance condition.
 - `command-code` still builds on every host where R1 enables it.
 
 Suggested commit: `feat(supply-chain): own command-code dependency updates`
@@ -994,9 +1004,10 @@ canonical progress record for this plan — do not duplicate it elsewhere.
     and has **not** been applied — see
     [`docs/security/github-settings.md`](../../security/github-settings.md#required-status-checks).
 12. `feat(supply-chain): own command-code dependency updates` — S3. Landed.
-    The `@opentelemetry/propagator-jaeger` CVE it surfaced remains open for
-    human triage — see
-    [`docs/security/supply-chain.md`](../../security/supply-chain.md#override-ownership-and-lifecycle).
+    The OpenTelemetry advisories it surfaced remain visible until the next
+    upstream `command-code` dependency update; no local override is carried —
+    see
+    [`docs/security/supply-chain.md`](../../security/supply-chain.md#dependency-automation-decisions).
 13. `refactor(nixpkgs): scope package policy exceptions` — S4. Landed.
 14. `fix(macbook): align desktop bindings and install contract` — H1. Landed
     (plus a follow-up correcting the Terminal.app launch flag and
