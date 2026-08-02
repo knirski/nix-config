@@ -56,7 +56,7 @@
             # Keep the workaround in nixpkgs' typed interface so it merges
             # with the module's own parameters and is rendered into the
             # generated modprobe configuration.
-            gsp.enable = !cfg.disableGsp;
+            gsp.enable = lib.mkIf cfg.disableGsp false;
             moduleParams = lib.optionalAttrs cfg.disableGsp {
               nvidia.NVreg_EnableGpuFirmware = 0;
             };
