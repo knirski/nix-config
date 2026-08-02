@@ -95,6 +95,13 @@ Existing examples:
   TPM auto-unlock, break-glass passphrase unlock, LAN initrd SSH unlock, direct-link rescue unlock, DHCP client DNS, forced unit failure → ntfy, restic restore drill, tampered boot rejection, TPM re-enrollment.
 - Keep host directories thin; push reusable logic into modules.
 
+### External Linux research
+
+- For Linux/NixOS troubleshooting, consult the [ArchWiki](https://wiki.archlinux.org/) and [Arch Linux Forums](https://bbs.archlinux.org/) alongside NixOS, kernel, and upstream project documentation.
+- Use the ArchWiki for practical Linux behavior, configuration patterns, and troubleshooting procedures. Link the specific article when an external workaround informs a change, and account for Arch-specific paths, package names, and service defaults.
+- Search the Arch Linux Forums for hardware-, kernel-, driver-, and version-specific field reports. Treat forum posts as hypotheses and reproduction leads, not authoritative conclusions; corroborate them with local logs and primary upstream documentation or issues before adopting them.
+- Record the relevant hardware, kernel, driver, and software versions when applying advice. Separate observed facts from inferences, and translate imperative Arch commands into declarative NixOS configuration rather than copying them blindly.
+
 ## Boundary rules (never modify these)
 
 - `flake.lock` — update only via `nix flake update <input>`.

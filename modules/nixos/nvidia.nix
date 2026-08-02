@@ -44,16 +44,16 @@
         services.xserver.videoDrivers = [ "nvidia" ];
 
         hardware = {
-          # Stable production-branch NVIDIA driver (595.x series).  The open
-          # kernel modules support Ada GPUs and are required for the modern
-          # kernel suspend-notifier path used by NVIDIA 595+.
+          # Stable production-branch NVIDIA driver (595.x series).  Use the
+          # proprietary module because the ArchWiki GSP workaround is not
+          # available with nvidia-open, and this ZBook has already hit an Xid
+          # 120 GSP crash during power management.
           nvidia = {
             package = config.boot.kernelPackages.nvidiaPackages.stable;
             modesetting.enable = true;
             nvidiaSettings = true;
             powerManagement = {
               enable = true;
-              kernelSuspendNotifier = true;
               # finegrained = true enables per-engine power-gating, but
               # triggers an ABBA rw-semaphore deadlock in the ACPI notify
               # handler (rm_acpi_nvpcf_notify) when the NVIDIA driver receives
@@ -64,10 +64,7 @@
               # dock-event deadlock seen with the proprietary path.
               finegrained = false;
             };
-            open = true;
-            # The old ZBook fix disabled GSP for the proprietary path; the
-            # open kernel module needs GSP, so we keep it enabled here and use
-            # the kernel suspend-notifier path instead.
+            open = false;
             # In offload mode the GPU powers down — persistenced isn't needed
             # and just fails trying to query the sleeping device.
             nvidiaPersistenced = false;
@@ -87,6 +84,14 @@
             enable32Bit = true;
           };
         };
+
+        # NVIDIA's GSP firmware has already crashed on this host (Xid 120)
+        # while entering a power-management state.  The proprietary module
+        # supports disabling GSP; nvidia-open does not.  This is the smallest
+        # change that targets the failing component without changing PRIME
+        # offload or the laptop's separate wake-source workarounds.
+        # https://wiki.archlinux.org/title/NVIDIA/Troubleshooting#GSP_firmware
+        boot.extraModprobeConfig = "options nvidia NVreg_EnableGpuFirmware=0";
 
       };
     };
