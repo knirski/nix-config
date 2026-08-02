@@ -11,6 +11,7 @@
     {
       options.lanAppliance.services.nvidia = {
         enable = lib.mkEnableOption "NVIDIA GPU support with Optimus PRIME";
+        disableGsp = lib.mkEnableOption "disable NVIDIA GSP firmware";
         prime = {
           intelBusId = lib.mkOption {
             type = lib.types.str;
@@ -52,6 +53,13 @@
             package = config.boot.kernelPackages.nvidiaPackages.stable;
             modesetting.enable = true;
             nvidiaSettings = true;
+            # Keep the workaround in nixpkgs' typed interface so it merges
+            # with the module's own parameters and is rendered into the
+            # generated modprobe configuration.
+            gsp.enable = !cfg.disableGsp;
+            moduleParams = lib.optionalAttrs cfg.disableGsp {
+              nvidia.NVreg_EnableGpuFirmware = 0;
+            };
             powerManagement = {
               enable = true;
               # finegrained = true enables per-engine power-gating, but
@@ -84,14 +92,6 @@
             enable32Bit = true;
           };
         };
-
-        # NVIDIA's GSP firmware has already crashed on this host (Xid 120)
-        # while entering a power-management state.  The proprietary module
-        # supports disabling GSP; nvidia-open does not.  This is the smallest
-        # change that targets the failing component without changing PRIME
-        # offload or the laptop's separate wake-source workarounds.
-        # https://wiki.archlinux.org/title/NVIDIA/Troubleshooting#GSP_firmware
-        boot.extraModprobeConfig = "options nvidia NVreg_EnableGpuFirmware=0";
 
       };
     };
