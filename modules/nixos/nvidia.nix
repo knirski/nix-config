@@ -11,6 +11,7 @@
     {
       options.lanAppliance.services.nvidia = {
         enable = lib.mkEnableOption "NVIDIA GPU support with Optimus PRIME";
+        disableGsp = lib.mkEnableOption "disable NVIDIA GSP firmware";
         prime = {
           intelBusId = lib.mkOption {
             type = lib.types.str;
@@ -44,16 +45,23 @@
         services.xserver.videoDrivers = [ "nvidia" ];
 
         hardware = {
-          # Stable production-branch NVIDIA driver (595.x series).  The open
-          # kernel modules support Ada GPUs and are required for the modern
-          # kernel suspend-notifier path used by NVIDIA 595+.
+          # Stable production-branch NVIDIA driver (595.x series).  Use the
+          # proprietary module because the ArchWiki GSP workaround is not
+          # available with nvidia-open, and this ZBook has already hit an Xid
+          # 120 GSP crash during power management.
           nvidia = {
             package = config.boot.kernelPackages.nvidiaPackages.stable;
             modesetting.enable = true;
             nvidiaSettings = true;
+            # Keep the workaround in nixpkgs' typed interface so it merges
+            # with the module's own parameters and is rendered into the
+            # generated modprobe configuration.
+            gsp.enable = lib.mkIf cfg.disableGsp false;
+            moduleParams = lib.optionalAttrs cfg.disableGsp {
+              nvidia.NVreg_EnableGpuFirmware = 0;
+            };
             powerManagement = {
               enable = true;
-              kernelSuspendNotifier = true;
               # finegrained = true enables per-engine power-gating, but
               # triggers an ABBA rw-semaphore deadlock in the ACPI notify
               # handler (rm_acpi_nvpcf_notify) when the NVIDIA driver receives
@@ -64,10 +72,7 @@
               # dock-event deadlock seen with the proprietary path.
               finegrained = false;
             };
-            open = true;
-            # The old ZBook fix disabled GSP for the proprietary path; the
-            # open kernel module needs GSP, so we keep it enabled here and use
-            # the kernel suspend-notifier path instead.
+            open = false;
             # In offload mode the GPU powers down — persistenced isn't needed
             # and just fails trying to query the sleeping device.
             nvidiaPersistenced = false;
