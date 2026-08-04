@@ -30,7 +30,6 @@ rec {
     ".local/share/direnv"
     ".cache/DankMaterialShell"
     ".cache/quickshell"
-    ".cache/uv"
     ".local/share/applications"
     "tmp"
     "Pictures/Screenshots"
