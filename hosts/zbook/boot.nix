@@ -1,9 +1,9 @@
 { pkgs, ... }:
 {
   boot = {
-    # Investigation A/B test: 6.12.97 still hung during s2idle suspend, so
-    # test the newer maintained LTS with the same NVIDIA driver configuration.
-    kernelPackages = pkgs.linuxPackages_6_18;
+    # Follow the current kernel for newer graphics and suspend fixes on this
+    # workstation; the NVIDIA package is selected from this kernel set too.
+    kernelPackages = pkgs.linuxPackages_latest;
     kernelParams = [
       "nvidia_drm.modeset=1"
       # ramoops/pstore: preserve panic, console, and ftrace logs across
