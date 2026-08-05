@@ -145,8 +145,9 @@ purpose-built process:
   scheduled `.github/workflows/security-scan.yml`
   (`on: schedule` + `workflow_dispatch`). The scan remains authoritative:
   this repository does not carry a local OpenTelemetry advisory override, and
-  the current 1.7.0 tree still reports `@opentelemetry/core` 2.0.0/2.7.1 and
-  `@opentelemetry/propagator-jaeger` 2.7.1. The next upstream `command-code`
+  the current 1.13.0 tree still reports `@opentelemetry/core` 2.0.0/2.7.1 and
+  `@opentelemetry/propagator-jaeger` 2.7.1 — the 1.13.0 dependency ranges
+  re-resolve to the same versions as the 1.7.0 tree. The next upstream `command-code`
   update is expected to refresh those transitive packages. Re-run the scan
   after every command-code update and record any remaining upstream advisories
   rather than suppressing them.
