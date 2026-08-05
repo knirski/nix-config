@@ -45,12 +45,12 @@
         services.xserver.videoDrivers = [ "nvidia" ];
 
         hardware = {
-          # Stable production-branch NVIDIA driver (595.x series).  Use the
+          # Latest supported NVIDIA driver branch from nixpkgs.  Use the
           # proprietary module because the ArchWiki GSP workaround is not
           # available with nvidia-open, and this ZBook has already hit an Xid
           # 120 GSP crash during power management.
           nvidia = {
-            package = config.boot.kernelPackages.nvidiaPackages.stable;
+            package = config.boot.kernelPackages.nvidiaPackages.latest;
             modesetting.enable = true;
             nvidiaSettings = true;
             # Keep the workaround in nixpkgs' typed interface so it merges
