@@ -146,7 +146,10 @@ just deploy zbook
 
 ### 4. Reboot
 
-After first deploy, reboot to ensure NVIDIA drivers load correctly:
+The ZBook follows `linuxPackages_latest`, and its NVIDIA aspect selects
+`config.boot.kernelPackages.nvidiaPackages.latest`, so the driver is built for
+the same current kernel package set. Reboot after the first deploy (and after
+kernel or driver updates) to load the new kernel modules:
 
 ```bash
 sudo reboot
