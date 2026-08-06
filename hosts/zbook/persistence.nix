@@ -22,6 +22,19 @@ in
       # /etc/restic stores the SSH key and known_hosts for restic remote backups.
       # Without this, the key vanishes on reboot and unattended backups fail.
       "/etc/restic"
+      # btrbk/restic backup success markers (healthcheck freshness probe).
+      # They live in systemd StateDirectories that would otherwise be wiped
+      # with the ephemeral root each boot, making the healthcheck report
+      # NEVER_RAN until the next daily run.  Persist them so the check is
+      # meaningful right after a reboot.  The btrbk marker dir is owned by
+      # the btrbk service user; restic's is root-owned (preservation's
+      # default for plain-string entries).
+      {
+        directory = "/var/lib/btrbk-zbook";
+        user = "btrbk";
+        group = "btrbk";
+      }
+      "/var/lib/restic-backups-zbook"
       "/var/log"
       "/etc/NetworkManager/system-connections"
       {
