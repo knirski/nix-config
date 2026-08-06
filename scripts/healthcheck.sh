@@ -393,9 +393,13 @@ if [[ "$ROLE" == "workstation" ]]; then
     run_ssh 'grep DynamicPowerManagement /proc/driver/nvidia/params'
   # Hung-task warnings naming the NVIDIA driver (nv_queue / rm_acpi_nvpcf_notify
   # rw-semaphore pile-up) mean the GPU is wedged and only a cold reboot fixes
-  # it; they persist in the journal until then.
+  # it; they persist in the journal until then.  Fails closed: an unreadable
+  # journal fails the check instead of passing on an empty grep input.
+  # The command is POSIX-portable because ssh runs it under the remote user's
+  # login shell (zsh on these hosts), so journalctl's exit status is captured
+  # explicitly rather than via bash-only $PIPESTATUS.
   check "No NVIDIA driver deadlock in current boot" \
-    run_ssh "! journalctl -b 0 --no-pager 2>/dev/null | grep -qE 'rm_acpi_nvpcf_notify|owned by task nv_queue'"
+    run_ssh 't=$(mktemp); journalctl -b 0 --no-pager 2>/dev/null > "$t"; s=$?; grep -qE "rm_acpi_nvpcf_notify|owned by task nv_queue" "$t"; g=$?; rm -f "$t"; [ "$s" -ne 0 ] && exit 1; [ "$g" -eq 0 ] && exit 1 || exit 0'
 fi
 
 echo ""
