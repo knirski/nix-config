@@ -194,3 +194,35 @@ setup() { setup_contract_test; }
   assert_output_has 'blackbox HTTP probes healthy (expected: ALL_UP, got: DOWN:nas.home.arpa)'
   assert_output_has '[PASS] blackbox ICMP probes healthy'
 }
+
+@test "workstation GPU checks verify the fine-grained PM workaround is applied" {
+  run "$HEALTHCHECK" test-host workstation eth0
+  assert_status 0
+  assert_output_has '[PASS] NVIDIA dynamic PM excludes fine-grained (0x01)'
+  assert_output_has '[PASS] No NVIDIA driver deadlock in current boot'
+  assert_log_has 'grep DynamicPowerManagement /proc/driver/nvidia/params'
+  assert_log_has 'rm_acpi_nvpcf_notify'
+
+  # Appliance role must never probe the NVIDIA GPU checks.
+  : >"$OPERATOR_TEST_LOG"
+  run "$HEALTHCHECK" test-host appliance eth0
+  assert_status 0
+  assert_log_lacks 'DynamicPowerManagement'
+  assert_log_lacks 'rm_acpi_nvpcf_notify'
+}
+
+@test "fine-grained PM re-enabled (driver default 0x03) fails the GPU workaround check" {
+  export NVIDIA_PM_STATE='DynamicPowerManagement: 3'
+  run "$HEALTHCHECK" test-host workstation eth0
+  assert_status 1
+  assert_output_has 'NVIDIA dynamic PM excludes fine-grained (0x01) (expected: DynamicPowerManagement: 1, got: DynamicPowerManagement: 3)'
+  assert_output_has '[PASS] No NVIDIA driver deadlock in current boot'
+}
+
+@test "an NVIDIA hung-task warning in the current boot fails the GPU check" {
+  export NVIDIA_HUNG_STATE=1
+  run "$HEALTHCHECK" test-host workstation eth0
+  assert_status 1
+  assert_output_has 'No NVIDIA driver deadlock in current boot'
+  assert_output_has '[PASS] NVIDIA dynamic PM excludes fine-grained (0x01)'
+}

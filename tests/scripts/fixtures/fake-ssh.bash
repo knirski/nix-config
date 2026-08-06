@@ -33,5 +33,11 @@ case "$command_line" in
   # jobs (icmp/http) can be steered independently. Default: every target up.
   *'/api/v1/targets'*'blackbox-icmp'*) printf '%s\n' "${BLACKBOX_ICMP_STATE:-ALL_UP}" ;;
   *'/api/v1/targets'*'blackbox-http'*) printf '%s\n' "${BLACKBOX_HTTP_STATE:-ALL_UP}" ;;
+  # NVIDIA GPU checks (workstation role only; scripts/healthcheck.sh).
+  # Default fixture state: the fine-grained-PM workaround is applied and the
+  # current boot has no hung-task warning. Override to simulate a regression
+  # (driver default 0x03 re-applied, or an nv_queue/rw-semaphore wedge).
+  *'grep DynamicPowerManagement /proc/driver/nvidia/params'*) printf '%s\n' "${NVIDIA_PM_STATE:-DynamicPowerManagement: 1}" ;;
+  *'rm_acpi_nvpcf_notify'*) [[ "${NVIDIA_HUNG_STATE:-0}" == 0 ]] ;;
   *) printf '%s\n' '. active enabled persistent custom-host test-host soyo workstation appliance node_ lan_device_ Permission denied Location success # HELP "health":"up" 0.0.0.0 10.0.0.9' ;;
 esac

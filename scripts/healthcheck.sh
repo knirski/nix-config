@@ -380,6 +380,28 @@ check_val "Journald persistent" "persistent" \
 check_val "Tailscale connected" "$HOST" \
   run_ssh 'tailscale status'
 
+if [[ "$ROLE" == "workstation" ]]; then
+  echo ""
+  echo "--- GPU (workstation) ---"
+  # Regression guard for the rm_acpi_nvpcf_notify ABBA deadlock workaround
+  # (modules/nixos/nvidia.nix, enabled via disableFineGrainedPm in
+  # hosts/zbook/nvidia.nix): the driver's default NVreg_DynamicPowerManagement
+  # is 0x03 (dynamic + fine-grained), and nixpkgs emits nothing when
+  # powerManagement.finegrained = false — so the effective value silently
+  # reverts to fine-grained unless the module overrides it explicitly to 0x01.
+  check_val "NVIDIA dynamic PM excludes fine-grained (0x01)" "DynamicPowerManagement: 1" \
+    run_ssh 'grep DynamicPowerManagement /proc/driver/nvidia/params'
+  # Hung-task warnings naming the NVIDIA driver (nv_queue / rm_acpi_nvpcf_notify
+  # rw-semaphore pile-up) mean the GPU is wedged and only a cold reboot fixes
+  # it; they persist in the journal until then.  Fails closed: an unreadable
+  # journal fails the check instead of passing on an empty grep input.
+  # The command is POSIX-portable because ssh runs it under the remote user's
+  # login shell (zsh on these hosts), so journalctl's exit status is captured
+  # explicitly rather than via bash-only $PIPESTATUS.
+  check "No NVIDIA driver deadlock in current boot" \
+    run_ssh 't=$(mktemp); journalctl -b 0 --no-pager 2>/dev/null > "$t"; s=$?; grep -qE "rm_acpi_nvpcf_notify|owned by task nv_queue" "$t"; g=$?; rm -f "$t"; [ "$s" -ne 0 ] && exit 1; [ "$g" -eq 0 ] && exit 1 || exit 0'
+fi
+
 echo ""
 echo "--- Storage ---"
 check "SMART enabled (smartd running)" \
