@@ -84,11 +84,6 @@ in
           system.stateVersion = "26.11";
           nixpkgs = {
             hostPlatform = "x86_64-linux";
-            overlays = [
-              (_: prev: {
-                dgop = inputs.dgop.packages.${prev.stdenv.hostPlatform.system}.default;
-              })
-            ];
             # Separate `nixpkgs.config` definition from aspects.nixos.base's
             # `nixpkgs.config = sharedNixpkgsArgs.config;` -- disjoint keys
             # (base never sets permittedInsecurePackages when called with no

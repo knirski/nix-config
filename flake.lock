@@ -202,26 +202,6 @@
         "type": "github"
       }
     },
-    "dgop": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs-unstable"
-        ]
-      },
-      "locked": {
-        "lastModified": 1785966402,
-        "narHash": "sha256-Tmsh3vJj5/shLANhzodqQWI1zsGADCW04zomLpB7HfM=",
-        "owner": "AvengeMedia",
-        "repo": "dgop",
-        "rev": "d57055f6d9e634aaf4f154fdd448e511267b885b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "AvengeMedia",
-        "repo": "dgop",
-        "type": "github"
-      }
-    },
     "disko": {
       "inputs": {
         "nixpkgs": [
@@ -728,7 +708,6 @@
         "dank-greeter": "dank-greeter",
         "dcal": "dcal",
         "deploy-rs": "deploy-rs",
-        "dgop": "dgop",
         "disko": "disko",
         "dms": "dms",
         "dms-plugins": "dms-plugins",
