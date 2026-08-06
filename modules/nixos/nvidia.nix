@@ -12,6 +12,11 @@
       options.lanAppliance.services.nvidia = {
         enable = lib.mkEnableOption "NVIDIA GPU support with Optimus PRIME";
         disableGsp = lib.mkEnableOption "disable NVIDIA GSP firmware";
+        disableFineGrainedPm = lib.mkEnableOption ''
+          cap NVreg_DynamicPowerManagement at 0x01 (dynamic PM without
+          fine-grained power gating), working around the rm_acpi_nvpcf_notify
+          ABBA deadlock.  ZBook-specific; set from the host data file.
+        '';
         prime = {
           intelBusId = lib.mkOption {
             type = lib.types.str;
@@ -53,23 +58,32 @@
             package = config.boot.kernelPackages.nvidiaPackages.latest;
             modesetting.enable = true;
             nvidiaSettings = true;
-            # Keep the workaround in nixpkgs' typed interface so it merges
-            # with the module's own parameters and is rendered into the
-            # generated modprobe configuration.
+            # Express the GSP workaround through nixpkgs' typed option so it
+            # merges into the generated modprobe configuration.
             gsp.enable = lib.mkIf cfg.disableGsp false;
-            moduleParams = lib.optionalAttrs cfg.disableGsp {
-              nvidia.NVreg_EnableGpuFirmware = 0;
+            moduleParams = {
+              nvidia =
+                lib.optionalAttrs cfg.disableGsp {
+                  NVreg_EnableGpuFirmware = 0;
+                }
+                // lib.optionalAttrs cfg.disableFineGrainedPm {
+                  # finegrained = false alone is a no-op: nixpkgs only emits
+                  # NVreg_DynamicPowerManagement when finegrained = true, so
+                  # the driver default (0x03 = dynamic + fine-grained) applies
+                  # and the deadlock persists.  Render the explicit 0x01
+                  # (dynamic PM, no fine-grained power gating) instead.
+                  # `//` merges shallowly — both sides define `nvidia`.
+                  NVreg_DynamicPowerManagement = "0x01";
+                };
             };
             powerManagement = {
               enable = true;
-              # finegrained = true enables per-engine power-gating, but
-              # triggers an ABBA rw-semaphore deadlock in the ACPI notify
-              # handler (rm_acpi_nvpcf_notify) when the NVIDIA driver receives
-              # a USB-C dock hotplug ACPI event.  The nv_queue thread waits on
-              # a mutex while ACPI kworkers pile up waiting for the same rwlock
-              # — permanent wedge, requires cold power-cycle.
-              # Keep finegrained = false while investigating the separate ACPI
-              # dock-event deadlock seen with the proprietary path.
+              # finegrained = true enables per-engine power-gating, which
+              # triggers the rm_acpi_nvpcf_notify ABBA deadlock (USB-C dock
+              # hotplug ACPI event): nv_queue waits on a mutex while ACPI
+              # kworkers pile up on the same rwlock — permanent wedge, cold
+              # power-cycle only.  Keep it off; disableFineGrainedPm is the
+              # real kill switch (see moduleParams above).
               finegrained = false;
             };
             open = false;
