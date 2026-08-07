@@ -216,6 +216,8 @@ The following Oh-My-Zsh plugins are enabled:
 ### GitHub CLI
 
 - **gh-dash**: Dashboard for PRs, issues, repos
+- **gh-pr-review**: Interactive PR review from the terminal
+- **gh-stack**: Stacked PR workflow (sync branch stacks to PR stacks)
 - **Editor**: Neovim
 - **Protocol**: SSH
 
