@@ -84,8 +84,8 @@
         };
 
         # GitHub CLI: no legitimate use without a GitHub workflow (soyo has
-        # none). desktop.nix layers gh-dash/gh-pr-review extensions on top of
-        # this on hosts that also enable the desktop aspect.
+        # none). desktop.nix layers gh-dash/gh-pr-review/gh-stack extensions
+        # on top of this on hosts that also enable the desktop aspect.
         gh = {
           enable = true;
           settings = {
