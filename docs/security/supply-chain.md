@@ -127,7 +127,7 @@ purpose-built process:
 - **Freshness check** (the alternative to Renovate automation):
   `tests/security/check_command_code_freshness.py` reads a locally-recorded
   `date` from `command-code-lock/last-reviewed.json` and fails if more than
-  `staleAfterDays` (currently 180) have elapsed. It is deliberately **not**
+  `staleAfterDays` (currently 14) have elapsed. It is deliberately **not**
   a `nix flake check` output: a `checks.*` derivation is cached by its
   time-independent inputs, so once built and substituted from Cachix it
   would never re-run just because time passed, silently freezing "pass"
@@ -145,12 +145,8 @@ purpose-built process:
   scheduled `.github/workflows/security-scan.yml`
   (`on: schedule` + `workflow_dispatch`). The scan remains authoritative:
   this repository does not carry a local OpenTelemetry advisory override, and
-  the current 1.13.0 tree still reports `@opentelemetry/core` 2.0.0/2.7.1 and
-  `@opentelemetry/propagator-jaeger` 2.7.1 — the 1.13.0 dependency ranges
-  re-resolve to the same versions as the 1.7.0 tree. The next upstream `command-code`
-  update is expected to refresh those transitive packages. Re-run the scan
-  after every command-code update and record any remaining upstream advisories
-  rather than suppressing them.
+  the current 1.15.0 tree. Re-run the scan after every command-code update
+  and record any remaining upstream advisories rather than suppressing them.
 - **Offline build/smoke check**: `nix build path:.#command-code` builds the
   package and validates the Nix dependency hash. The normal package build is
   intentionally separate from the networked OSV scan; it does not claim that
@@ -158,7 +154,7 @@ purpose-built process:
 
 There is no repository-local advisory override lifecycle. Upstream owns the
 dependency ranges, `scripts/update-command-code.sh` owns regeneration, and
-`osv-scanner` owns current vulnerability visibility. The 180-day freshness
+`osv-scanner` owns current vulnerability visibility. The 14-day freshness
 check forces a human review even when no command-code version bump is needed.
 
 OpenSSF Scorecard is also deferred until the repository settings in
