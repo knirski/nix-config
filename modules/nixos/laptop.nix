@@ -74,6 +74,15 @@
         # device — immutable, immune to powertop --auto-tune.
         # https://docs.kernel.org/admin-guide/kernel-parameters.html
         "usbcore.quirks=046d:c52b:b,046d:c532:b"
+        # Disable NVMe APST (autonomous power-state transitions): the XPG
+        # S70 Blade's firmware can fail to wake from a low-power state after
+        # s2idle, wedging the PCIe link. The whole disk then hangs, btrfs
+        # remounts read-only after command timeouts, and only a cold reboot
+        # recovers. APST saves a few watts at idle; on this firmware the
+        # stability risk is not worth it. (Powertop re-enables it at runtime
+        # — see disable-nvme-apst.service below.)
+        # https://docs.kernel.org/admin-guide/kernel-parameters.html
+        "nvme_core.default_ps_max_latency_us=0"
       ];
 
       # Laptop lid switch handling
@@ -107,6 +116,22 @@
               echo "$dev" > /proc/acpi/wakeup
             fi
           done
+        '';
+      };
+
+      # Powertop's --auto-tune writes the nvme_core APST parameter via sysfs
+      # (observed value 100000 µs after boot), overriding the
+      # nvme_core.default_ps_max_latency_us=0 kernel param above. Re-apply
+      # the disable after powertop has run so the kernel param isn't a lie
+      # for the rest of the session. Without this, the APST hang returns on
+      # the next s2idle resume.
+      systemd.services.disable-nvme-apst = {
+        description = "Disable NVMe APST (re-apply after powertop auto-tune)";
+        after = [ "powertop.service" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig.Type = "oneshot";
+        script = ''
+          echo 0 > /sys/module/nvme_core/parameters/default_ps_max_latency_us
         '';
       };
     };
