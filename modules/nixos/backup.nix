@@ -299,6 +299,38 @@
                   Nice = 10;
                   IOWeight = 25;
                 })
+                (lib.mkIf (cfg.restic.sftp.host != null) {
+                  # The daily timer catches up at resume (Persistent=true) —
+                  # often before WiFi is associated, so the backup can fire
+                  # into a dead resolver. network-online.target only proves
+                  # the network was up at boot; it stays reached after
+                  # suspend/resume, so it doesn't protect here. Wait (bounded)
+                  # for the SFTP host to resolve before running restic; a
+                  # genuine outage still fails and still triggers the ntfy
+                  # OnFailure notification.
+                  ExecStartPre = lib.mkBefore [
+                    (lib.getExe (
+                      pkgs.writeShellApplication {
+                        name = "restic-wait-for-host";
+                        runtimeInputs = [
+                          pkgs.coreutils
+                          pkgs.glibc.bin
+                        ];
+                        text = ''
+                          host="${cfg.restic.sftp.host}"
+                          for i in $(seq 1 20); do
+                            if getent ahosts "$host" >/dev/null 2>&1; then
+                              exit 0
+                            fi
+                            sleep 10
+                          done
+                          echo "restic: $host did not resolve within 200s" >&2
+                          exit 1
+                        '';
+                      }
+                    ))
+                  ];
+                })
                 {
                   # Immutable success marker for scripts/healthcheck.sh's
                   # freshness probe. systemd's own Result/ExecMainStatus are
