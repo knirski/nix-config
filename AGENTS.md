@@ -133,6 +133,6 @@ Existing examples:
   SMART `unsafe shutdowns` and the daily "uncleanly shut down" journal lines
   for the pattern. Fixed by `nvme_core.default_ps_max_latency_us=0`
   ([kernel parameter docs](https://docs.kernel.org/admin-guide/kernel-parameters.html))
-  plus the `disable-nvme-apst` service (powertop's `--auto-tune` re-enables
-  APST at boot, so the kernel param alone is not enough) in
+  plus the `disable-nvme-apst` service, which re-asserts the disable per
+  controller (PM QoS sysfs node) after powertop and on every resume, in
   `modules/nixos/laptop.nix`. Requires a reboot.
