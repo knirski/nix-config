@@ -318,10 +318,15 @@
                         ];
                         text = ''
                           host="${cfg.restic.sftp.host}"
-                          for i in $(seq 1 20); do
+                          # Counter loop, not `for i in $(seq 1 20)`: the loop
+                          # variable would be unused and fail the derivation's
+                          # script-lint phase (unused-variable finding).
+                          n=0
+                          while [ "$n" -lt 20 ]; do
                             if getent ahosts "$host" >/dev/null 2>&1; then
                               exit 0
                             fi
+                            n=$((n + 1))
                             sleep 10
                           done
                           echo "restic: $host did not resolve within 200s" >&2
