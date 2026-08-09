@@ -299,7 +299,53 @@
                   Nice = 10;
                   IOWeight = 25;
                 })
+                (lib.mkIf (cfg.restic.sftp.host != null) {
+                  # The daily timer catches up at resume (Persistent=true) —
+                  # often before WiFi is associated, so the backup can fire
+                  # into a dead resolver. network-online.target only proves
+                  # the network was up at boot; it stays reached after
+                  # suspend/resume, so it doesn't protect here. Wait (bounded)
+                  # for the SFTP host to resolve before running restic; a
+                  # genuine outage still fails and still triggers the ntfy
+                  # OnFailure notification.
+                  ExecStartPre = lib.mkBefore [
+                    (lib.getExe (
+                      pkgs.writeShellApplication {
+                        name = "restic-wait-for-host";
+                        runtimeInputs = [
+                          pkgs.coreutils
+                          pkgs.glibc.bin
+                        ];
+                        text = ''
+                          host="${cfg.restic.sftp.host}"
+                          # Absolute 200s deadline — getent can block for many
+                          # seconds per call on a slow resolver, so an attempt
+                          # count alone would not bound wall time. The per-call
+                          # timeout caps each lookup and sleep never extends
+                          # past the deadline.
+                          deadline=$(( $(date +%s) + 200 ))
+                          while [ "$(date +%s)" -lt "$deadline" ]; do
+                            if timeout 5 getent ahosts "$host" >/dev/null 2>&1; then
+                              exit 0
+                            fi
+                            remaining=$(( deadline - $(date +%s) ))
+                            [ "$remaining" -le 0 ] && break
+                            sleep $(( remaining < 5 ? remaining : 5 ))
+                          done
+                          echo "restic: $host did not resolve within 200s" >&2
+                          exit 1
+                        '';
+                      }
+                    ))
+                  ];
+                })
                 {
+                  # Type=oneshot: TimeoutStartSec bounds the whole run (DNS
+                  # wait + backup + prune). The 90s systemd default would kill
+                  # the wait mid-way on slow-DNS mornings and long prunes
+                  # later, so declare an explicit cap like the repo's reviewed
+                  # services do (modules/parts/systemd-hardening-checks.nix).
+                  TimeoutStartSec = "30min";
                   # Immutable success marker for scripts/healthcheck.sh's
                   # freshness probe. systemd's own Result/ExecMainStatus are
                   # mutable bookkeeping -- `systemctl reset-failed` silently

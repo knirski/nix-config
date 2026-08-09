@@ -74,6 +74,16 @@
         # device — immutable, immune to powertop --auto-tune.
         # https://docs.kernel.org/admin-guide/kernel-parameters.html
         "usbcore.quirks=046d:c52b:b,046d:c532:b"
+        # Disable NVMe APST (autonomous power-state transitions): the XPG
+        # S70 Blade's firmware can fail to wake from a low-power state after
+        # s2idle, wedging the PCIe link. The whole disk then hangs, btrfs
+        # remounts read-only after command timeouts, and only a cold reboot
+        # recovers. APST saves a few watts at idle; on this firmware the
+        # stability risk is not worth it. (The module parameter only applies
+        # at controller init — see disable-nvme-apst.service below for the
+        # per-controller runtime re-assert.)
+        # https://docs.kernel.org/admin-guide/kernel-parameters.html
+        "nvme_core.default_ps_max_latency_us=0"
       ];
 
       # Laptop lid switch handling
@@ -106,6 +116,34 @@
             if grep -q "^''${dev}[[:space:]]\+S[0-9][[:space:]]\+\*enabled" /proc/acpi/wakeup; then
               echo "$dev" > /proc/acpi/wakeup
             fi
+          done
+        '';
+      };
+
+      # The nvme_core.default_ps_max_latency_us=0 kernel param above disables
+      # APST at controller init, but it cannot be changed for a running
+      # controller — powertop's --auto-tune writes the module parameter sysfs
+      # file (observed 100000 µs) with no effect on the already-initialized
+      # controller. The effective runtime knob is each controller's PM QoS
+      # latency tolerance node, so re-assert the disable per controller after
+      # powertop has run and again on every resume (sleep.target) — the
+      # failure mode this prevents is tied to s2idle resumes.
+      systemd.services.disable-nvme-apst = {
+        description = "Disable NVMe APST (re-assert per controller after powertop and on resume)";
+        after = [
+          "powertop.service"
+          "systemd-suspend.service"
+          "systemd-hibernate.service"
+        ];
+        wantedBy = [
+          "multi-user.target"
+          "sleep.target"
+        ];
+        serviceConfig.Type = "oneshot";
+        script = ''
+          for qos in /sys/class/nvme/nvme[0-9]*/power/pm_qos_latency_tolerance_us; do
+            [ -w "$qos" ] || continue
+            echo 0 > "$qos"
           done
         '';
       };
