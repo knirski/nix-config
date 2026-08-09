@@ -318,16 +318,19 @@
                         ];
                         text = ''
                           host="${cfg.restic.sftp.host}"
-                          # Counter loop, not `for i in $(seq 1 20)`: the loop
-                          # variable would be unused and fail the derivation's
-                          # script-lint phase (unused-variable finding).
-                          n=0
-                          while [ "$n" -lt 20 ]; do
-                            if getent ahosts "$host" >/dev/null 2>&1; then
+                          # Absolute 200s deadline — getent can block for many
+                          # seconds per call on a slow resolver, so an attempt
+                          # count alone would not bound wall time. The per-call
+                          # timeout caps each lookup and sleep never extends
+                          # past the deadline.
+                          deadline=$(( $(date +%s) + 200 ))
+                          while [ "$(date +%s)" -lt "$deadline" ]; do
+                            if timeout 5 getent ahosts "$host" >/dev/null 2>&1; then
                               exit 0
                             fi
-                            n=$((n + 1))
-                            sleep 10
+                            remaining=$(( deadline - $(date +%s) ))
+                            [ "$remaining" -le 0 ] && break
+                            sleep $(( remaining < 5 ? remaining : 5 ))
                           done
                           echo "restic: $host did not resolve within 200s" >&2
                           exit 1
@@ -337,6 +340,12 @@
                   ];
                 })
                 {
+                  # Type=oneshot: TimeoutStartSec bounds the whole run (DNS
+                  # wait + backup + prune). The 90s systemd default would kill
+                  # the wait mid-way on slow-DNS mornings and long prunes
+                  # later, so declare an explicit cap like the repo's reviewed
+                  # services do (modules/parts/systemd-hardening-checks.nix).
+                  TimeoutStartSec = "30min";
                   # Immutable success marker for scripts/healthcheck.sh's
                   # freshness probe. systemd's own Result/ExecMainStatus are
                   # mutable bookkeeping -- `systemctl reset-failed` silently
