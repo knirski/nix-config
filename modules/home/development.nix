@@ -39,6 +39,8 @@
         # Used by AI coding agents (claude-code, codex, opencode, command-code)
         # for script execution — not an interactive admin shell.
         nushell
+        # github
+        actionlint
       ];
 
       programs = {
