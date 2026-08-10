@@ -126,13 +126,15 @@ Existing examples:
 - **DMS auto-suspend while media playing.** Fixed by `media-sleep-inhibit` systemd user service in `modules/home/sway.nix` (polls MPRIS via `playerctl` every 15s).
 - **NetworkManager "connected" but no internet after s2idle.** Fixed by `powerManagement.resumeCommands` in `modules/nixos/laptop.nix` (restarts NetworkManager on resume).
 - **NVMe hang + btrfs read-only after s2idle resume.** The XPG S70 Blade can
-  fail to wake from a low-power state (APST), wedging the PCIe link: the disk
-  stops answering, btrfs remounts read-only after command timeouts, and only
-  a cold reboot recovers. The journal ends abruptly with no kernel messages —
+  fail to wake from a low-power state, wedging the PCIe link: the disk stops
+  answering, btrfs remounts read-only after command timeouts, and only a cold
+  reboot recovers. The journal ends abruptly with no kernel messages —
   they're stuck in journald's buffer on the same dead disk. Recurring: check
-  SMART `unsafe shutdowns` and the daily "uncleanly shut down" journal lines
-  for the pattern. Fixed by `nvme_core.default_ps_max_latency_us=0`
+  SMART `unsafe shutdowns` (a wedged controller can't even record the event)
+  and the daily "uncleanly shut down" journal lines for the pattern. Fixed by
+  `nvme_core.default_ps_max_latency_us=0`
   ([kernel parameter docs](https://docs.kernel.org/admin-guide/kernel-parameters.html))
-  plus the `disable-nvme-apst` service, which re-asserts the disable per
-  controller (PM QoS sysfs node) after powertop and on every resume, in
-  `modules/nixos/laptop.nix`. Requires a reboot.
+  plus `pcie_aspm=off` (APST alone did not stop the wedge — the failing
+  power state is the link itself) and the `disable-nvme-apst` service, which
+  re-asserts the disable per controller (PM QoS sysfs node) on every resume,
+  in `modules/nixos/laptop.nix`. Requires a reboot.
