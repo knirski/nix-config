@@ -68,12 +68,18 @@
       # Intel P-State driver (better power management on 12th/13th gen)
       boot.kernelParams = [
         "intel_pstate=active"
-        # Disable USB autosuspend for Logitech Unifying (c52b) and Bolt (c532)
-        # receivers at the USB core level, before powertop or udev can touch
-        # it. The "b" flag prevents the USB core from ever autosuspending the
-        # device — immutable, immune to powertop --auto-tune.
+        # USB quirks at the USB-core level, applied at device enumeration
+        # before any driver binds — immutable, immune to powertop --auto-tune.
         # https://docs.kernel.org/admin-guide/kernel-parameters.html
-        "usbcore.quirks=046d:c52b:b,046d:c532:b"
+        # "b" = USB_QUIRK_RESET_RESUME: Logitech Unifying (c52b) and Bolt
+        # (c532) receivers stutter after s2idle resume; resetting the device
+        # on resume re-initializes the radio cleanly.
+        # "j" = USB_QUIRK_IGNORE_REMOTE_WAKEUP: the dock's Realtek RTL8153
+        # LAN chip raises a remote wake on s2idle entry (link-state change),
+        # re-waking the machine ~3s after suspend. A udev rule alone cannot
+        # fix this — it races the r8152 driver, which re-enables wakeup in
+        # its probe — so kill the capability at the USB core.
+        "usbcore.quirks=046d:c52b:b,046d:c532:b,0bda:8153:j"
         # Disable NVMe APST (autonomous power-state transitions): the XPG
         # S70 Blade's firmware can fail to wake from a low-power state after
         # s2idle, wedging the PCIe link. The whole disk then hangs, btrfs
@@ -106,6 +112,9 @@
       # On s2idle (S0ix), link-state changes from the >1Gbps LAN chip
       # trigger an immediate re-wake after suspend entry, even when the
       # cable is idle. Only the dock LAN is targeted, not internal USB.
+      # Belt-and-suspenders: the authoritative fix is the 0bda:8153:j
+      # usbcore quirk above (this rule alone races the r8152 driver probe,
+      # which re-enables wakeup).
       services.udev.extraRules = lib.mkAfter ''
         ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", ATTR{power/wakeup}="disabled"
       '';

@@ -120,7 +120,7 @@ Existing examples:
 
 - **Disabling lid-close suspend.** `disable-lid` in `modules/home/desktop.nix` wraps `systemd-inhibit --what=handle-lid-switch sleep infinity`. Cancel with Ctrl+C.
 - **First boot: nouveau instead of NVIDIA.** Reboot after first `nixos-rebuild switch`.
-- **Suspend: no deep S3.** HP firmware can't route S3 wake events; s2idle used instead. If immediate wake after suspend, a udev rule in `modules/nixos/laptop.nix` disables wake on the dock's RTL8153 Ethernet.
+- **Suspend: no deep S3.** HP firmware can't route S3 wake events; s2idle used instead. If immediate wake after suspend (machine re-wakes ~3 s after suspend entry while docked), the `0bda:8153:j` usbcore quirk in `modules/nixos/laptop.nix` disables remote wake on the dock's RTL8153 Ethernet at the USB-core level — a udev rule alone isn't enough, the r8152 driver re-enables wakeup on bind. Needs reboot.
 - **Logitech receiver stutter.** Fixed by `usbcore.quirks` in `modules/nixos/laptop.nix` (`boot.kernelParams`). Requires reboot.
 - **NVIDIA GSP firmware crash on s2idle resume.** Fixed by `NVreg_EnableGpuFirmware=0` in `modules/nixos/nvidia.nix`. Requires cold reboot.
 - **DMS auto-suspend while media playing.** Fixed by `media-sleep-inhibit` systemd user service in `modules/home/sway.nix` (polls MPRIS via `playerctl` every 15s).
