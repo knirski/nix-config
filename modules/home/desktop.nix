@@ -76,6 +76,7 @@
           extensions = with pkgs; [
             gh-dash
             gh-pr-review
+            gh-stack
           ];
         };
         git.settings.alias.visual = "!gitk";

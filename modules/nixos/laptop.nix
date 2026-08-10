@@ -90,6 +90,15 @@
         # per-controller runtime re-assert.)
         # https://docs.kernel.org/admin-guide/kernel-parameters.html
         "nvme_core.default_ps_max_latency_us=0"
+        # Disable PCIe ASPM entirely. The APST disable above alone did not
+        # stop the wedge (observed: crash recurred with APST fully off), so
+        # the failing power state is the link itself (ASPM L1), not the
+        # controller's internal states. This platform cannot report PCIe
+        # link errors, so a wedged link is silent — the disk just stops
+        # answering and only a cold reboot recovers. Costs a little battery;
+        # worth it.
+        # https://docs.kernel.org/admin-guide/kernel-parameters.html
+        "pcie_aspm=off"
       ];
 
       # Laptop lid switch handling
@@ -131,16 +140,22 @@
 
       # The nvme_core.default_ps_max_latency_us=0 kernel param above disables
       # APST at controller init, but it cannot be changed for a running
-      # controller — powertop's --auto-tune writes the module parameter sysfs
-      # file (observed 100000 µs) with no effect on the already-initialized
-      # controller. The effective runtime knob is each controller's PM QoS
-      # latency tolerance node, so re-assert the disable per controller after
-      # powertop has run and again on every resume (sleep.target) — the
+      # controller — the module parameter sysfs write is a no-op for the
+      # already-initialized controller. The effective runtime knob is each
+      # controller's PM QoS latency tolerance node, so re-assert the disable
+      # per controller and again on every resume (sleep.target) — the
       # failure mode this prevents is tied to s2idle resumes.
+      #
+      # Deliberately NOT ordered after powertop.service: powertop writes the
+      # module parameter, which cannot affect a running controller anyway,
+      # and ordering after it creates a systemd ordering cycle (powertop is
+      # ordered After=multi-user.target while this unit is wanted by
+      # multi-user.target). systemd resolves the cycle by deleting one of
+      # the two jobs — observed dropping the powertop job, silently skipping
+      # all of powertop's other tunings for the whole session.
       systemd.services.disable-nvme-apst = {
-        description = "Disable NVMe APST (re-assert per controller after powertop and on resume)";
+        description = "Disable NVMe APST (re-assert per controller and on resume)";
         after = [
-          "powertop.service"
           "systemd-suspend.service"
           "systemd-hibernate.service"
         ];
