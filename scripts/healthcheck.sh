@@ -175,6 +175,16 @@ if [[ "$ROLE" != "appliance" && "$ROLE" != "workstation" ]]; then
   exit 2
 fi
 
+# dig must query the appliance's LAN address, not the SSH destination: the
+# hostname resolves via Tailscale MagicDNS (100.x.y.z), where nothing listens
+# on port 53, so the DNS checks below would always fail. Discover the IPv4
+# on the already-detected NIC instead.
+DNS_SERVER="$HOST"
+if [[ "$ROLE" == "appliance" ]]; then
+  DNS_SERVER="$("$SSH_BIN" -o ConnectTimeout=10 -o LogLevel=QUIET "krzysiek@$HOST" \
+    "ip -4 -json addr show dev $NIC | jq -r '.[0].addr_info[] | select(.family == \"inet\") | .local' | head -1" 2>/dev/null || echo "$HOST")"
+fi
+
 PASS=0
 FAIL=0
 
@@ -422,13 +432,13 @@ if [[ "$ROLE" == "appliance" ]]; then
   echo ""
   echo "--- DNS / DHCP (appliance) ---"
   check_nonempty "Forward DNS resolves" \
-    "$DIG_BIN" +short example.com @"$HOST"
+    "$DIG_BIN" +short example.com @"$DNS_SERVER"
   check_val "Ad blocking (doubleclick.net)" "0.0.0.0" \
-    "$DIG_BIN" +short doubleclick.net @"$HOST"
+    "$DIG_BIN" +short doubleclick.net @"$DNS_SERVER"
   check_val "Local resolution (soyo.home.arpa)" "10.0.0.9" \
-    "$DIG_BIN" +short soyo.home.arpa @"$HOST"
+    "$DIG_BIN" +short soyo.home.arpa @"$DNS_SERVER"
   check_val "Reverse DNS (10.0.0.9)" "soyo" \
-    "$DIG_BIN" +short -x 10.0.0.9 @"$HOST"
+    "$DIG_BIN" +short -x 10.0.0.9 @"$DNS_SERVER"
   check "DHCP lease file exists" \
     run_sudo test -f /var/lib/dnsmasq/dnsmasq.leases
 

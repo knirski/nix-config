@@ -90,13 +90,25 @@ setup() { setup_contract_test; }
   assert_log_has '<systemctl is-active --quiet greetd>'
   assert_log_lacks '<systemctl is-active --quiet blocky>'
   assert_log_lacks 'dig'
+  assert_log_lacks 'ip -4 -json addr'
 
   : >"$OPERATOR_TEST_LOG"
   run "$HEALTHCHECK" test-host appliance eth0
   assert_status 0
   assert_log_has '<systemctl is-active --quiet blocky>'
   assert_log_has '<systemctl is-active --quiet dnsmasq>'
+  # DNS probes target the LAN address discovered over SSH, never the SSH
+  # destination (which resolves via Tailscale MagicDNS where :53 is closed).
+  assert_log_has 'ip -4 -json addr show dev eth0'
+  assert_log_has 'dig <+short> <example.com> <@10.0.0.9>'
+}
+
+@test "DNS probes fall back to the SSH hostname when LAN IP discovery fails" {
+  run env SSH_FAIL_PATTERN='ip -4 -json addr show dev eth0' SSH_FAIL_STATUS=1 \
+    "$HEALTHCHECK" test-host appliance eth0
+  assert_status 0
   assert_log_has 'dig <+short> <example.com> <@test-host>'
+  assert_output_has '[PASS] Forward DNS resolves'
 }
 
 @test "inactive service is a failure, never an active substring match" {
