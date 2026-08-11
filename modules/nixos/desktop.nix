@@ -26,8 +26,9 @@
         # GVfs: userspace virtual filesystem providing mounts, trash:// URIs,
         # and MTP device access. Required by the Nautilus file manager (HM
         # desktop aspect) and DMS's dock trash (`xdg-open trash:///`). Pulls
-        # in udisks2 + libmtp udev rules (services.udisks2 is already active
-        # via upower on zbook anyway).
+        # in udisks2 + libmtp udev rules; the default nixpkgs build also
+        # compiles the SMB/NFS backends (smb:// and nfs:// in Nautilus).
+        # (udisks2 is additionally enabled by fwupd via laptop.nix.)
         gvfs.enable = true;
       };
 
