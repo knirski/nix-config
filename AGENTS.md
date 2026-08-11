@@ -131,10 +131,30 @@ Existing examples:
   reboot recovers. The journal ends abruptly with no kernel messages —
   they're stuck in journald's buffer on the same dead disk. Recurring: check
   SMART `unsafe shutdowns` (a wedged controller can't even record the event)
-  and the daily "uncleanly shut down" journal lines for the pattern. Fixed by
+  and the daily "uncleanly shut down" journal lines for the pattern. Mitigated by
   `nvme_core.default_ps_max_latency_us=0`
   ([kernel parameter docs](https://docs.kernel.org/admin-guide/kernel-parameters.html))
   plus `pcie_aspm=off` (APST alone did not stop the wedge — the failing
   power state is the link itself) and the `disable-nvme-apst` service, which
   re-asserts the disable per controller (PM QoS sysfs node) on every resume,
   in `modules/nixos/laptop.nix`. Requires a reboot.
+- **Recurrent wedge + VPD access failure (2026-08-11).** All three mitigations
+  above were active (`/proc/cmdline` confirmed `nvme_core.default_ps_max_latency_us=0`
+  and `pcie_aspm=off`, `disable-nvme-apst.service` enabled and ran on boot), yet
+  the wedge recurred: boot -1 ended abruptly at 02:22:13 with no kernel
+  messages, and boot 0 logged `system.journal corrupted or uncleanly shut down`
+  at 03:03:12 — a ~41-min dark gap resolved by a forced cold shutdown. The
+  leading symptom this time was `nvme 0000:03:00.0: VPD access failed. This is
+  likely a firmware bug on this device. Contact the card vendor for a firmware
+  update` at 02:12:05, ~3 s after a resume — a PCIe config-space (VPD) read
+  failure that predates any filesystem symptom. The S70 Blade runs an InnoGrit
+  controller (subsystem NQN `nqn.2016-11.com.innogrit:2N11292JQEJC`); the
+  kernel's own recommendation is a vendor firmware update, and the in-kernel
+  power-state mitigations are already maxed out (`pcie_aspm=off`, APST
+  disabled) — no further software lever remains. Firmware at time of wedge:
+  `3.2.F.74` per `nvme id-ctrl`. A firmware update via the official XPG SSD
+  Toolbox on Windows is planned; all fixes/workarounds are to be re-evaluated
+  after that update. Until then, treat s2idle on this drive as unreliable: prefer
+  `systemctl hibernate` or a full shutdown over suspend, and treat
+  `VPD access failed` in the journal as an early-warning signal that the next
+  wedge is imminent.
