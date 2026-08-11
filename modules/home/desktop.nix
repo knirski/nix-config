@@ -97,6 +97,9 @@
       # Darwin (macbook) has no nautilus build: Finder is the default file
       # manager there and `open` resolves folders natively.
       xdg.mimeApps = lib.mkIf pkgs.stdenv.isLinux {
+        # HM writes ~/.config/mimeapps.list only when enable is set
+        # (default: false) — without it, defaultApplications is inert.
+        enable = true;
         defaultApplications = {
           "inode/directory" = "org.gnome.Nautilus.desktop";
           "x-scheme-handler/trash" = "org.gnome.Nautilus.desktop";
