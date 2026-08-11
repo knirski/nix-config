@@ -87,15 +87,15 @@
       # graphical session is guaranteed. pinentry-gnome3 is a Linux/GTK
       # package with no Darwin build, so guard even though this aspect is
       # also imported on macbook (aerospace/Aqua, not GNOME).
-      # Nautilus is THE default file manager on every desktop host (all but
-      # the headless soyo): folders and trash:// URLs resolve to it via
-      # xdg-open (Yazi's opener, DMS dock trash, gio). This HM aspect is the
-      # single source of truth — it is imported by zbook, ubuntu, and macbook
-      # — so the nautilus package and these defaults follow the desktop aspect
-      # wherever it goes. GVfs (trash, automounts) comes from the host's NixOS
-      # desktop aspect (zbook) or the stock Ubuntu GNOME base (ubuntu).
-      # Darwin (macbook) has no nautilus build: Finder is the default file
-      # manager there and `open` resolves folders natively.
+      # Nautilus is the default file manager on Linux desktop hosts: folders
+      # and trash:// URLs resolve to it via xdg-open (Yazi's opener, DMS dock
+      # trash, gio). This HM aspect is the single source of truth — imported
+      # by zbook, ubuntu, and macbook — so the nautilus package and these
+      # defaults follow the desktop aspect wherever it goes. GVfs (trash,
+      # automounts) comes from the host's NixOS desktop aspect (zbook) or the
+      # stock Ubuntu GNOME base (ubuntu). Darwin (macbook) has no nautilus
+      # build: Finder is the default file manager there and `open` resolves
+      # folders natively.
       xdg.mimeApps = lib.mkIf pkgs.stdenv.isLinux {
         # HM writes ~/.config/mimeapps.list only when enable is set
         # (default: false) — without it, defaultApplications is inert.
