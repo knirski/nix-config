@@ -184,19 +184,31 @@
                   name: value: "${name}:${value.snapshot_dir}"
                 ) generated) expectedBtrbk.${host}.subvolumes;
             }
+            {
+              # The healthcheck's backup-freshness probe reads these markers;
+              # without persistence every reboot resets them to "never ran"
+              # even when backups are healthy. Ownership matters: btrbk runs
+              # as its own service user, restic as root (the preservation
+              # default for plain-string entries).
+              name = "${host}: backup freshness markers are persisted with correct ownership";
+              pass =
+                let
+                  btrbkEntry = directoryEntry host "/var/lib/btrbk-${host}";
+                  resticEntry = directoryEntry host "/var/lib/restic-backups-${host}";
+                in
+                btrbkEntry != null
+                && btrbkEntry.user == "btrbk"
+                && btrbkEntry.group == "btrbk"
+                && resticEntry != null
+                && resticEntry.user == "root"
+                && resticEntry.group == "root";
+            }
           ]
         ) (builtins.attrNames hosts)
         ++ [
           {
             name = "soyo: all stateful DNS and observability services are persisted";
             pass = lib.all (path: lib.elem path (bindDirectories "soyo")) soyoStateDirectories;
-          }
-          {
-            name = "soyo: backup freshness markers survive reboots";
-            pass = lib.all (path: lib.elem path (bindDirectories "soyo")) [
-              "/var/lib/restic-backups-soyo"
-              "/var/lib/btrbk-soyo"
-            ];
           }
           {
             name = "soyo: state directories keep service ownership and modes";
