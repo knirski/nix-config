@@ -124,52 +124,74 @@
       # switches it on/off — so we only write if currently enabled.
       # On s2idle, the HP Thunderbolt dock (TDM0/TDM1) fires an immediate
       # wake event on suspend entry, overriding the RTL8153 udev fix.
-      systemd.services.disable-thunderbolt-wake = {
-        description = "Disable Thunderbolt wake sources before suspend";
-        before = [ "systemd-suspend.service" ];
-        wantedBy = [ "sleep.target" ];
-        serviceConfig.Type = "oneshot";
-        script = ''
-          for dev in TXHC TDM0 TDM1; do
-            if grep -q "^''${dev}[[:space:]]\+S[0-9][[:space:]]\+\*enabled" /proc/acpi/wakeup; then
-              echo "$dev" > /proc/acpi/wakeup
-            fi
-          done
-        '';
-      };
+      systemd.services = {
+        disable-thunderbolt-wake = {
+          description = "Disable Thunderbolt wake sources before suspend";
+          before = [ "systemd-suspend.service" ];
+          wantedBy = [ "sleep.target" ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            for dev in TXHC TDM0 TDM1; do
+              if grep -q "^''${dev}[[:space:]]\+S[0-9][[:space:]]\+\*enabled" /proc/acpi/wakeup; then
+                echo "$dev" > /proc/acpi/wakeup
+              fi
+            done
+          '';
+        };
 
-      # The nvme_core.default_ps_max_latency_us=0 kernel param above disables
-      # APST at controller init, but it cannot be changed for a running
-      # controller — the module parameter sysfs write is a no-op for the
-      # already-initialized controller. The effective runtime knob is each
-      # controller's PM QoS latency tolerance node, so re-assert the disable
-      # per controller and again on every resume (sleep.target) — the
-      # failure mode this prevents is tied to s2idle resumes.
-      #
-      # Deliberately NOT ordered after powertop.service: powertop writes the
-      # module parameter, which cannot affect a running controller anyway,
-      # and ordering after it creates a systemd ordering cycle (powertop is
-      # ordered After=multi-user.target while this unit is wanted by
-      # multi-user.target). systemd resolves the cycle by deleting one of
-      # the two jobs — observed dropping the powertop job, silently skipping
-      # all of powertop's other tunings for the whole session.
-      systemd.services.disable-nvme-apst = {
-        description = "Disable NVMe APST (re-assert per controller and on resume)";
-        after = [
-          "systemd-suspend.service"
-          "systemd-hibernate.service"
-        ];
-        wantedBy = [
-          "multi-user.target"
-          "sleep.target"
-        ];
-        serviceConfig.Type = "oneshot";
-        script = ''
-          for qos in /sys/class/nvme/nvme[0-9]*/power/pm_qos_latency_tolerance_us; do
-            [ -w "$qos" ] || continue
-            echo 0 > "$qos"
-          done
-        '';
+        # The nvme_core.default_ps_max_latency_us=0 kernel param above disables
+        # APST at controller init, but it cannot be changed for a running
+        # controller — the module parameter sysfs write is a no-op for the
+        # already-initialized controller. The effective runtime knob is each
+        # controller's PM QoS latency tolerance node, so re-assert the disable
+        # per controller and again on every resume (sleep.target) — the
+        # failure mode this prevents is tied to s2idle resumes.
+        #
+        # Deliberately NOT ordered after powertop.service: powertop writes the
+        # module parameter, which cannot affect a running controller anyway,
+        # and ordering after it creates a systemd ordering cycle (powertop is
+        # ordered After=multi-user.target while this unit is wanted by
+        # multi-user.target). systemd resolves the cycle by deleting one of
+        # the two jobs — observed dropping the powertop job, silently skipping
+        # all of powertop's other tunings for the whole session.
+        disable-nvme-apst = {
+          description = "Disable NVMe APST (re-assert per controller and on resume)";
+          after = [
+            "systemd-suspend.service"
+            "systemd-hibernate.service"
+          ];
+          wantedBy = [
+            "multi-user.target"
+            "sleep.target"
+          ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            for qos in /sys/class/nvme/nvme[0-9]*/power/pm_qos_latency_tolerance_us; do
+              [ -w "$qos" ] || continue
+              echo 0 > "$qos"
+            done
+          '';
+        };
+
+        # Declarative backlight level. DMS is the runtime brightness controller
+        # (control-center slider, XF86MonBrightness keys), but it only persists
+        # a user-set value to session.json for *exponential* devices —
+        # intel_backlight is linear, so a brightness chosen in DMS lives only
+        # in sysfs, restored at boot by systemd-backlight from the last shutdown
+        # (not declarative). This unit re-applies the fixed level right after
+        # that restore, so the laptop panel always comes up at this brightness;
+        # interactive changes during the session still work (and survive suspend
+        # via systemd-backlight). To change the level, edit the `set` argument —
+        # brightnessctl computes the raw sysfs value from the percent.
+        apply-backlight-level = {
+          description = "Apply declarative backlight level (30%)";
+          after = [ "systemd-backlight@backlight:intel_backlight.service" ];
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            ${pkgs.brightnessctl}/bin/brightnessctl --device=intel_backlight set 30%
+          '';
+        };
       };
     };
 }
