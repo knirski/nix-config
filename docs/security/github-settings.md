@@ -75,7 +75,7 @@ Reasoning for the complete enforced set:
   soyo/zbook already have as required checks.
 - **`Build macbook darwin closure`** runs on GitHub's `macos-latest` hosted
   runner via the same `./.github/actions/setup-nix` composite action
-  (DeterminateSystems installer + magic-nix-cache + Cachix) used by every
+  (DeterminateSystems installer + Cachix) used by every
   other job in this workflow — there is no macOS-specific fork of the setup
   step, so it carries the same installer reliability as the Linux jobs.
   Darwin closures do not need `/dev/kvm`, so this job does not inherit the

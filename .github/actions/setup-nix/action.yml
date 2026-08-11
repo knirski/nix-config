@@ -1,5 +1,5 @@
-# Composite action that installs Nix and configures caching.
-# Used by every CI job to avoid repeating the same 4-step setup.
+# Composite action that installs Nix and configures the Cachix cache.
+# Used by every CI job to avoid repeating the same setup.
 #
 # Example usage:
 #   # PR / non-main push (no auth token — pull-only cache access)
@@ -24,9 +24,6 @@ runs:
   using: composite
   steps:
     - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
-    - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
-      with:
-        use-flakehub: false
 
     # When no auth token is provided, configure Cachix for pull-only access.
     # This is safe for PRs from forks (no secret exposure).
