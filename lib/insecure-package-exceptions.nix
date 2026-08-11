@@ -54,4 +54,30 @@
     reviewed = "2026-07-23";
     reviewIntervalDays = 180;
   }
+  {
+    package = "ventoy-gtk3-1.1.12";
+    knownVulnerability = ''
+      Ventoy uses binary blobs which can't be trusted to be free of malware
+      or compliant to their licenses (nixpkgs issue #404663, Ventoy issues
+      #2795 and #3224).
+    '';
+    rationale = ''
+      ventoy-full-gtk (pname ventoy-gtk3) is installed by
+      aspects.nixos.desktop on zbook only (soyo is headless and never
+      enables that aspect; macbook/ubuntu have no route to NixOS-level
+      packages) to create bootable USB drives. The unfree license is already
+      accepted globally via allowUnfree (lib/mk-nixpkgs-args.nix); the
+      knownVulnerabilities flag is the same binary-blob tradeoff the repo
+      owner accepted when requesting the package.
+
+      Verified 2026-08-11 via `nix eval .#nixosConfigurations.zbook.pkgs.\
+      ventoy-full-gtk.name` after wiring the exception: evaluation succeeds,
+      and only the registry entry (not a broader allowInsecurePredicate)
+      permits it. Bump the version string here together with the package
+      when updating desktop.nix.
+    '';
+    owner = "krzysiek (repo owner)";
+    reviewed = "2026-08-11";
+    reviewIntervalDays = 180;
+  }
 ]

@@ -43,9 +43,41 @@
         inter
       ];
 
+      # ---- Firefox: install + default browser ----
+
+      # `programs.firefox` (rather than a bare `firefox` in systemPackages)
+      # is the idiomatic NixOS hook: the package stays in the closure, and
+      # the `policies` and `nativeMessagingHosts` options become available
+      # declaratively when we need them (e.g. Bitwarden desktop <-> browser
+      # extension bridge).
+      programs.firefox.enable = true;
+
+      # System-wide default-browser associations (`/etc/xdg/mimeapps.list`).
+      # The per-user mimeapps.list written by the HM desktop aspect only
+      # overrides inode/directory and trash://; every other type falls
+      # through to this file, so http(s) and text/html resolve to Firefox
+      # for xdg-open, gio, and apps that open links (Thunderbird, ...).
+      # Kept here (not in the shared HM desktop aspect) because Firefox is
+      # installed only on this host — see macbook-desktop-checks.nix's
+      # Firefox matrix row (zbook ✓, macbook/ubuntu ✗).
+      xdg.mime.defaultApplications = {
+        "text/html" = "firefox.desktop";
+        "x-scheme-handler/http" = "firefox.desktop";
+        "x-scheme-handler/https" = "firefox.desktop";
+      };
+
+      # $BROWSER fallback for CLI tools that don't speak xdg-open.
+      environment.sessionVariables.BROWSER = "firefox";
+
       environment.systemPackages = with pkgs; [
-        firefox
         simple-scan # scanning GUI
+        # Bootable USB creator (ISO/WIM/IMG -> one stick, no reformatting).
+        # GUI + full filesystem support (ext4/xfs/ntfs/cryptsetup for
+        # persistent images). nixpkgs flags its binary blobs as
+        # knownVulnerabilities, so the reviewed exception lives in
+        # lib/insecure-package-exceptions.nix — keep that entry in sync with
+        # any version bump here.
+        ventoy-full-gtk
       ];
 
       hardware = {
