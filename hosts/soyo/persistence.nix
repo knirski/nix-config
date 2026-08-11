@@ -14,6 +14,17 @@
         inInitrd = true;
       }
       "/var/lib/dnsmasq"
+      # Freshness markers for the nightly backup units (restic + btrbk). The
+      # healthcheck's backup-freshness probe reads these; without persistence
+      # every reboot resets them to "never ran" even when backups are healthy.
+      # The btrbk marker dir is owned by the btrbk service user; restic's is
+      # root-owned (preservation's default for plain-string entries).
+      "/var/lib/restic-backups-soyo"
+      {
+        directory = "/var/lib/btrbk-soyo";
+        user = "btrbk";
+        group = "btrbk";
+      }
       # Alloy uses DynamicUser + StateDirectory=alloy, which resolves to the
       # private state dir below. Persist the cursor so journal shipping resumes
       # from the last read entry instead of replaying a large backlog on boot.
