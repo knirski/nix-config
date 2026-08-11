@@ -196,6 +196,7 @@
       alloyConfig = import ../../lib/observability/alloy-config.nix { };
       grafanaAlertSetup = import ../../lib/observability/grafana-alert-setup.nix {
         inherit lib config pkgs;
+        inherit (cfg) lanInterface;
       };
       grafanaGcxSetup = import ../../lib/observability/grafana-gcx-setup.nix {
         inherit lib config pkgs;
