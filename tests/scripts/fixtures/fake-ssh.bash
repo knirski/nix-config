@@ -15,8 +15,9 @@ case "$command_line" in
   *'. /etc/os-release'*) printf '%s\n' "${SSH_OS_RELEASE:-ID=ubuntu}" ;;
   *'ip -json link'*) printf '%s\n' "${SSH_NIC:-wlan-test}" ;;
   # LAN IPv4 discovery for the appliance DNS checks
-  # (scripts/healthcheck.sh: DNS_SERVER discovery).
-  *'ip -4 -json addr show dev'*) printf '%s\n' "${SSH_LAN_IP:-10.0.0.9}" ;;
+  # (scripts/healthcheck.sh: DNS_SERVER discovery). `-` (not `:-`) so an
+  # explicitly empty SSH_LAN_IP simulates an interface with no IPv4.
+  *'ip -4 -json addr show dev'*) printf '%s\n' "${SSH_LAN_IP-10.0.0.9}" ;;
   *'cat /etc/nix-config/role'*) printf '%s' "${SSH_ROLE_MARKER:-}" ;;
   *'tailscale status 2>/dev/null | grep -q "10.0.0.0/24"'*) [[ "${SSH_APPLIANCE_FALLBACK:-0}" == 1 ]] ;;
   # Backup freshness probes (scripts/healthcheck.sh: check_backup_freshness).
