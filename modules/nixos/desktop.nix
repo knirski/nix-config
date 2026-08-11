@@ -22,6 +22,13 @@
         };
         blueman.enable = true;
         gnome.gnome-keyring.enable = true;
+
+        # GVfs: userspace virtual filesystem providing mounts, trash:// URIs,
+        # and MTP device access. Required by the Nautilus file manager (HM
+        # desktop aspect) and DMS's dock trash (`xdg-open trash:///`). Pulls
+        # in udisks2 + libmtp udev rules (services.udisks2 is already active
+        # via upower on zbook anyway).
+        gvfs.enable = true;
       };
 
       security.rtkit.enable = true;

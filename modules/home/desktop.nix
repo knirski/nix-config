@@ -34,6 +34,7 @@
             bitwarden-desktop
             bitwarden-cli
             rbw
+            nautilus # default file manager (see xdg.mimeApps below)
             # rbw spawns `pinentry` directly (not through gpg-agent). The
             # nixpkgs `pinentry` meta-package was removed; provide a thin
             # wrapper that delegates to the GTK3 pinentry we already have.
@@ -86,6 +87,22 @@
       # graphical session is guaranteed. pinentry-gnome3 is a Linux/GTK
       # package with no Darwin build, so guard even though this aspect is
       # also imported on macbook (aerospace/Aqua, not GNOME).
+      # Nautilus is THE default file manager on every desktop host (all but
+      # the headless soyo): folders and trash:// URLs resolve to it via
+      # xdg-open (Yazi's opener, DMS dock trash, gio). This HM aspect is the
+      # single source of truth — it is imported by zbook, ubuntu, and macbook
+      # — so the nautilus package and these defaults follow the desktop aspect
+      # wherever it goes. GVfs (trash, automounts) comes from the host's NixOS
+      # desktop aspect (zbook) or the stock Ubuntu GNOME base (ubuntu).
+      # Darwin (macbook) has no nautilus build: Finder is the default file
+      # manager there and `open` resolves folders natively.
+      xdg.mimeApps = lib.mkIf pkgs.stdenv.isLinux {
+        defaultApplications = {
+          "inode/directory" = "org.gnome.Nautilus.desktop";
+          "x-scheme-handler/trash" = "org.gnome.Nautilus.desktop";
+        };
+      };
+
       services.gpg-agent = lib.mkIf pkgs.stdenv.isLinux {
         pinentry.package = pkgs.pinentry-gnome3;
       };
