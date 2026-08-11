@@ -346,6 +346,15 @@
                   # later, so declare an explicit cap like the repo's reviewed
                   # services do (modules/parts/systemd-hardening-checks.nix).
                   TimeoutStartSec = "30min";
+                  # Transient failures (a slow resolver hiccup in the SFTP
+                  # host wait, the NAS rebooting overnight) should retry
+                  # before the night's backup is written off: on 2026-08-11 a
+                  # single ~200s DNS failure skipped the whole run. Retry at
+                  # 10-minute gaps; only once the start limit is exhausted
+                  # does the unit enter the failed state, which is what
+                  # triggers the ntfy OnFailure notification.
+                  Restart = "on-failure";
+                  RestartSec = "10min";
                   # Immutable success marker for scripts/healthcheck.sh's
                   # freshness probe. systemd's own Result/ExecMainStatus are
                   # mutable bookkeeping -- `systemctl reset-failed` silently
@@ -365,7 +374,14 @@
                   ];
                 }
               ];
-              unitConfig.OnFailure = lib.mkIf cfg.notifyOnFailure "ntfy-failure@%N.service";
+              unitConfig = {
+                # Bounded retries (see Restart above): at most 4 starts per
+                # hour before the unit stays failed and the OnFailure ntfy
+                # notification fires.
+                StartLimitIntervalSec = "1h";
+                StartLimitBurst = 4;
+                OnFailure = lib.mkIf cfg.notifyOnFailure "ntfy-failure@%N.service";
+              };
             };
           }
 

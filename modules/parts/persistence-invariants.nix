@@ -192,6 +192,13 @@
             pass = lib.all (path: lib.elem path (bindDirectories "soyo")) soyoStateDirectories;
           }
           {
+            name = "soyo: backup freshness markers survive reboots";
+            pass = lib.all (path: lib.elem path (bindDirectories "soyo")) [
+              "/var/lib/restic-backups-soyo"
+              "/var/lib/btrbk-soyo"
+            ];
+          }
+          {
             name = "soyo: state directories keep service ownership and modes";
             pass =
               lib.all
