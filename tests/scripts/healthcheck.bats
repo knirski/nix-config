@@ -111,6 +111,15 @@ setup() { setup_contract_test; }
   assert_output_has '[PASS] Forward DNS resolves'
 }
 
+@test "empty LAN IP discovery output falls back to the SSH hostname" {
+  # The discovery pipeline exits 0 even when jq matches nothing (an up
+  # interface with no IPv4), so an empty result must fall back too.
+  run env SSH_LAN_IP='' "$HEALTHCHECK" test-host appliance eth0
+  assert_status 0
+  assert_log_has 'dig <+short> <example.com> <@test-host>'
+  assert_output_has '[PASS] Forward DNS resolves'
+}
+
 @test "inactive service is a failure, never an active substring match" {
   run env SSH_FAIL_PATTERN='systemctl is-active --quiet greetd' SSH_FAIL_OUTPUT='inactive' \
     "$HEALTHCHECK" test-host workstation eth0

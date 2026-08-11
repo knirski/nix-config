@@ -181,8 +181,14 @@ fi
 # on the already-detected NIC instead.
 DNS_SERVER="$HOST"
 if [[ "$ROLE" == "appliance" ]]; then
+  # `|| true` keeps set -e from killing the script on a failed SSH call;
+  # the `${DNS_SERVER:-$HOST}` fallback below then covers the empty result.
+  # Both matter: the discovery pipeline can fail with a non-zero exit (SSH
+  # error) or exit 0 with empty output (an up interface with no IPv4), and
+  # either would otherwise leave dig with an empty @target.
   DNS_SERVER="$("$SSH_BIN" -o ConnectTimeout=10 -o LogLevel=QUIET "krzysiek@$HOST" \
-    "ip -4 -json addr show dev $NIC | jq -r '.[0].addr_info[] | select(.family == \"inet\") | .local' | head -1" 2>/dev/null || echo "$HOST")"
+    "ip -4 -json addr show dev $NIC | jq -r '.[0].addr_info[] | select(.family == \"inet\") | .local' | head -1" 2>/dev/null || true)"
+  DNS_SERVER="${DNS_SERVER:-$HOST}"
 fi
 
 PASS=0
