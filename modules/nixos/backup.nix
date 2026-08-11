@@ -353,6 +353,11 @@
                   # 10-minute gaps; only once the start limit is exhausted
                   # does the unit enter the failed state, which is what
                   # triggers the ntfy OnFailure notification.
+                  # Restart= is supported for Type=oneshot units — systemd
+                  # only rejects `always` and `on-success` for them (man
+                  # systemd.service). Verified live on systemd 260: the unit
+                  # retries on failure and then hits the start limit
+                  # (Result=start-limit-hit) instead of looping forever.
                   Restart = "on-failure";
                   RestartSec = "10min";
                   # Immutable success marker for scripts/healthcheck.sh's
