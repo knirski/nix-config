@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  pkgs,
+  lanInterface,
+  ...
+}:
 let
   hardening = import ../systemd-hardening.nix;
   # Single source of truth for the Btrfs metric names, shared with the
@@ -124,6 +129,16 @@ in
               }
 
               provision_rules() {
+                post_rule soyo_nic_link_down \
+                  "🔌 LAN NIC link down" \
+                  'node_network_up{job="node", device="${lanInterface}"} == 0' \
+                  1m KeepLast "🔌 ${lanInterface} link is down — LAN DNS/DHCP are unreachable"
+
+                post_rule soyo_nic_flapping \
+                  "🔁 LAN NIC link flapping" \
+                  'changes(node_network_up{job="node", device="${lanInterface}"}[15m]) > 2' \
+                  5m KeepLast "🔁 ${lanInterface} link has flapped repeatedly — check the cable/switch and the journal for NETDEV WATCHDOG"
+
                 post_rule soyo_prometheus_scrape_failure \
                   "📈 Prometheus scrape failure" \
                   'sum by (job) (up{job=~"blocky|dnsmasq|loki|tempo"} == 0) > 0' \
