@@ -64,7 +64,7 @@
         fi
 
         # Never touch a disk the host has mounted (concurrent NTFS writes corrupt).
-        if lsblk -no MOUNTPOINTS "$dev" | grep -q .; then
+        if lsblk -no MOUNTPOINTS "$dev" | grep -q '[^[:space:]]'; then
           echo "error: $dev has mounted partitions; unmount first: sudo umount ''${dev}*" >&2
           exit 1
         fi
