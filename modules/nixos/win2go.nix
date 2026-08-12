@@ -25,6 +25,9 @@
     let
       # Shared preamble: root re-exec, SSD detection (edit the model matcher
       # if the enclosure/SSD ever changes), and the two safety guards.
+      # Both scripts must list every tool they use in runtimeInputs below —
+      # the repository's shell-boundaries check rejects unchecked
+      # writeShellScript usage.
       preamble = ''
         set -euo pipefail
 
@@ -61,111 +64,135 @@
         # ntfsclone (NTFS-aware imaging) and zstd (compression for images).
         pkgs.ntfs3g
         pkgs.zstd
-        (pkgs.writeShellScriptBin "win-usb" ''
-          ${preamble}
+        (pkgs.writeShellApplication {
+          name = "win-usb";
+          runtimeInputs = [
+            pkgs.coreutils
+            pkgs.gawk
+            pkgs.glibc.bin # getent (resolve SUDO_USER's home)
+            pkgs.gnugrep
+            pkgs.procps # pgrep
+            pkgs.qemu
+            pkgs.sudo
+            pkgs.util-linux # lsblk
+          ];
+          text = ''
+            ${preamble}
 
-          ovmf_code=${pkgs.OVMF.fd}/FV/OVMF_CODE.fd
-          ovmf_vars_template=${pkgs.OVMF.fd}/FV/OVMF_VARS.fd
+            ovmf_code=${pkgs.OVMF.fd}/FV/OVMF_CODE.fd
+            ovmf_vars_template=${pkgs.OVMF.fd}/FV/OVMF_VARS.fd
 
-          # --- persistent UEFI vars -------------------------------------------
-          # Windows Setup wrote a "Windows Boot Manager" entry here during
-          # install; keep that file so the VM boots the disk directly. If it
-          # is ever deleted, OVMF falls back to the ESP's \EFI\BOOT\BOOTX64.EFI
-          # and the disk still boots.
-          if [ -n "''${SUDO_USER:-}" ]; then
-            vars_dir="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.local/share/win2go"
-          else
-            vars_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/win2go"
-          fi
-          vars="$vars_dir/OVMF_VARS.fd"
-          if [ ! -e "$vars" ]; then
-            install -d "$vars_dir"
-            cp "$ovmf_vars_template" "$vars"
-          fi
+            # --- persistent UEFI vars -------------------------------------------
+            # Windows Setup wrote a "Windows Boot Manager" entry here during
+            # install; keep that file so the VM boots the disk directly. If it
+            # is ever deleted, OVMF falls back to the ESP's \EFI\BOOT\BOOTX64.EFI
+            # and the disk still boots.
+            if [ -n "''${SUDO_USER:-}" ]; then
+              vars_dir="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.local/share/win2go"
+            else
+              vars_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/win2go"
+            fi
+            vars="$vars_dir/OVMF_VARS.fd"
+            if [ ! -e "$vars" ]; then
+              install -d "$vars_dir"
+              cp "$ovmf_vars_template" "$vars"
+            fi
 
-          # --- assemble the VM ------------------------------------------------
-          qemu_args=(
-            -machine q35,accel=kvm -cpu host -smp "''${WIN_USB_SMP:-8}" -m "''${WIN_USB_MEM:-8G}"
-            -drive if=pflash,format=raw,readonly=on,file="$ovmf_code"
-            -drive if=pflash,format=raw,file="$vars"
-            -device ich9-ahci,id=sata
-            -drive file="$dev",format=raw,if=none,id=winusb
-            -device ide-hd,drive=winusb,bus=sata.2
-            -netdev user,id=net0 -device e1000e,netdev=net0
-            -display gtk
-          )
-          case "''${1:-}" in
-            --iso)
-              [ -f "''${2:-}" ] || { echo "error: ISO not found: ''${2:-}" >&2; exit 1; }
-              qemu_args+=(-drive "file=$2,media=cdrom,readonly=on")
-              ;;
-            "") ;;
-            *) echo "usage: win-usb [--iso /path/to/windows.iso]" >&2; exit 2 ;;
-          esac
-
-          exec qemu-system-x86_64 "''${qemu_args[@]}"
-        '')
-        (pkgs.writeShellScriptBin "win-usb-image" ''
-          ${preamble}
-
-          # --- destination -----------------------------------------------------
-          dest_dir="''${1:-}"
-          if [ -z "$dest_dir" ]; then
-            echo "error: no destination given." >&2
-            echo "usage: win-usb-image <dest-dir>   (e.g. a NAS path; ~/ is ephemeral on this host)" >&2
-            exit 1
-          fi
-          if [ -n "''${SUDO_USER:-}" ]; then
-            user_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
-          else
-            user_home="$HOME"
-          fi
-          dest_dir="''${1:-$user_home/win2go-images}"
-          stamp="$(date +%Y%m%d-%H%M%S)"
-          out="$dest_dir/win2go-$stamp"
-          mkdir -p "$out"
-
-          echo "imaging $dev -> $out (leave the SSD idle, do not attach it to a VM)"
-
-          # Exact partition table, so restore can reproduce the layout 1:1.
-          sfdisk -d "$dev" > "$out/parttable.txt"
-
-          # Per-partition images: ntfsclone for NTFS (used clusters only, so
-          # the image is tens of GB instead of the disk's full 954 GB); plain
-          # dd for ESP/MSR (small, no filesystem tools needed).
-          {
-            echo "# Restore this image on the NixOS host (root):"
-            echo "#   sudo sfdisk $dev < parttable.txt"
-            echo "# then, in partition order:"
-          } > "$out/restore-notes.txt"
-
-          for part in $(lsblk -nlo NAME "$dev" | tail -n +2); do
-            p="/dev/$part"
-            fstype="$(blkid -s TYPE -o value "$p" || true)"
-            case "$fstype" in
-              ntfs)
-                echo "  $p (ntfs): ntfsclone + zstd"
-                ntfsclone -s -o - "$p" | zstd -q -f -o "$out/$part.ntfsclone.zst"
-                echo "  zstd -dc $part.ntfsclone.zst | sudo ntfsclone -r -o $p -" >> "$out/restore-notes.txt"
+            # --- assemble the VM ------------------------------------------------
+            # qemu args use comma syntax; keep every element quoted so it
+            # stays a single array element.
+            qemu_args=(
+              "-machine" "q35,accel=kvm" "-cpu" "host" "-smp" "''${WIN_USB_SMP:-8}" "-m" "''${WIN_USB_MEM:-8G}"
+              "-drive" "if=pflash,format=raw,readonly=on,file=$ovmf_code"
+              "-drive" "if=pflash,format=raw,file=$vars"
+              "-device" "ich9-ahci,id=sata"
+              "-drive" "file=$dev,format=raw,if=none,id=winusb"
+              "-device" "ide-hd,drive=winusb,bus=sata.2"
+              "-netdev" "user,id=net0" "-device" "e1000e,netdev=net0"
+              "-display" "gtk"
+            )
+            case "''${1:-}" in
+              --iso)
+                [ -f "''${2:-}" ] || { echo "error: ISO not found: ''${2:-}" >&2; exit 1; }
+                qemu_args+=(-drive "file=$2,media=cdrom,readonly=on")
                 ;;
-              *)
-                echo "  $p (''${fstype:-none}): dd + zstd"
-                dd if="$p" bs=4M status=none | zstd -q -f -o "$out/$part.raw.zst"
-                echo "  zstd -dc $part.raw.zst | sudo dd of=$p bs=4M status=progress" >> "$out/restore-notes.txt"
-                ;;
+              "") ;;
+              *) echo "usage: win-usb [--iso /path/to/windows.iso]" >&2; exit 2 ;;
             esac
-          done
 
-          # The script runs as root; hand the image back to the invoking user
-          # so they can manage (or delete) it without sudo.
-          if [ -n "''${SUDO_USER:-}" ]; then
-            chown -R "$SUDO_USER" "$out"
-          fi
+            exec qemu-system-x86_64 "''${qemu_args[@]}"
+          '';
+        })
+        (pkgs.writeShellApplication {
+          name = "win-usb-image";
+          runtimeInputs = [
+            pkgs.coreutils
+            pkgs.gawk
+            pkgs.glibc.bin # getent
+            pkgs.gnugrep
+            pkgs.ntfs3g # ntfsclone
+            pkgs.procps # pgrep
+            pkgs.sudo
+            pkgs.util-linux # lsblk, blkid, sfdisk
+            pkgs.zstd
+          ];
+          text = ''
+            ${preamble}
 
-          echo "done. contents:"
-          du -sh "$out"/* | sort -rh
-          echo "restore steps: $out/restore-notes.txt (also in docs/win-usb.md)"
-        '')
+            # --- destination -----------------------------------------------------
+            # ~/ is ephemeral on this host; snapshots belong on the NAS.
+            dest_dir="''${1:-}"
+            if [ -z "$dest_dir" ]; then
+              echo "error: no destination given." >&2
+              echo "usage: win-usb-image <dest-dir>   (e.g. a NAS path)" >&2
+              exit 1
+            fi
+            stamp="$(date +%Y%m%d-%H%M%S)"
+            out="$dest_dir/win2go-$stamp"
+            mkdir -p "$out"
+
+            echo "imaging $dev -> $out (leave the SSD idle, do not attach it to a VM)"
+
+            # Exact partition table, so restore can reproduce the layout 1:1.
+            sfdisk -d "$dev" > "$out/parttable.txt"
+
+            # Per-partition images: ntfsclone for NTFS (used clusters only, so
+            # the image is tens of GB instead of the disk's full 954 GB); plain
+            # dd for ESP/MSR (small, no filesystem tools needed).
+            {
+              echo "# Restore this image on the NixOS host (root):"
+              echo "#   sudo sfdisk $dev < parttable.txt"
+              echo "# then, in partition order:"
+            } > "$out/restore-notes.txt"
+
+            for part in $(lsblk -nlo NAME "$dev" | tail -n +2); do
+              p="/dev/$part"
+              fstype="$(blkid -s TYPE -o value "$p" || true)"
+              case "$fstype" in
+                ntfs)
+                  echo "  $p (ntfs): ntfsclone + zstd"
+                  ntfsclone -s -o - "$p" | zstd -q -f -o "$out/$part.ntfsclone.zst"
+                  echo "  zstd -dc $part.ntfsclone.zst | sudo ntfsclone -r -o $p -" >> "$out/restore-notes.txt"
+                  ;;
+                *)
+                  echo "  $p (''${fstype:-none}): dd + zstd"
+                  dd if="$p" bs=4M status=none | zstd -q -f -o "$out/$part.raw.zst"
+                  echo "  zstd -dc $part.raw.zst | sudo dd of=$p bs=4M status=progress" >> "$out/restore-notes.txt"
+                  ;;
+              esac
+            done
+
+            # The script runs as root; hand the image back to the invoking user
+            # so they can manage (or delete) it without sudo.
+            if [ -n "''${SUDO_USER:-}" ]; then
+              chown -R "$SUDO_USER" "$out"
+            fi
+
+            echo "done. contents:"
+            du -sh "$out"/* | sort -rh
+            echo "restore steps: $out/restore-notes.txt (also in docs/win-usb.md)"
+          '';
+        })
       ];
     };
 }
