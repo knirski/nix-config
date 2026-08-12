@@ -1,6 +1,11 @@
 # NixOS aspect: boot the USB-attached Windows 11 (Windows To Go) SSD in a
 # QEMU/KVM VM.
 #
+# An aspect is an opt-in module under modules/nixos that a host assembler
+# toggles by name via config.aspects.nixos — the repo's flake-parts module
+# pattern (https://flake.parts; see docs/learning/design-journey.md for the
+# design rationale).
+#
 # `win-usb` is a native-Windows escape hatch from NixOS: when the KIOXIA USB
 # SSD — a full Windows 11 LTSC install, created by running Windows Setup in
 # this same VM with the disk passed through — is plugged in, one command
