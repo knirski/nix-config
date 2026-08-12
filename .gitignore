@@ -1,4 +1,8 @@
 result
+# Local git worktree checkouts (scratch branches checked out inside the repo)
+/worktrees/
+# PR review loop state
+.pr-review/
 # agenix-rekey temp files
 **/.tmp.agenix-rekey.*/
 # direnv local cache
