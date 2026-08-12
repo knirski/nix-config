@@ -141,6 +141,9 @@ Windows before imaging.
   attached — unplug the others (the scripts refuse to guess).
 - **"a VM already has $dev attached"** — close the other VM window, or
   `sudo pkill -f qemu-system-x86_64` if it is stuck.
+- **"run 'win-usb' (or 'win-usb-image') WITHOUT sudo"** — the commands
+  elevate themselves with `sudo -E` (preserving the display environment); a
+  manual `sudo win-usb` strips it and the GTK window cannot open.
 - **"another win-usb/win-usb-image is already using $dev"** — the disk's
   `flock` is held by another invocation; wait for it to finish (or close the
   other VM).
