@@ -74,6 +74,17 @@
           echo "error: a VM already has $dev attached — close it first." >&2
           exit 1
         fi
+
+        # Exclusive lock: two invocations racing past the pgrep check would
+        # both touch the raw disk. Held for the whole run (fd 9 survives the
+        # exec below); pgrep stays as a secondary guard for VMs started
+        # outside this tool.
+        lock="/run/lock/win2go-$name.lock"
+        exec 9>"$lock"
+        flock -n 9 || {
+          echo "error: another win-usb/win-usb-image is already using $dev." >&2
+          exit 1
+        }
       '';
     in
     {
