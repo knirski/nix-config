@@ -152,9 +152,10 @@ Existing examples:
   kernel's own recommendation is a vendor firmware update, and the in-kernel
   power-state mitigations are already maxed out (`pcie_aspm=off`, APST
   disabled) — no further software lever remains. Firmware at time of wedge:
-  `3.2.F.74` per `nvme id-ctrl`. A firmware update via the official XPG SSD
-  Toolbox on Windows is planned; all fixes/workarounds are to be re-evaluated
-  after that update. Until then, treat s2idle on this drive as unreliable: prefer
+  `3.2.F.74` per `nvme id-ctrl`. A firmware check via AData SSD Toolbox
+  (booted from a live Windows 10 USB, 2026-08-12) reports **no update
+  available** — `3.2.F.74` is current. All mitigations therefore stay in
+  force permanently; treat s2idle on this drive as unreliable: prefer
   `systemctl hibernate` or a full shutdown over suspend, and treat
   `VPD access failed` in the journal as an early-warning signal that the next
   wedge is imminent.
