@@ -24,6 +24,11 @@ rec {
     "Videos"
     ".local/share/Steam"
     ".local/share/lutris"
+    # win-usb VM state: OVMF NVRAM vars. Must survive the ephemeral root
+    # wipe — see docs/win-usb.md. (Disk images are NOT persisted here;
+    # they live on the NAS and win-usb-image requires an explicit
+    # destination argument.)
+    ".local/share/win2go"
   ];
 
   bestEffort = [

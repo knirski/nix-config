@@ -38,6 +38,7 @@
     "docs/troubleshooting.md": { "status": "active", "role": "troubleshooting guide" },
     "docs/update-and-rollback.md": { "status": "active", "role": "operations runbook" },
     "docs/workstation-setup.md": { "status": "active", "role": "workstation setup guide" },
+    "docs/win-usb.md": { "status": "active", "role": "operations runbook" },
     "docs/architecture/README.md": { "status": "active", "role": "architecture documents index" },
     "docs/topology/README.md": { "status": "active", "role": "topology diagram guide" },
     "docs/darwin/README.md": { "status": "active", "role": "macOS documentation index" },

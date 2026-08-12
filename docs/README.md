@@ -37,6 +37,7 @@ enforcement belongs to the documentation-check layer.
 - [Install ubuntu](install-ubuntu.md) — Ubuntu (standalone Home Manager)
   installation and activation.
 - [Set up a workstation](workstation-setup.md) — recommended tooling and CLI setup.
+- [Windows on USB SSD (win-usb)](win-usb.md) — boot the USB Windows in a VM, snapshot and restore it.
 - [Troubleshooting](troubleshooting.md) — common issues and debugging steps.
 - [Update and roll back](update-and-rollback.md) — input updates, deployment
   checks and rollback paths.

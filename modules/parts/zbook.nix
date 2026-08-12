@@ -25,6 +25,7 @@ in
         laptop
         gaming
         workstation
+        win2go
         nodejs
         python
         rust

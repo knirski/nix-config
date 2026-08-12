@@ -112,6 +112,10 @@ topology:
 topology-operator-detailed:
     nix run path:.#topology-operator-detailed
 
+# Boot the USB-attached Windows 11 SSD in a QEMU VM. Plug in the KIOXIA SSD first; add --iso <file> to attach installer media (reinstall).
+win-usb *args:
+    win-usb {{args}}
+
 # Enter the dev shell with all tooling (pre-commit hooks auto-install).
 dev:
     nix develop
