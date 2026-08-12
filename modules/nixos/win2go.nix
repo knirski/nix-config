@@ -132,6 +132,13 @@
               cp "$ovmf_vars_template" "$vars"
             fi
 
+            # The script runs as root; hand the vars back to the invoking
+            # user so they can delete it (documented troubleshooting step)
+            # without sudo.
+            if [ -n "''${SUDO_USER:-}" ]; then
+              chown -R "$SUDO_USER" "$vars_dir"
+            fi
+
             # --- assemble the VM ------------------------------------------------
             # qemu args use comma syntax; keep every element quoted so it
             # stays a single array element.
