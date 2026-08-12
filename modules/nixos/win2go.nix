@@ -38,6 +38,10 @@
 
         # Raw /dev/sdX access needs root.
         if [ "$(id -u)" -ne 0 ]; then
+          # Resolve sudo from the caller's PATH: the runtimeInputs here must
+          # NOT include pkgs.sudo, whose store binary is non-setuid (Nix
+          # strips the bit); the system profile's /run/current-system/sw/bin
+          # sudo is the setuid wrapper and only works via the caller PATH.
           exec sudo -E "$0" "$@"
         fi
 
@@ -107,11 +111,23 @@
             pkgs.gnugrep
             pkgs.procps # pgrep
             pkgs.qemu
-            pkgs.sudo
             pkgs.util-linux # lsblk
           ];
           text = ''
             ${preamble}
+
+            # Running as root via a manual `sudo win-usb` drops the display
+            # environment (sudo env_reset) and qemu's GTK then cannot open a
+            # window. Fail with a clear hint instead of a cryptic GTK error.
+            # win-usb-image is headless and deliberately has no such check,
+            # so it keeps working over SSH and from virtual consoles.
+            if [ -n "''${SUDO_USER:-}" ] && [ -z "''${WAYLAND_DISPLAY:-}" ] && [ -z "''${DISPLAY:-}" ]; then
+              echo "error: run 'win-usb' WITHOUT sudo." >&2
+              echo "       The command elevates itself with 'sudo -E', which" >&2
+              echo "       preserves the display environment; 'sudo win-usb'" >&2
+              echo "       strips it and the GTK window cannot open." >&2
+              exit 1
+            fi
 
             ovmf_code=${pkgs.OVMF.fd}/FV/OVMF_CODE.fd
             ovmf_vars_template=${pkgs.OVMF.fd}/FV/OVMF_VARS.fd
@@ -149,6 +165,10 @@
               "-device" "ich9-ahci,id=sata"
               "-drive" "file=$dev,format=raw,if=none,id=winusb"
               "-device" "ide-hd,drive=winusb,bus=sata.2"
+              # USB tablet: absolute cursor positioning keeps the host and
+              # guest cursors synchronized (relative PS/2 mice drift).
+              "-device" "qemu-xhci"
+              "-device" "usb-tablet"
               "-netdev" "user,id=net0" "-device" "e1000e,netdev=net0"
               "-display" "gtk"
             )
@@ -173,7 +193,6 @@
             pkgs.gnugrep
             pkgs.ntfs3g # ntfsclone
             pkgs.procps # pgrep
-            pkgs.sudo
             pkgs.util-linux # lsblk, blkid, sfdisk
             pkgs.zstd
           ];
