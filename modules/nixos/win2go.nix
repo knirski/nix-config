@@ -36,14 +36,32 @@
           exec sudo -E "$0" "$@"
         fi
 
-        # --- locate the USB SSD --------------------------------------------
-        line="$(lsblk -dno NAME,MODEL,TRAN | awk 'tolower($0) ~ /kioxia/ && tolower($NF) == "usb" { print; exit }')"
-        if [ -z "$line" ]; then
-          echo "error: KIOXIA USB SSD not found — plug it in first." >&2
+        # --- locate the USB SSD (exactly one; by-id for stable identity) ----
+        # The guest gets raw write access to this disk: refuse ambiguity
+        # instead of guessing when more than one KIOXIA USB disk is attached.
+        candidates="$(lsblk -dno NAME,MODEL,TRAN | awk 'tolower($0) ~ /kioxia/ && tolower($NF) == "usb" { print $1 }')"
+        count="$(printf '%s\n' "$candidates" | grep -c . || true)"
+        if [ "$count" -ne 1 ]; then
+          echo "error: expected exactly one KIOXIA USB SSD, found $count." >&2
           lsblk -dno NAME,MODEL,TRAN | awk 'tolower($NF) == "usb" { print "  " $0 }' >&2
           exit 1
         fi
-        dev="/dev/$(printf '%s\n' "$line" | awk '{ print $1 }')"
+        name="$(printf '%s\n' "$candidates" | head -1)"
+        dev="/dev/$name"
+
+        # Prefer the /dev/disk/by-id link: the kernel may rename the node on
+        # hotplug, while the by-id name stays tied to the device.
+        byid=""
+        for link in /dev/disk/by-id/usb-*; do
+          [ -e "$link" ] || continue
+          if [ "$(readlink -f "$link")" = "/dev/$name" ]; then
+            byid="$link"
+            break
+          fi
+        done
+        if [ -n "$byid" ]; then
+          dev="$byid"
+        fi
 
         # Never touch a disk the host has mounted (concurrent NTFS writes corrupt).
         if lsblk -no MOUNTPOINTS "$dev" | grep -q .; then
