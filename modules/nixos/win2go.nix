@@ -149,6 +149,10 @@
               "-device" "ich9-ahci,id=sata"
               "-drive" "file=$dev,format=raw,if=none,id=winusb"
               "-device" "ide-hd,drive=winusb,bus=sata.2"
+              # USB tablet: absolute cursor positioning keeps the host and
+              # guest cursors synchronized (relative PS/2 mice drift).
+              "-device" "qemu-xhci"
+              "-device" "usb-tablet"
               "-netdev" "user,id=net0" "-device" "e1000e,netdev=net0"
               "-display" "gtk"
             )
