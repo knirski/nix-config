@@ -45,17 +45,6 @@
           exec sudo -E "$0" "$@"
         fi
 
-        # Running as root via a manual `sudo win-usb` drops the display
-        # environment (sudo env_reset) and qemu's GTK then cannot open a
-        # window. Fail with a clear hint instead of a cryptic GTK error.
-        if [ -n "''${SUDO_USER:-}" ] && [ -z "''${WAYLAND_DISPLAY:-}" ] && [ -z "''${DISPLAY:-}" ]; then
-          echo "error: run 'win-usb' (or 'win-usb-image') WITHOUT sudo." >&2
-          echo "       The command elevates itself with 'sudo -E', which" >&2
-          echo "       preserves the display environment; 'sudo win-usb'" >&2
-          echo "       strips it and the GTK window cannot open." >&2
-          exit 1
-        fi
-
         # --- locate the USB SSD (exactly one; by-id for stable identity) ----
         # The guest gets raw write access to this disk: refuse ambiguity
         # instead of guessing when more than one KIOXIA USB disk is attached.
@@ -126,6 +115,19 @@
           ];
           text = ''
             ${preamble}
+
+            # Running as root via a manual `sudo win-usb` drops the display
+            # environment (sudo env_reset) and qemu's GTK then cannot open a
+            # window. Fail with a clear hint instead of a cryptic GTK error.
+            # win-usb-image is headless and deliberately has no such check,
+            # so it keeps working over SSH and from virtual consoles.
+            if [ -n "''${SUDO_USER:-}" ] && [ -z "''${WAYLAND_DISPLAY:-}" ] && [ -z "''${DISPLAY:-}" ]; then
+              echo "error: run 'win-usb' WITHOUT sudo." >&2
+              echo "       The command elevates itself with 'sudo -E', which" >&2
+              echo "       preserves the display environment; 'sudo win-usb'" >&2
+              echo "       strips it and the GTK window cannot open." >&2
+              exit 1
+            fi
 
             ovmf_code=${pkgs.OVMF.fd}/FV/OVMF_CODE.fd
             ovmf_vars_template=${pkgs.OVMF.fd}/FV/OVMF_VARS.fd
