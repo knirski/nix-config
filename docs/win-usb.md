@@ -36,9 +36,13 @@ Both commands share a preamble that:
 - re-execs via `sudo -E` (raw disk access; passwordless sudo on zbook) while
   preserving the Wayland environment so the GTK window can open;
 - locates the SSD by model (`KIOXIA` + `TRAN=usb` — edit the matcher if the
-  enclosure/SSD ever changes) and fails with a hint when it is unplugged;
-- refuses to run while any partition is mounted, or while another VM already
-  has the disk attached (concurrent NTFS access corrupts).
+  enclosure/SSD ever changes) and requires **exactly one** match: zero means
+  unplugged, several means ambiguity, and both are errors rather than guesses;
+- resolves the stable `/dev/disk/by-id` path for the matched disk, so a
+  hotplug rename cannot redirect the VM or the imager to a different device;
+- refuses to run while any partition is mounted, while another VM already
+  has the disk attached, or while another `win-usb`/`win-usb-image` holds the
+  disk's `flock` (concurrent NTFS access corrupts).
 
 Key design decisions:
 
@@ -53,6 +57,11 @@ Key design decisions:
   first run). The "Windows Boot Manager" entry that Windows Setup wrote there
   makes the VM boot the disk directly. If the file is deleted, OVMF falls
   back to the ESP's `\EFI\BOOT\BOOTX64.EFI` and the disk still boots.
+- **Exclusive access.** The disk is matched by model and must be the only
+  KIOXIA USB disk attached; the stable `/dev/disk/by-id` identity is used for
+  attach and imaging, and a `flock` on `/run/lock/win2go-<disk>.lock`
+  (per disk, held for the whole run) guarantees only one of `win-usb` /
+  `win-usb-image` touches the disk at a time.
 - **Networking** is user-mode NAT (`e1000e`), so Windows has internet in the
   VM but no inbound access.
 
@@ -86,14 +95,20 @@ Requirements: the VM must be closed and the SSD's partitions unmounted (the
 script enforces both). Imaging reads the disk while it is idle — a fresh
 installation images in roughly 20–30 GB instead of the disk's full 954 GB.
 
-Restore (the commands are also written into `restore-notes.txt`):
+Restore (the commands are also written into `restore-notes.txt`, using a
+`/dev/sdX` placeholder because the disk may enumerate under a different name
+at restore time):
 
 ```sh
-# 1. Plug in the SSD; verify it is /dev/sda (lsblk). Repartition exactly:
-sudo sfdisk /dev/sda < parttable.txt
-# 2. Restore each partition, in order (from restore-notes.txt):
-zstd -dc sda1.raw.zst | sudo dd of=/dev/sda1 bs=4M status=progress
-zstd -dc sda2.ntfsclone.zst | sudo ntfsclone -r -o /dev/sda2 -
+# 1. Plug in the SSD; check its current name — it may differ from the one it
+#    had when imaged (lsblk). Adjust /dev/sdX below if needed.
+#    Repartition exactly:
+sudo sfdisk /dev/sdX < parttable.txt
+# 2. Restore each partition, in order (from restore-notes.txt). Partition
+#    numbers are preserved 1:1 by the saved table; only the sdX prefix can
+#    change:
+zstd -dc sda1.raw.zst | sudo dd of=/dev/sdX1 bs=4M status=progress
+zstd -dc sda3.ntfsclone.zst | sudo ntfsclone -r -o /dev/sdX3 -
 ```
 
 Then boot with `win-usb` (or F9 on real hardware). Restoring a snapshot is
@@ -110,7 +125,8 @@ Windows before imaging.
   Display Adapter. Use the real-hardware boot (F9) for GPU work.
 - **Keep BitLocker off** — a portable USB system should not be locked to one
   machine's TPM.
-- **One VM at a time** — the script refuses to double-attach the disk.
+- **One VM (or imager) at a time** — flock-based exclusivity: only one of
+  `win-usb`/`win-usb-image` may touch the disk at once.
 - **Drivers** — NVIDIA (RTX 4000 Ada) and other vendor drivers are installed
   inside Windows after first boot; they are not part of the NixOS config.
 - **The VM is not a backup** — `win-usb-image` snapshots are; store them on
@@ -119,10 +135,15 @@ Windows before imaging.
 
 ## Troubleshooting
 
-- **"KIOXIA USB SSD not found"** — the SSD is unplugged, or the model matcher
-  in `modules/nixos/win2go.nix` no longer matches (new enclosure/SSD).
+- **"expected exactly one KIOXIA USB SSD, found N"** — with 0, the SSD is
+  unplugged or the model matcher in `modules/nixos/win2go.nix` no longer
+  matches (new enclosure/SSD); with more than 1, several KIOXIA USB disks are
+  attached — unplug the others (the scripts refuse to guess).
 - **"a VM already has $dev attached"** — close the other VM window, or
   `sudo pkill -f qemu-system-x86_64` if it is stuck.
+- **"another win-usb/win-usb-image is already using $dev"** — the disk's
+  `flock` is held by another invocation; wait for it to finish (or close the
+  other VM).
 - **VM boots into Setup instead of Windows** — stale or missing NVRAM:
   delete `~/.local/share/win2go/OVMF_VARS.fd` and retry.
 - **Windows is slow in the VM** — expected: no GPU acceleration and the USB
