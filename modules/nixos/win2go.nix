@@ -187,26 +187,33 @@
 
             # Per-partition images: ntfsclone for NTFS (used clusters only, so
             # the image is tens of GB instead of the disk's full 954 GB); plain
-            # dd for ESP/MSR (small, no filesystem tools needed).
+            # dd for ESP/MSR (small, no filesystem tools needed). The notes use
+            # a /dev/sdX placeholder: the disk may enumerate under a different
+            # name at restore time.
             {
-              echo "# Restore this image on the NixOS host (root):"
-              echo "#   sudo sfdisk $dev < parttable.txt"
-              echo "# then, in partition order:"
+              echo "# Restore this image on the NixOS host (root)."
+              echo "# The disk may enumerate under a different name than when"
+              echo "# imaged — run 'lsblk' first and adjust /dev/sdX below if"
+              echo "# needed."
+              echo "#   1. Repartition exactly:"
+              echo "#      sudo sfdisk /dev/sdX < parttable.txt"
+              echo "#   2. Then, in partition order:"
             } > "$out/restore-notes.txt"
 
             for part in $(lsblk -nlo NAME "$dev" | tail -n +2); do
               p="/dev/$part"
+              partnum="''${part#"$name"}"
               fstype="$(blkid -s TYPE -o value "$p" || true)"
               case "$fstype" in
                 ntfs)
                   echo "  $p (ntfs): ntfsclone + zstd"
                   ntfsclone -s -o - "$p" | zstd -q -f -o "$out/$part.ntfsclone.zst"
-                  echo "  zstd -dc $part.ntfsclone.zst | sudo ntfsclone -r -o $p -" >> "$out/restore-notes.txt"
+                  echo "  zstd -dc $part.ntfsclone.zst | sudo ntfsclone -r -o /dev/sdX$partnum -" >> "$out/restore-notes.txt"
                   ;;
                 *)
                   echo "  $p (''${fstype:-none}): dd + zstd"
                   dd if="$p" bs=4M status=none | zstd -q -f -o "$out/$part.raw.zst"
-                  echo "  zstd -dc $part.raw.zst | sudo dd of=$p bs=4M status=progress" >> "$out/restore-notes.txt"
+                  echo "  zstd -dc $part.raw.zst | sudo dd of=/dev/sdX$partnum bs=4M status=progress" >> "$out/restore-notes.txt"
                   ;;
               esac
             done
