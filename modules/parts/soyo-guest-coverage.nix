@@ -137,6 +137,15 @@
       #     guest. Pick one.
       doubleClassified = lib.intersectLists guestUnits nonGuestUnits;
 
+      # Negative control: a hypothetical future M4 service must meet none of
+      # the lists/patterns, so the catch logic actually fires. If a future
+      # edit widens a pattern such that this synthetic name silently passes,
+      # the check's harness itself fails — surfacing the regression rather
+      # than letting the invariant go quiet. Declared before failureLines
+      # because the harness-regression line below references fixtureCaught.
+      fixture = "future-m4-service-fixture";
+      fixtureCaught = !(isGuest fixture) && !(isNonGuest fixture);
+
       failureLines =
         map (
           n:
@@ -153,15 +162,15 @@
         ++ map (
           n:
           "double-classified: '${n}' appears in BOTH lib/soyo-guest-units.nix (isolated guest) AND nonGuestUnits (modules/parts/soyo-guest-coverage.nix). Pick one."
-        ) doubleClassified;
-
-      # Negative control: a hypothetical future M4 service must meet none of
-      # the lists/patterns, so the catch logic actually fires. If a future
-      # edit widens a pattern such that this synthetic name silently passes,
-      # the check's harness itself fails — surfacing the regression rather
-      # than letting the invariant go quiet.
-      fixture = "future-m4-service-fixture";
-      fixtureCaught = !(isGuest fixture) && !(isNonGuest fixture);
+        ) doubleClassified
+        # Harness self-honesty: the negative-control fixture must remain
+        # unclassified — a future pattern-widening that silently swallows it
+        # is a regression in the check itself. Reported via failureLines (not a
+        # shell branch) so the message is always present when this fires, even
+        # when real escapees also produced failureLines above.
+        ++
+          lib.optional (!fixtureCaught)
+            "internal: harness accepted the negative-control fixture '${fixture}' — set arithmetic has narrowed";
     in
     {
       checks.soyo-guest-coverage =
@@ -175,9 +184,6 @@
             if [ "$failed" != 0 ]; then
               echo "ERROR: Soyo guest-coverage (deny-by-default) check failed:" >&2
               cat "$failureTextPath" >&2
-              if [ ! -s "$failureTextPath" ]; then
-                echo "internal: harness accepted the negative-control fixture '${fixture}' — set arithmetic has narrowed" >&2
-              fi
               exit 1
             fi
             touch "$out"
