@@ -40,6 +40,14 @@
   # other headless servers may need i915 for hardware transcoding (VA-API).
   boot.blacklistedKernelModules = [ "i915" ];
 
+  # The N150's Intel iTCO watchdog provides /dev/watchdog, backing systemd's
+  # RuntimeWatchdogSec/RebootWatchdogSec set in the server aspect
+  # (modules/nixos/server.nix). Loaded explicitly because udev won't autoload
+  # it before systemd arms the watchdog at boot. Verify with `wdctl` after
+  # deploy.
+
+  boot.kernelModules = [ "iTCO_wdt" ];
+
   zramSwap.enable = true;
   security.tpm2.enable = true;
 

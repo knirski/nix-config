@@ -93,7 +93,7 @@ Existing examples:
 - Pre-commit hooks auto-install via `nix develop`. Run `just lint` before committing.
 - After deploy or after touching boot/unlock/networking/services, run `just healthcheck <host>`. Expect all \[PASS\].
 - The following require **manual verification** (reboot / physical access / destructive action):
-  TPM auto-unlock, break-glass passphrase unlock, LAN initrd SSH unlock, direct-link rescue unlock, DHCP client DNS, forced unit failure → ntfy, restic restore drill, tampered boot rejection, TPM re-enrollment.
+  TPM auto-unlock, break-glass passphrase unlock, LAN initrd SSH unlock, direct-link rescue unlock, DHCP client DNS, forced unit failure → ntfy, restic restore drill, tampered boot rejection, TPM re-enrollment, hardware watchdog armed (`wdctl` after reboot — see `docs/security/srvos-hardening-crosscheck.md`).
 - Keep host directories thin; push reusable logic into modules.
 
 ### External Linux research

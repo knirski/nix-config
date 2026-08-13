@@ -10,6 +10,10 @@
       # SSH access is already key-only, so this doesn't weaken the auth
       # boundary — it avoids interactive password prompts during activation.
       wheelNeedsPassword = false;
+      # Only wheel members may execute sudo at all. Limits the blast radius of
+      # sudo vulnerabilities (CVE-2021-3156 class) and of any future non-wheel
+      # login account. (srvos nixos/common/sudo.nix)
+      execWheelOnly = true;
     };
 
     # Paths resolve relative to this file: ../../secrets -> repo root /secrets.
