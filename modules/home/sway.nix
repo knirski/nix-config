@@ -2,15 +2,26 @@
   aspects.homeManager.sway =
     { lib, pkgs, ... }:
     let
-      # The 19 shell preferences that actually differ from DankMaterialShell's
-      # own defaults, recovered by diffing the old 527-key dump against the
-      # `property` declarations in its SettingsData.qml. Everything else in
-      # that dump was the shell agreeing with itself, which is why generating
-      # the whole file bought nothing and cost the shell its ability to
-      # persist anything.
+      # The shell preferences this repository insists on, recovered by diffing
+      # the old 527-key settings.json dump against the `property` declarations
+      # in DankMaterialShell's SettingsData.qml. Only 19 of those 527 keys
+      # differed from the shell's own defaults; the rest was the shell
+      # agreeing with itself, which is why generating the whole file bought
+      # nothing and cost the shell its ability to persist anything.
       #
-      # Re-applied over the live file on every activation, so these survive a
-      # fresh machine while the shell keeps ownership of the rest.
+      # Eight of the 19 were deliberately unpinned and left at the shell's
+      # defaults -- barElevationEnabled, barInsetPaddingSyncAll, cornerRadius,
+      # displayNameMode, dockLauncherLogoColorOverride, dockLauncherLogoMode,
+      # networkPreference and osdPowerProfileEnabled. They are appearance and
+      # convenience toggles worth adjusting from the UI without Nix
+      # reasserting them on the next activation. See the previous commit for
+      # the values they held.
+      #
+      # What remains is behaviour that should be identical on a fresh machine:
+      # when it locks, when it suspends, how it treats the battery, and the
+      # two status icons that are easy to miss are missing.
+      #
+      # Re-applied over the live file on every activation.
       dmsPinnedSettings = {
         # Idle, lock and suspend behaviour
         acLockTimeout = 180;
@@ -22,20 +33,10 @@
         batteryProfileName = "1";
         batteryAutoPowerSaver = true;
         batteryChargeLimit = 80;
-        osdPowerProfileEnabled = false;
-        # Bar, dock and general appearance
-        barElevationEnabled = false;
-        barInsetPaddingSyncAll = true;
-        cornerRadius = 16;
+        # Workspace and control-centre indicators
         showWorkspaceIndex = true;
-        dockLauncherLogoMode = "os";
-        dockLauncherLogoColorOverride = "primary";
-        displayNameMode = "model";
-        # Control centre
         controlCenterShowIdleInhibitorIcon = true;
         controlCenterShowMicPercent = false;
-        # Networking
-        networkPreference = "wifi";
       };
 
       dmsPinnedFile = (pkgs.formats.json { }).generate "dms-pinned.json" dmsPinnedSettings;
