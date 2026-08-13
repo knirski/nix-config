@@ -148,6 +148,7 @@
                 MemoryMax = "1G";
                 CPUQuota = "50%";
                 Nice = 19;
+                IOWeight = 10;
                 IOSchedulingClass = "idle";
               };
             };
