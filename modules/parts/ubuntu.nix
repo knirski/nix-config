@@ -225,6 +225,21 @@ in
               # one. The profile goes first so Nix entries win.
               export XDG_DATA_DIRS="${config.home.profileDirectory}/share:/nix/var/nix/profiles/default/share:''${XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}"
 
+              # Pick the SSH agent explicitly. Two run here: Ubuntu's
+              # gcr-ssh-agent (socket-activated on $XDG_RUNTIME_DIR/gcr/ssh,
+              # unlocked by the same PAM that unlocks the login keyring, and
+              # holding every key) and gpg-agent's ssh emulation. Which one
+              # won was previously an accident -- SSH_AUTH_SOCK was inherited
+              # from the `systemd --user` environment, where it had been left
+              # by an earlier X11 session via /etc/X11/Xsession.d/90gpg-agent,
+              # a script a Wayland session never runs. That pointed at
+              # gpg-agent, which held only some of the keys.
+              #
+              # gcr is the deliberate choice: gpg-agent keeps GPG, and
+              # services.gpg-agent sets no enableSshSupport, so nothing in
+              # this repository wants it serving ssh.
+              export SSH_AUTH_SOCK="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh"
+
               export NIXOS_OZONE_WL=1
               export MOZ_ENABLE_WAYLAND=1
               export QT_QPA_PLATFORM='wayland;xcb'
