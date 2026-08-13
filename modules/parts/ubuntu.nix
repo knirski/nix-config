@@ -230,7 +230,22 @@ in
               export QT_QPA_PLATFORM='wayland;xcb'
               export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
               export XDG_SESSION_TYPE=wayland
-              export XDG_CURRENT_DESKTOP=sway
+
+              # GNOME is appended for Electron's benefit. Chromium picks its
+              # safeStorage backend from desktop detection, and under a bare
+              # "sway" it falls back to basic_text -- plaintext -- instead of
+              # gnome_libsecret. Signal refuses to start outright once that
+              # changes under it ("Detected change in safeStorage backend,
+              # can't decrypt DB key (previous: gnome_libsecret, current:
+              # basic_text)"), because its database key was sealed with the
+              # keyring; Slack, VS Code and Chrome would quietly re-encrypt
+              # their secrets in the clear instead.
+              #
+              # gnome-keyring-daemon already serves org.freedesktop.secrets
+              # here, so only the detection was missing. xdg-desktop-portal
+              # treats this as a colon-separated list and still finds
+              # sway-portals.conf, so backend selection is unaffected.
+              export XDG_CURRENT_DESKTOP=sway:GNOME
               export XCURSOR_THEME=Adwaita
               export XCURSOR_SIZE=24
 
