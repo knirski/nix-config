@@ -1,7 +1,83 @@
 {
   aspects.homeManager.sway =
-    { pkgs, ... }:
+    { lib, pkgs, ... }:
+    let
+      # The 19 shell preferences that actually differ from DankMaterialShell's
+      # own defaults, recovered by diffing the old 527-key dump against the
+      # `property` declarations in its SettingsData.qml. Everything else in
+      # that dump was the shell agreeing with itself, which is why generating
+      # the whole file bought nothing and cost the shell its ability to
+      # persist anything.
+      #
+      # Re-applied over the live file on every activation, so these survive a
+      # fresh machine while the shell keeps ownership of the rest.
+      dmsPinnedSettings = {
+        # Idle, lock and suspend behaviour
+        acLockTimeout = 180;
+        acSuspendTimeout = 600;
+        lockBeforeSuspend = true;
+        lockScreenPowerOffMonitorsOnLock = true;
+        # Power profiles and battery care
+        acProfileName = "2";
+        batteryProfileName = "1";
+        batteryAutoPowerSaver = true;
+        batteryChargeLimit = 80;
+        osdPowerProfileEnabled = false;
+        # Bar, dock and general appearance
+        barElevationEnabled = false;
+        barInsetPaddingSyncAll = true;
+        cornerRadius = 16;
+        showWorkspaceIndex = true;
+        dockLauncherLogoMode = "os";
+        dockLauncherLogoColorOverride = "primary";
+        displayNameMode = "model";
+        # Control centre
+        controlCenterShowIdleInhibitorIcon = true;
+        controlCenterShowMicPercent = false;
+        # Networking
+        networkPreference = "wifi";
+      };
+
+      dmsPinnedFile = (pkgs.formats.json { }).generate "dms-pinned.json" dmsPinnedSettings;
+    in
     {
+      # DankMaterialShell owns its own settings.json. It used to be generated
+      # wholesale from a 527-key dump, which made it a read-only store symlink:
+      # the shell could not persist a single change from its UI, and anything
+      # this repository wanted to set had to fight the same file -- the
+      # wallpaper could not go there at all, and the lock command needed
+      # mkForce.
+      #
+      # Now only dmsPinnedSettings above is enforced, merged over whatever the
+      # shell has. Two ordering details matter. This runs *before*
+      # linkGeneration, because that step deletes symlinks the new generation
+      # no longer declares -- an entry ordered after it finds the old file
+      # already gone and silently migrates nothing. And the merge is
+      # `live * pinned`, so pinned keys win while the shell's own keys are
+      # preserved.
+      home.activation.dankMaterialShellSettings = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
+        target="''${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/settings.json"
+        run mkdir -p "$(dirname "$target")"
+
+        # A symlink is the old store-managed file: keep its contents, drop the
+        # link, so no setting is lost on the way out of wholesale management.
+        if [ -L "$target" ]; then
+          resolved=$(readlink -f "$target")
+          run rm -f "$target"
+          [ -f "$resolved" ] && run install -m 0644 "$resolved" "$target"
+        fi
+
+        if [ -f "$target" ]; then
+          tmp=$(mktemp)
+          if ${pkgs.jq}/bin/jq -s '.[0] * .[1]' "$target" ${dmsPinnedFile} >"$tmp"; then
+            run install -m 0644 "$tmp" "$target"
+          fi
+          rm -f "$tmp"
+        else
+          run install -m 0644 ${dmsPinnedFile} "$target"
+        fi
+      '';
+
       home.packages = with pkgs; [
         libnotify
         # Wayland/Sway utilities
@@ -197,7 +273,6 @@
           enableDynamicTheming = true;
           enableVPN = false;
           enableCalendarEvents = false;
-          settings = builtins.fromJSON (builtins.readFile ./dms-settings.json);
           clipboardSettings = {
             disabled = false;
             maxHistory = 100;

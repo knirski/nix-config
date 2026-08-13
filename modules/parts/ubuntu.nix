@@ -168,9 +168,24 @@ in
           # NixOS hosts keep the built-in lock: there the PAM service and the
           # setuid wrappers exist, so this stays out of the shared aspect.
           #
-          # mkForce because modules/home/dms-settings.json already defines the
-          # key as "" for every host that imports the Sway aspect.
-          programs.dank-material-shell.settings.customPowerActionLock = lib.mkForce "/usr/bin/swaylock -f -c 14181C";
+          # Pinned into the shell's own settings.json rather than declared
+          # through its module option: that option writes the whole file as a
+          # read-only store symlink, which would stop the shell persisting
+          # anything from its UI. The shared aspect seeds the file; this
+          # merges the one key that must not drift.
+          home.activation.pinSwaylockAsShellLocker =
+            lib.hm.dag.entryAfter [ "unmanageDankMaterialShellSettings" ]
+              ''
+                target="''${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/settings.json"
+                if [ -f "$target" ]; then
+                  tmp=$(mktemp)
+                  if ${pkgs.jq}/bin/jq --arg v "/usr/bin/swaylock -f -c 14181C" \
+                       '.customPowerActionLock = $v' "$target" >"$tmp"; then
+                    run install -m 0644 "$tmp" "$target"
+                  fi
+                  rm -f "$tmp"
+                fi
+              '';
 
           # See gitSshSign above: signing goes to gpg-agent, auth stays on gcr.
           programs.git.settings.gpg.ssh.program = lib.getExe gitSshSign;
