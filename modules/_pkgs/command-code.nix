@@ -10,7 +10,8 @@
 # command-code-lock/. That lockfile is a real, owned npm dependency tree:
 # see docs/security/supply-chain.md's "Dependency automation decisions" for
 # how it's reviewed, updated and scanned. The lockfile is refreshed by the
-# repository's command-code update script and scanned as-is.
+# repository's command-code update script (which also injects the
+# OpenTelemetry overrides — see postPatch below) and scanned as-is.
 #
 # Ref: https://nixos.org/manual/nixpkgs/stable/#buildNpmPackage
 #
@@ -37,11 +38,11 @@
 
 buildNpmPackage rec {
   pname = "command-code";
-  version = "1.15.1";
+  version = "1.22.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/command-code/-/command-code-${version}.tgz";
-    hash = "sha512-YQXTHXuPQyPGOTn2Xp/tobnkOanTVadjlTwd4aFX/6R0fUQS7SyzpyPwIHwPiADVolJIBO2a4xiN29W2iywrGQ==";
+    hash = "sha512-zg3UyMVHSnvmVscO2/sImSRy3nJjJ0D1srOMcN+r4aNTSBpEvR5s1QkcICuZwQDtKGanI0OGz8GnzAu8vwL2Pg==";
   };
 
   dontNpmBuild = true;
@@ -49,9 +50,16 @@ buildNpmPackage rec {
   postPatch = ''
     cp ${./command-code-lock/package-lock.json} package-lock.json
     sed -i '/^  "devDependencies": {/,/^  }/d' package.json
+    # Force the OpenTelemetry packages to fixed versions. sdk-node pins
+    # propagator-jaeger at exactly 2.7.1 and otel-cf-workers' nested exporters
+    # pin core at 2.0.0/2.7.1 — all vulnerable (GHSA-45rx-2jwx-cxfr,
+    # GHSA-8988-4f7v-96qf). The vendored lockfile is generated with these
+    # same overrides applied (see scripts/update-command-code.sh); keeping
+    # them in package.json too keeps npm ci's consistency check happy.
+    sed -i '$s/^}$/,\n  "overrides": {"@opentelemetry\/core":"2.10.0","@opentelemetry\/propagator-jaeger":"2.10.0"}\n}/' package.json
   '';
 
-  npmDepsHash = "sha256-oIYbkSjO5CKLGMfKm/ReTP5thF25ctOOd7YDmv+tqI0=";
+  npmDepsHash = "sha256-1KGq+PfofxatpXJpb0TvG6zO7mv/19VFk/mC2fkl6+A=";
 
   nativeBuildInputs = [
     makeWrapper
