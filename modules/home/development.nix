@@ -27,6 +27,9 @@
     {
       home.packages = with pkgs; [
         command-code
+        # Rust Token Killer — CLI proxy that filters git/grep/find output
+        # before it reaches an AI coding agent's context.
+        rtk
         # Nix language servers
         nil
         nixd

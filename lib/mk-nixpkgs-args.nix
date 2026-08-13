@@ -51,6 +51,7 @@
     (final: _: {
       command-code = final.callPackage ../modules/_pkgs/command-code.nix { };
       gcx = final.callPackage ../modules/_pkgs/gcx.nix { };
+      rtk = final.callPackage ../modules/_pkgs/rtk.nix { };
     })
 
   ];
