@@ -61,6 +61,25 @@ in
           ];
 
           wallpaper = pkgs.callPackage ../_pkgs/hive-grid-wallpaper.nix { };
+
+          # git signs by shelling out to ssh-keygen, which talks to whatever
+          # SSH_AUTH_SOCK names. That is the gcr agent here, and gnome-keyring
+          # does not implement the signing operation -- it answers
+          # "agent refused operation" even though it holds the key. gpg-agent's
+          # ssh emulation does implement it, and also has the signing key.
+          #
+          # So point only the signing path at gpg-agent and leave
+          # authentication on gcr, which holds all five keys and is unlocked by
+          # the same PAM as the login keyring. Overriding the variable per
+          # invocation keeps that split from leaking into anything else.
+          gitSshSign = pkgs.writeShellApplication {
+            name = "git-ssh-sign";
+            runtimeInputs = [ pkgs.openssh ];
+            text = ''
+              export SSH_AUTH_SOCK="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gnupg/S.gpg-agent.ssh"
+              exec ssh-keygen "$@"
+            '';
+          };
         in
         {
           home = {
@@ -152,6 +171,9 @@ in
           # mkForce because modules/home/dms-settings.json already defines the
           # key as "" for every host that imports the Sway aspect.
           programs.dank-material-shell.settings.customPowerActionLock = lib.mkForce "/usr/bin/swaylock -f -c 14181C";
+
+          # See gitSshSign above: signing goes to gpg-agent, auth stays on gcr.
+          programs.git.settings.gpg.ssh.program = lib.getExe gitSshSign;
 
           # Distinguishes this machine from the other hosts at a glance.
           #

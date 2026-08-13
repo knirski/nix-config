@@ -518,6 +518,7 @@
             user = {
               name = "Krzysztof Nirski";
               email = "krzysztof.nirski+github@gmail.com";
+              signingkey = "~/.ssh/id_ed25519";
             };
             core.editor = "nvim";
             init.defaultBranch = "main";
@@ -528,6 +529,11 @@
             # Use delta as pager
             core.pager = "delta";
             interactive.diffFilter = "delta --color-only";
+            # SSH commit signing. The key is served by the gcr agent, which
+            # the graphical session points SSH_AUTH_SOCK at, so signing needs
+            # no passphrase prompt in a logged-in session.
+            commit.gpgsign = true;
+            gpg.format = "ssh";
             delta = {
               navigate = true;
               light = false;
