@@ -81,6 +81,8 @@ enforcement belongs to the documentation-check layer.
   and separately authorized administrator changes.
 - [Service hardening policy](security/service-hardening.md) — reviewed systemd
   privilege, filesystem, network and failure-semantics boundaries.
+- [srvos hardening cross-check](security/srvos-hardening-crosscheck.md) —
+  appliance posture review against nix-community/srvos.
 - [Security reporting](../SECURITY.md) — privately report a vulnerability.
 
 ### Subsystem designs

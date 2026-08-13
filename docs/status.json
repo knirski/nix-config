@@ -20,6 +20,7 @@
     "docs/security/github-settings.md": { "status": "active", "role": "GitHub administrator checklist" },
     "docs/security/public-repository.md": { "status": "canonical", "role": "public data policy" },
     "docs/security/service-hardening.md": { "status": "active", "role": "systemd hardening policy" },
+    "docs/security/srvos-hardening-crosscheck.md": { "status": "active", "role": "appliance hardening cross-check" },
     "docs/security/supply-chain.md": { "status": "active", "role": "dependency and workflow trust policy" },
     "docs/archive/2026-06-28-soyo-dns-dhcp-appliance.md": { "status": "completed", "role": "implementation plan" },
     "docs/archive/2026-07-04-lan-observability.md": { "status": "completed", "role": "implementation plan" },

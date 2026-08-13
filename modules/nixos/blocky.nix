@@ -39,6 +39,11 @@
           enable = true;
           settings.Resolve = {
             DNS = "127.0.0.1";
+            # Disable LLMNR: it is only a fallback resolution path and is
+            # spoofable on the LAN (the classic LLMNR/NBT-NS poisoning vector).
+            # DHCP already hands every client Blocky as the only resolver, so
+            # nothing depends on LLMNR. (srvos nixos/common/networking.nix)
+            LLMNR = "false";
           };
         };
         networking.firewall.interfaces.${cfg.lanInterface} = {
