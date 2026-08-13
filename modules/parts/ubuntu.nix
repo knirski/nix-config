@@ -47,6 +47,7 @@ in
             "/bin"
           ];
 
+          wallpaper = pkgs.callPackage ../_pkgs/hive-grid-wallpaper.nix { };
         in
         {
           home = {
@@ -92,6 +93,14 @@ in
               # Work-laptop specific, so it stays out of the shared desktop
               # aspect that zbook and macbook also import.
               pkgs.slack
+
+              # Replacing the snaps of the same name. Both are unfree, which
+              # lib/mk-nixpkgs-args.nix already permits. Spotify and Bitwarden
+              # need no entry here: aspects.homeManager.desktop provides them.
+              pkgs.vscode
+              # jetbrains.idea is the Ultimate build; nixpkgs dropped the
+              # -ultimate suffix and keeps idea-community as the free one.
+              pkgs.jetbrains.idea
             ];
           };
 
@@ -99,6 +108,13 @@ in
             dms.Service.Environment = [ "PATH=${graphicalServicePath}" ];
             dcal.Service.Environment = [ "PATH=${graphicalServicePath}" ];
           };
+
+          # Distinguishes this machine from the other hosts at a glance. Sway
+          # renders the background itself, so this needs no extra service, and
+          # it leaves DankMaterialShell's settings.json writable -- setting it
+          # through the DMS module option would replace that whole file with a
+          # read-only store symlink and stop the UI persisting any change.
+          wayland.windowManager.sway.config.output."*".bg = "${wallpaper} fill";
 
           # Ubuntu ships no portal backend that serves
           # org.freedesktop.impl.portal.Settings to a Sway session:
