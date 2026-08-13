@@ -101,6 +101,27 @@ Rationale, per item:
   boot; the failure path (boot error → continue instead of emergency shell)
   is covered by the existing boot-generation fallback drills.
 
+## Verification record (2026-08-13, after deploy + reboot)
+
+All six items verified on soyo (booted 22:14 with the applied generation):
+
+| Item | Result | Evidence |
+| --- | --- | --- |
+| Hardware watchdog | ✅ armed | `wdctl`: `/dev/watchdog0` `intel_oc_wdt`, 15 s timeout, actively petted; journal: `systemd[1]: Using hardware watchdog /dev/watchdog0: 'intel_oc_wdt', version 0.` |
+| Sleep off | ✅ | `systemctl suspend` → `Call to Suspend failed: Sleep verb 'suspend' is disabled by config`, exit 1, system stays up (message matches the upstream example verbatim) |
+| No emergency mode | ✅ | `emergency.service` unit absent; `rescue.service` linked, not enabled |
+| LLMNR off | ✅ | `resolvectl llmnr`: Global + all links `no` |
+| `execWheelOnly` | ✅ | sudo binary `-r-s--x--- root wheel` (4750) |
+| nix-daemon pressure | ✅ | `OOMScoreAdjust=250` on `nix-daemon.service` |
+
+**Watchdog driver nuance:** the N150 exposes two hardware watchdogs. The
+initrd-loaded `iTCO_wdt` registered `/dev/watchdog1`, but the auto-loaded
+`intel_oc_wdt` claimed `/dev/watchdog0` first and systemd arms the primary
+device — so the active watchdog is `intel_oc_wdt`, not iTCO. Both are
+hardware watchdogs; loading `iTCO_wdt` in the initrd remains the correct
+mechanism (module availability before PID1) even though it is not the
+driver that ends up serving the watchdog on this platform.
+
 ## References
 
 - srvos repository: <https://github.com/nix-community/srvos>
