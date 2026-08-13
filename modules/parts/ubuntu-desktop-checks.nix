@@ -137,6 +137,49 @@
               exit 1
             fi
 
+            # The GDM session launcher is the single point of failure for
+            # logging in at all, and two outages traced to it: a
+            # WLR_DRM_DEVICES value containing colons (the variable is a
+            # colon-separated list, so wlroots split one device path into
+            # three bogus ones and aborted with "Found 0 GPUs"), and an
+            # XDG_CURRENT_DESKTOP export that Sway overwrites immediately
+            # afterwards, so it silently did nothing. Both are cheap to catch
+            # here rather than by being unable to log in.
+            session=$(readlink -f "$activation/home-files/.local/bin/sway-ubuntu-session")
+            if [ ! -f "$session" ]; then
+              echo "expected the generated sway-ubuntu-session launcher in the activation package" >&2
+              exit 1
+            fi
+
+            # A colon in the value silently becomes a device separator.
+            drmValue=$(sed -n 's/^ *export WLR_DRM_DEVICES=\(.*\)$/\1/p' "$session")
+            case "$drmValue" in
+              *:*)
+                echo "WLR_DRM_DEVICES is a colon-separated list; the literal value $drmValue would be split into multiple bogus device paths" >&2
+                exit 1
+                ;;
+            esac
+
+            # Sway sets XDG_CURRENT_DESKTOP itself right after this script
+            # execs it, so exporting anything but the plain compositor name is
+            # dead code that will appear to work when tested against a child
+            # process. Electron's keyring detection rides on
+            # GNOME_DESKTOP_SESSION_ID instead -- see docs/ubuntu-adaptations.md.
+            if grep -qE '^ *export XDG_CURRENT_DESKTOP=.*:' "$session"; then
+              echo "XDG_CURRENT_DESKTOP is overwritten by Sway; a composite value here has no effect (use GNOME_DESKTOP_SESSION_ID for Electron keyring detection)" >&2
+              exit 1
+            fi
+
+            # Without a login shell, nothing else puts the profile on these
+            # two paths: keybindings fail with "command not found" and no
+            # Home Manager .desktop file is discoverable.
+            for var in PATH XDG_DATA_DIRS; do
+              if ! grep -qE "^ *export $var=.*\.nix-profile" "$session"; then
+                echo "sway-ubuntu-session must put the Home Manager profile on $var -- GDM execs it without a login shell" >&2
+                exit 1
+              fi
+            done
+
             touch "$out"
           '';
     };
