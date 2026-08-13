@@ -160,8 +160,30 @@ in
               export XDG_CURRENT_DESKTOP=sway
               export XCURSOR_THEME=Adwaita
               export XCURSOR_SIZE=24
-              export SWAY_UNSUPPORTED_GPU=1
-              export WLR_NO_HARDWARE_CURSORS=1
+
+              # SWAY_UNSUPPORTED_GPU and WLR_NO_HARDWARE_CURSORS are
+              # deliberately absent. Both are NVIDIA-proprietary workarounds
+              # inherited from the NixOS Sway aspect, and this laptop drives
+              # every connector from the Intel iGPU. Sway needs no override to
+              # accept i915, and forcing software cursors made each pointer
+              # movement dirty the whole output and issue a full atomic commit
+              # instead of a cursor-plane update -- which the 2560x1440
+              # external could not retire before the next one arrived, giving
+              # bursts of "Atomic commit failed: Device or resource busy".
+              # This laptop's internal panel is driven by Intel.  Keep wlroots
+              # from probing the discrete GPU, which has no display outputs
+              # and is unused after removing Ubuntu's NVIDIA userspace
+              # packages.
+              #
+              # /dev/dri/cardN indices follow driver probe order and are not
+              # stable across kernel upgrades, so identify the GPU by PCI
+              # path.  WLR_DRM_DEVICES is colon-separated and the by-path name
+              # embeds the PCI address (0000:00:02.0), so it cannot be passed
+              # verbatim -- wlroots would split it into three bogus paths and
+              # fail with "Found 0 GPUs".  Resolve the symlink to its cardN
+              # target instead, and leave the variable unset if the node is
+              # missing so Sway falls back to auto-discovery rather than
+              # exiting.
               # This laptop's internal panel is driven by Intel.  Keep wlroots
               # from probing the discrete GPU, which has no display outputs
               # and is unused after removing Ubuntu's NVIDIA userspace
