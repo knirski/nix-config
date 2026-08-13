@@ -441,6 +441,12 @@
 
                 ${sharedEnv}
 
+                # Keep machine-local secrets and shell helpers out of the Nix
+                # store while making them available to every interactive zsh.
+                if [[ -r "$HOME/.envvars" ]]; then
+                  source "$HOME/.envvars"
+                fi
+
                 # Custom functions (interactive shells only)
                 if [[ $- == *i* ]]; then
                   mkcd() { mkdir -p "$1" && cd "$1"; }
