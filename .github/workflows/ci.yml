@@ -129,6 +129,7 @@ jobs:
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.service-aspect-invariants \
+            .#checks.x86_64-linux.soyo-guest-coverage \
             .#checks.x86_64-linux.soyo-guest-isolation \
             .#checks.x86_64-linux.systemd-hardening-invariants \
             .#checks.x86_64-linux.ubuntu-desktop-invariants
@@ -156,6 +157,7 @@ jobs:
             .#checks.x86_64-linux.persistence-invariants \
             .#checks.x86_64-linux.reservation-validation \
             .#checks.x86_64-linux.service-aspect-invariants \
+            .#checks.x86_64-linux.soyo-guest-coverage \
             .#checks.x86_64-linux.soyo-guest-isolation \
             .#checks.x86_64-linux.systemd-hardening-invariants \
             .#checks.x86_64-linux.ubuntu-desktop-invariants

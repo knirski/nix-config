@@ -1,0 +1,69 @@
+# Single source of truth for Soyo's guest-workload systemd unit names.
+#
+# Consumed by:
+#   modules/parts/soyo-guest-isolation.nix — validates each listed guest HAS
+#                                            MemoryMax/CPUQuota/Nice-or-IOWeight.
+#   modules/parts/soyo-guest-coverage.nix  — validates that EVERY systemd unit on
+#                                            Soyo is classified: either here
+#                                            (an isolated guest) or in its
+#                                            explicit nonGuestUnits list (a
+#                                            critical role, operator/recovery, or
+#                                            infrastructure entry with a reason).
+#
+# The two files together close the one silent-escape path the isolation allowlist
+# alone leaves open: a future aspect that introduces a service without adding it
+# here would otherwise run unisolated and unnoticed. The coverage check makes the
+# omission fail loudly.
+#
+# Blocky and dnsmasq are intentionally absent — they are Soyo's two critical
+# roles (AGENTS.md invariant 1), not guests. OpenSSH and core boot/network
+# units are operator/recovery infrastructure rather than guest workloads; they
+# live in soyo-guest-coverage.nix's nonGuestUnits list, each with an inline
+# reason, not here.
+cfg:
+let
+  maintenanceEnabled = cfg.lanAppliance.services.maintenance.enable or false;
+in
+[
+  # Observability guests (modules/nixos/observability.nix + lib/observability/*).
+  "alloy"
+  "grafana"
+  "grafana-alert-setup"
+  "grafana-gcx-setup"
+  "lan-inventory-exporter"
+  "loki"
+  "prometheus"
+  "prometheus-blackbox-exporter"
+  "prometheus-dnsmasq-exporter"
+  "prometheus-node-exporter"
+  "tempo"
+
+  # Boot/activation/health trace emitters (lib/observability/tempo-traces.nix).
+  # One-shot or path-triggered, but the definitions already carry
+  # MemoryMax/CPUQuota — listing them here makes soyo-guest-isolation.nix
+  # actually validate that isolation, instead of silently relying on the
+  # aspect author remembering to update this list.
+  "soyo-activation-trace"
+  "soyo-boot-trace"
+  "soyo-health-trace"
+
+  # Backup and low-priority maintenance guests.
+  "btrbk-soyo"
+  "nix-store-optimise"
+  "restic-backup-metric-bootstrap"
+  "restic-backups-soyo"
+
+  # Remote administration must not contend with DNS or DHCP either.
+  "tailscale-auth"
+  "tailscaled"
+]
+++ (
+  if maintenanceEnabled then
+    [
+      "btrfs-scrub"
+      "free-space-check"
+      "ntfy-failure@"
+    ]
+  else
+    [ ]
+)
