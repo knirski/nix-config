@@ -128,7 +128,30 @@
             # nix.gc only sets ExecStart/OnCalendar; nixpkgs' nix-gc.service has
             # no unitConfig of its own, so a plain assignment (no mkForce
             # needed) adds the same crash-notification edge as the units below.
-            nix-gc.unitConfig.OnFailure = "ntfy-failure@%N.service";
+            #
+            # Resource isolation (AGENTS.md invariant 2): the sibling
+            # nix-store-optimise in base.nix is capped at MemoryMax=512M; GC
+            # builds a larger live-path set during its scan, so double that.
+            # 1G is still 6% of soyo's 16GB and generous enough that a weekly
+            # `nix-collect-garbage --delete-older-than 30d` won't realistically
+            # OOM-kill on an appliance store. If it ever does, the
+            # OnFailure=ntfy-failure@ edge below surfaces it to the operator
+            # — strictly better than the silent unbounded behavior this
+            # replaces. This closes the deferral previously recorded in
+            # soyo-guest-coverage.nix's nonGuestUnits, where nix-gc was the
+            # only unisolated non-critical unit. IOSchedulingClass=idle yields
+            # the I/O-heavy store traversal to DNS/DHCP (mostly in-RAM) and any
+            # future guest.
+            nix-gc = {
+              unitConfig.OnFailure = "ntfy-failure@%N.service";
+              serviceConfig = {
+                MemoryMax = "1G";
+                CPUQuota = "50%";
+                Nice = 19;
+                IOWeight = 10;
+                IOSchedulingClass = "idle";
+              };
+            };
             btrfs-scrub = {
               description = "Btrfs scrub";
               serviceConfig = {

@@ -81,6 +81,15 @@ in
             MemoryMax = "512M";
             CPUQuota = "50%";
             Nice = 19;
+            # IOWeight complements IOSchedulingClass=idle the same way it does
+            # on nix-gc (modules/nixos/maintenance.nix) and btrfs-scrub: under
+            # cgroups v2, IOSchedulingClass is honored only when BFQ is the
+            # active scheduler (it sets ioprio_class, which BFQ reads but
+            # mq-deadline/none/kyber ignore). IOWeight goes through cgroup
+            # io.weight / io.bfq.weight instead, so it's the portable,
+            # scheduler-independent lever that honors AGENTS.md invariant 2
+            # regardless of the active scheduler on the block device.
+            IOWeight = 10;
             IOSchedulingClass = "idle";
           };
           # base.nix is role-neutral and shared by every NixOS host, but the
