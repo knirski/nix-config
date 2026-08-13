@@ -7,15 +7,62 @@ let
   # reviewed insecure-package exceptions (see
   # lib/insecure-package-exceptions.nix for what/why).
   insecurePackageExceptions = import ../../lib/insecure-package-exceptions.nix;
+
+  # Bake the keyring backend into the Chromium-family apps rather than relying
+  # on desktop detection. Chromium picks its safeStorage backend by sniffing
+  # the environment, and under Sway it falls back to basic_text -- plaintext.
+  # Exporting a GNOME hint works, but only reaches processes that inherit it:
+  # the session script covers Sway's children and
+  # systemd.user.sessionVariables covers systemd's, and Signal still broke
+  # once from a launcher-spawned transient scope in between. The command-line
+  # switch is not environmental, so it holds on every launch path.
+  #
+  # Ubuntu-scoped: these packages are shared with zbook and macbook, which are
+  # not verified against this.
+  chromiumSecretStoreOverlay =
+    final: prev:
+    let
+      inherit (final) lib;
+      withLibsecret =
+        name: exes:
+        let
+          pkg = prev.${name};
+        in
+        final.symlinkJoin {
+          pname = pkg.pname or (lib.getName pkg);
+          version = pkg.version or "";
+          name = "${pkg.pname or (lib.getName pkg)}-${pkg.version or "0"}";
+          inherit (pkg) meta;
+          paths = [ pkg ];
+          nativeBuildInputs = [ final.makeWrapper ];
+          postBuild = lib.concatMapStrings (exe: ''
+            if [ -e "$out/bin/${exe}" ]; then
+              rm "$out/bin/${exe}"
+              makeWrapper "${pkg}/bin/${exe}" "$out/bin/${exe}" \
+                --add-flags "--password-store=gnome-libsecret"
+            fi
+          '') exes;
+        };
+    in
+    {
+      signal-desktop = withLibsecret "signal-desktop" [ "signal-desktop" ];
+      slack = withLibsecret "slack" [ "slack" ];
+      vscode = withLibsecret "vscode" [ "code" ];
+      bitwarden-desktop = withLibsecret "bitwarden-desktop" [ "bitwarden" ];
+      google-chrome = withLibsecret "google-chrome" [ "google-chrome-stable" ];
+    };
+
+  nixpkgsArgs = import ../../lib/mk-nixpkgs-args.nix {
+    permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
+  };
 in
 {
   flake.homeConfigurations.ubuntu = inputs.home-manager.lib.homeManagerConfiguration {
     pkgs = import inputs.nixpkgs-unstable (
-      (import ../../lib/mk-nixpkgs-args.nix {
-        permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
-      })
+      nixpkgsArgs
       // {
         system = "x86_64-linux";
+        overlays = nixpkgsArgs.overlays ++ [ chromiumSecretStoreOverlay ];
       }
     );
     modules = [
@@ -285,30 +332,6 @@ in
 
               export XDG_CURRENT_DESKTOP=sway
 
-              # Make Chromium detect GNOME, so its safeStorage backend is
-              # gnome_libsecret rather than basic_text -- plaintext. Signal
-              # refuses to start once that changes under it ("Detected change
-              # in safeStorage backend, can't decrypt DB key (previous:
-              # gnome_libsecret, current: basic_text)") because its database
-              # key was sealed with the keyring; Slack, VS Code and Chrome
-              # would quietly re-encrypt their secrets in the clear instead.
-              # gnome-keyring-daemon already serves org.freedesktop.secrets
-              # here, so only the detection was ever missing.
-              #
-              # Chromium consults XDG_CURRENT_DESKTOP, then DESKTOP_SESSION,
-              # then this legacy variable. Measured against a throwaway
-              # profile sealed with libsecret, all three of "sway:GNOME",
-              # DESKTOP_SESSION=gnome and this one select gnome_libsecret,
-              # and plain sway/sway-nix reproduces the failure.
-              #
-              # This one is used because it is the only one that both works
-              # and is deliverable. XDG_CURRENT_DESKTOP is overwritten by Sway
-              # itself right after this script runs, so setting it here has no
-              # effect at all; DESKTOP_SESSION would work but names the
-              # session for everything else that reads it. Nothing else
-              # consults GNOME_DESKTOP_SESSION_ID today, and Sway leaves it
-              # alone.
-              export GNOME_DESKTOP_SESSION_ID=this-is-deprecated
               export XCURSOR_THEME=Adwaita
               export XCURSOR_SIZE=24
 

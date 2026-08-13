@@ -67,27 +67,34 @@ These are already applied in this checkout:
     have fixed this — `hm-session-vars.sh` sets `EDITOR` and `GNUPGHOME` but
     never `PATH` or `XDG_DATA_DIRS`, and the generated `environment.d` file
     carries only `LOCALE_ARCHIVE`.
-  - **Keyring detection for Electron.** Chromium picks its `safeStorage`
-    backend by sniffing the desktop, and under Sway it falls back to
-    `basic_text` — plaintext. Signal refuses to start once that changes under
-    it (`Detected change in safeStorage backend, can't decrypt DB key`), while
-    Slack, VS Code and Chrome silently re-encrypt their secrets in the clear.
-    Nothing is wrong with the keyring: `gnome-keyring-daemon` serves
-    `org.freedesktop.secrets` and its login collection is unlocked by GDM's
-    PAM.
+  - **Keyring for Electron is *not* handled here.** Chromium picks its
+    `safeStorage` backend by sniffing the desktop, and under Sway it falls
+    back to `basic_text` -- plaintext. Signal refuses to start once that
+    changes under it (`Detected change in safeStorage backend, can't decrypt
+    DB key`); Slack, VS Code and Chrome silently re-encrypt their secrets in
+    the clear. Nothing is wrong with the keyring:
+    `gnome-keyring-daemon` serves `org.freedesktop.secrets` and its login
+    collection is unlocked by GDM's PAM.
 
-    Chromium consults `XDG_CURRENT_DESKTOP`, then `DESKTOP_SESSION`, then the
-    legacy `GNOME_DESKTOP_SESSION_ID`. Measured against a throwaway Signal
-    profile sealed with libsecret, all three of `sway:GNOME`,
-    `DESKTOP_SESSION=gnome` and the legacy variable select `gnome_libsecret`,
-    and plain `sway`/`sway-nix` reproduces the failure.
+    Two environment-based fixes were tried and both failed, because each only
+    reaches processes that inherit the variable. `XDG_CURRENT_DESKTOP` is
+    overwritten by Sway itself right after this script execs it, so a
+    composite value never reaches any client -- and a check that passes it
+    directly to a child process bypasses Sway and appears to succeed.
+    `GNOME_DESKTOP_SESSION_ID` in the session script covers Sway's children
+    but not what systemd starts, so Signal still broke when opened from the
+    application launcher, which spawns apps in a transient scope.
 
-    **Do not use `XDG_CURRENT_DESKTOP` for this.** Sway overwrites that
-    variable itself immediately after the script execs it, so the value never
-    reaches any client — a check that passes it directly to a child process
-    bypasses Sway and will appear to succeed. `DESKTOP_SESSION` works but
-    renames the session for everything else that reads it. The legacy variable
-    is inert otherwise and Sway leaves it alone.
+    The fix is `--password-store=gnome-libsecret`, baked into the affected
+    binaries by an overlay in `modules/parts/ubuntu.nix`. A command-line
+    switch cannot be lost in propagation, so it holds on every launch path.
+    nixpkgs recommends exactly this: its per-package `commandLineArgs`
+    argument is deprecated in favour of "a wrapper script or a desktop entry
+    with your desired flags", and it offers no `flags.conf` or environment
+    mechanism.
+
+    Applications added later that store secrets must be added to that overlay
+    list; they will otherwise use plaintext without any warning.
   - **SSH agent.** Two run here: Ubuntu's `gcr-ssh-agent`, socket-activated on
     `$XDG_RUNTIME_DIR/gcr/ssh` and unlocked by the same PAM as the login
     keyring, and gpg-agent's ssh emulation. Which one won used to be an
