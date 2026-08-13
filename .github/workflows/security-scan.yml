@@ -3,11 +3,13 @@
 #
 # osv-scanner's default source-scan mode queries deps.dev over the network
 # for each resolved package, so this cannot be part of `nix flake check`
-# (which must stay offline/pure -- see checks.command-code-security in
-# modules/parts/command-code-security-checks.nix for the offline half: real
-# build, smoke test, and proof that the OpenTelemetry CVE-2026-54285
-# override actually resolved). This workflow is the online half: it looks
-# up currently-disclosed vulnerabilities against the exact resolved
+# (which must stay offline/pure). The offline half lives elsewhere:
+# `nix build path:.#command-code` builds the vendored tree and validates the
+# npmDepsHash, and tests/security/check_command_code_freshness.py (CI static
+# job) enforces the 14-day review window. Vulnerability fixes land in the
+# lockfile via npm overrides injected in command-code.nix's postPatch (see
+# that file). This workflow is the online half: it looks up
+# currently-disclosed vulnerabilities against the exact resolved
 # dependency tree, which can change over time even with no local edits.
 name: Security scan
 
