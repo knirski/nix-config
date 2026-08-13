@@ -3,6 +3,10 @@
 This guide walks through setting up the Ubuntu host using standalone Home
 Manager: install Nix, first `home-manager switch`, and validate.
 
+For the machine-specific adaptation checklist, including Ubuntu-level setup,
+the GDM Sway session entry, and the local backup wrapper, see
+[`docs/ubuntu-adaptations.md`](ubuntu-adaptations.md).
+
 Unlike NixOS hosts, standalone HM does not manage the OS — only the user
 environment. There is no disko, no impermanence, no systemd units from NixOS
 aspects, **and no agenix wiring at all**: `modules/parts/ubuntu.nix` declares
@@ -40,9 +44,9 @@ outputs):
   GPU driver — standalone Home Manager cannot touch kernel modules or system
   packages.
 - `dbus-user-session` (typically already installed on Ubuntu Desktop; if
-  missing, `sudo apt install dbus-user-session`) — needed for the
-  `dbus-run-session` Sway launch path documented under "Starting a Sway
-  session" below.
+  missing, `sudo apt install dbus-user-session`) — puts a session bus on
+  `$XDG_RUNTIME_DIR/bus`, where `systemd --user` also listens, so Sway's user
+  services and its clients share one bus. See "Starting a Sway session" below.
 - XDG desktop portals and a Polkit authentication agent, if you want
   screen-sharing/file-picker portals or GUI polkit prompts to work under
   Sway. `modules/home/sway.nix` (the aspect ubuntu imports) declares
@@ -157,10 +161,14 @@ bypassing GDM's session picker entirely:
 
 1. From the GDM3 login screen, switch to a virtual console (e.g.
    `Ctrl+Alt+F3`) and log in with your normal username/password.
-2. Start a Wayland session with its own D-Bus session bus:
+2. Start the session through the launcher Home Manager installs. Do **not**
+   run `sway` directly: the launcher is what applies the nixGL wrapper and the
+   wlroots/toolkit variables, without which Nix GL clients fail with
+   `Failed to create EGL display`. It also detects that a console login has no
+   D-Bus session bus and starts one itself.
 
    ```bash
-   dbus-run-session -- sway
+   ~/.local/bin/sway-ubuntu-session
    ```
 
 3. Exit Sway (`$mod+Shift+e` or however you've bound it) to return to the
@@ -177,7 +185,7 @@ sudo tee /usr/share/wayland-sessions/sway-nix.desktop >/dev/null <<'EOF'
 [Desktop Entry]
 Name=Sway (Nix, home-manager)
 Comment=Tiling Wayland compositor managed by Home Manager
-Exec=dbus-run-session -- /home/krzysiek/.nix-profile/bin/sway
+Exec=/home/knirski/.local/bin/sway-ubuntu-session
 Type=Application
 EOF
 ```
