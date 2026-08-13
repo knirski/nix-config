@@ -137,6 +137,16 @@
       #     guest. Pick one.
       doubleClassified = lib.intersectLists guestUnits nonGuestUnits;
 
+      # (e) pattern-shadowed guest — a guest name that also matches a
+      #     nonGuestPatterns entry. Same confused invariant as (d), but the
+      #     pattern side, which intersectLists cannot see:
+      #     soyo-guest-isolation still validates its isolation while this
+      #     file's isNonGuest claims it is infrastructure. No current pattern
+      #     (systemd-*, getty) shadows any current guest, so this is forward
+      #     defense against a future widened pattern silently swallowing a
+      #     real guest.
+      patternShadowedGuests = builtins.filter matchesAnyPattern guestUnits;
+
       # Negative control: a hypothetical future M4 service must meet none of
       # the lists/patterns, so the catch logic actually fires. If a future
       # edit widens a pattern such that this synthetic name silently passes,
@@ -163,6 +173,10 @@
           n:
           "double-classified: '${n}' appears in BOTH lib/soyo-guest-units.nix (isolated guest) AND nonGuestUnits (modules/parts/soyo-guest-coverage.nix). Pick one."
         ) doubleClassified
+        ++ map (
+          n:
+          "pattern-shadowed guest: '${n}' is in lib/soyo-guest-units.nix but also matches a nonGuestPatterns entry in modules/parts/soyo-guest-coverage.nix. Tighten the pattern, or rename the unit."
+        ) patternShadowedGuests
         # Harness self-honesty: the negative-control fixture must remain
         # unclassified — a future pattern-widening that silently swallows it
         # is a regression in the check itself. Reported via failureLines (not a
