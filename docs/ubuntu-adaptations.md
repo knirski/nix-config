@@ -173,6 +173,24 @@ for example:
 echo "${GITLAB_TOKEN:+GITLAB_TOKEN is set}"
 ```
 
+## Machine hardware
+
+The machine is a **Dell Precision 5570** (Alder Lake-P, 12th-gen Intel). The
+Intel iGPU drives every connector (`eDP-1`, `DP-1`–`DP-4`, `HDMI-A-1`); the
+discrete **RTX A1000** is a bare `3D controller` with no display outputs and is
+not needed for the session — the same layout that nixos-hardware's
+`dell/precision/5570` profile targets
+(<https://github.com/NixOS/nixos-hardware/tree/master/dell/precision/5570>).
+That profile is a NixOS module and cannot be imported into this standalone
+Home Manager output; it is used here as a reference only. Two of its points
+apply to this machine:
+
+- **thermald** — the profile enables it for this model; see step 10 below.
+- **Xe driver** — the profile switches the iGPU to the experimental Xe driver
+  (`xe.force_probe=46a6`, kernels ≥ 6.8). Deliberately not adopted here:
+  Ubuntu owns the kernel, i915 is stable on this machine, and the switch
+  belongs to a future NixOS migration rather than this workstation.
+
 ## Required Ubuntu-level setup
 
 Home Manager cannot install or configure these system-level components:
@@ -354,6 +372,21 @@ Home Manager cannot install or configure these system-level components:
    If a lock ever traps you, `loginctl unlock-session` will **not** clear it;
    DankMaterialShell honours Lock but not Unlock. Use `dms ipc lock unlock`,
    or `pkill -x swaylock`, from a virtual console.
+
+10. **Thermald**
+
+    The nixos-hardware profile for this model enables `thermald`
+    (`services.thermald.enable`); Ubuntu ships the package for Dell hardware
+    but does not always activate it. Confirm it is running:
+
+    ```bash
+    systemctl status thermald
+    ```
+
+    If it is not, `sudo apt install thermald` (the package's unit starts
+    automatically). Thermald is Dell's dynamic thermal management daemon
+    (ACPI/PECI); without it, cooling falls back to the kernel's static ACPI
+    thermal zones.
 
 ## Optional Ubuntu-level setup
 
