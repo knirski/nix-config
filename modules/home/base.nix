@@ -512,7 +512,6 @@
             user = {
               name = "Krzysztof Nirski";
               email = "krzysztof.nirski+github@gmail.com";
-              signingkey = "~/.ssh/id_ed25519";
             };
             core.editor = "nvim";
             init.defaultBranch = "main";
@@ -528,9 +527,6 @@
               light = false;
               line-numbers = true;
             };
-            # SSH commit signing
-            commit.gpgsign = true;
-            gpg.format = "ssh";
             # Useful aliases
             alias = {
               lg = "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
