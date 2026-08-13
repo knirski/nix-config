@@ -2,7 +2,12 @@
 
 This repository’s `ubuntu` output is a **standalone Home Manager** configuration.
 It manages the `knirski` user environment, not the Ubuntu operating system.
-Use this checklist for the Ubuntu machine (`LT43514`).
+Use this checklist for the Ubuntu machine.
+
+For the map of the boundary between the two — what each side owns, the
+crossing points and their failure modes — see
+[`docs/ubuntu-nix-surface.md`](ubuntu-nix-surface.md). For the 24.04 → 26.04
+LTS upgrade, see [`docs/ubuntu-upgrade.md`](ubuntu-upgrade.md).
 
 ## Repository-side adaptations
 
@@ -184,8 +189,8 @@ Home Manager cannot install or configure these system-level components:
 2. **Graphics driver**
 
    Install the driver using Ubuntu’s mechanism. Intel and AMD systems normally
-   use Ubuntu’s Mesa packages, which is the case here: `LT43514` drives every
-   connector from the Intel iGPU and needs no NVIDIA userspace (see step 5).
+   use Ubuntu’s Mesa packages, which is the case here: this machine drives
+   every connector from the Intel iGPU and needs no NVIDIA userspace (see step 5).
    For a machine that does need it:
 
    ```bash

@@ -7,6 +7,11 @@ For the machine-specific adaptation checklist, including Ubuntu-level setup,
 the GDM Sway session entry, and the local backup wrapper, see
 [`docs/ubuntu-adaptations.md`](ubuntu-adaptations.md).
 
+For the authoritative map of the boundary between the Ubuntu OS and the Nix
+environment — every crossing point, contract and failure mode — see
+[`docs/ubuntu-nix-surface.md`](ubuntu-nix-surface.md). For the 24.04 → 26.04
+LTS upgrade, see [`docs/ubuntu-upgrade.md`](ubuntu-upgrade.md).
+
 Unlike NixOS hosts, standalone HM does not manage the OS — only the user
 environment. There is no disko, no impermanence, no systemd units from NixOS
 aspects, **and no agenix wiring at all**: `modules/parts/ubuntu.nix` declares

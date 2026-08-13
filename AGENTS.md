@@ -12,6 +12,7 @@ A multi-host NixOS/nix-darwin/standalone-HM flake.
 | **ubuntu** (Ubuntu 24.04 LTS) | Professional work laptop | Standalone HM unstable | `modules/parts/ubuntu.nix` | *(data in assembler)* | CI only; hardware deploy pending |
 
 See [`docs/workstation-setup.md`](docs/workstation-setup.md) for macbook/ubuntu deploy status.
+See [`docs/ubuntu-nix-surface.md`](docs/ubuntu-nix-surface.md) for the Ubuntu/Nix boundary map and [`docs/ubuntu-upgrade.md`](docs/ubuntu-upgrade.md) for the 24.04→26.04 LTS upgrade runbook.
 See [`docs/superpowers/specs/soyo-dns-dhcp-appliance.md`](docs/superpowers/specs/soyo-dns-dhcp-appliance.md) for the canonical design doc.
 
 ## Aspect namespaces
