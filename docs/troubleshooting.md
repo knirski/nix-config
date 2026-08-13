@@ -234,6 +234,27 @@ Note that `swaymsg -t get_outputs` returning `[]` is normal when Sway is not
 the foreground VT: logind revokes DRM master, so outputs disappear until you
 switch back. It is not by itself a fault.
 
+### Lock Screen Rejects the Correct Password (Ubuntu)
+
+**Symptom**: after some idle time a lock screen appears and no password is
+accepted. It is not greetd — that is not installed — it is
+DankMaterialShell's own lock, fired by its idle timeout.
+
+**Diagnosis**:
+
+```bash
+journalctl -b 0 | grep dankshell
+```
+
+`pam_unix(dankshell:auth): authentication failure` together with
+`PAM _pam_init_handlers: no default config other` means the shell is using
+Nix's PAM, which cannot reach a setgid `unix_chkpwd`.
+
+**Escape**: from a virtual console, `dms ipc lock unlock` (note that
+`loginctl unlock-session` does not work), or `pkill -x swaylock`.
+
+**Solution**: step 9 of [`ubuntu-adaptations.md`](ubuntu-adaptations.md).
+
 ### GTK Apps Hang On Startup Under Sway (Ubuntu)
 
 **Symptom**: Ghostty or another GTK4 app never maps a window; `foot` is fine.

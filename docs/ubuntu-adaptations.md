@@ -264,6 +264,39 @@ Home Manager cannot install or configure these system-level components:
    ~/.local/bin/sway-ubuntu-session
    ```
 
+9. **Screen locking (`swaylock`)**
+
+   ```bash
+   sudo apt install swaylock
+   ```
+
+   DankMaterialShell's built-in lock screen cannot authenticate on this
+   machine and will reject the correct password every time. It is built
+   against Nix's PAM, so `pam_unix` looks for `unix_chkpwd` in the Nix store —
+   where nothing can be setgid `shadow` (`555`, against Ubuntu's `2755`) — and
+   therefore cannot read `/etc/shadow`. There is no `/etc/pam.d/dankshell`
+   either, so PAM falls through to Ubuntu's deny-by-default `other`, logging:
+
+   ```text
+   PAM _pam_init_handlers: no default config other
+   pam_unix(dankshell:auth): authentication failure ... user=knirski
+   ```
+
+   Supplying an `/etc/pam.d/dankshell` that points at Ubuntu's modules does
+   not help: Nix's PAM closure carries neither `libselinux` nor `libcrypt`, so
+   it cannot dlopen them.
+
+   `swaylock` is an Ubuntu binary with its own PAM stack and the setgid
+   helper, and its package ships `/etc/pam.d/swaylock`. Home Manager sets
+   `customPowerActionLock`, which makes DankMaterialShell delegate every lock
+   path to it — idle timeout, the `Ctrl+Mod+l` binding and logind lock alike —
+   without engaging its own session lock. NixOS hosts keep the built-in lock,
+   where the PAM service and setuid wrappers exist.
+
+   If a lock ever traps you, `loginctl unlock-session` will **not** clear it;
+   DankMaterialShell honours Lock but not Unlock. Use `dms ipc lock unlock`,
+   or `pkill -x swaylock`, from a virtual console.
+
 ## Optional Ubuntu-level setup
 
 ### Make Nix zsh the login shell

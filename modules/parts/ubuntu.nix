@@ -29,7 +29,12 @@ in
       inputs.dsearch.homeModules.default
       inputs.dms-plugins.homeModules.dms-plugin-registry
       (
-        { config, pkgs, ... }:
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
         let
           # GDM starts user services without the interactive shell PATH, and
           # standalone Home Manager has no NixOS profile paths to inherit.
@@ -109,11 +114,35 @@ in
             dcal.Service.Environment = [ "PATH=${graphicalServicePath}" ];
           };
 
-          # Distinguishes this machine from the other hosts at a glance. Sway
-          # renders the background itself, so this needs no extra service, and
-          # it leaves DankMaterialShell's settings.json writable -- setting it
-          # through the DMS module option would replace that whole file with a
-          # read-only store symlink and stop the UI persisting any change.
+          # Hand locking to Ubuntu's swaylock. DankMaterialShell's own lock
+          # screen cannot authenticate here: it is built against Nix's PAM, so
+          # pam_unix looks for unix_chkpwd in the Nix store, where nothing can
+          # be setgid shadow, and every unlock attempt fails with
+          # "pam_unix(dankshell:auth): authentication failure" no matter what
+          # is typed. There is no /etc/pam.d/dankshell either, so PAM falls
+          # through to Ubuntu's deny-by-default `other`. Pointing a pam.d file
+          # at Ubuntu's modules cannot work around it, because Nix's PAM has
+          # neither libselinux nor libcrypt in its closure to dlopen them
+          # with.
+          #
+          # swaylock is an Ubuntu binary with its own PAM stack and the
+          # setgid helper, and its package ships /etc/pam.d/swaylock. Setting
+          # customPowerActionLock makes DMS delegate every lock path to it --
+          # idle timeout, the Ctrl+Mod+l binding and logind lock alike -- and
+          # never engage its own WlSessionLock (see Lock.qml `lock()`).
+          #
+          # NixOS hosts keep the built-in lock: there the PAM service and the
+          # setuid wrappers exist, so this stays out of the shared aspect.
+          #
+          # mkForce because modules/home/dms-settings.json already defines the
+          # key as "" for every host that imports the Sway aspect.
+          programs.dank-material-shell.settings.customPowerActionLock = lib.mkForce "/usr/bin/swaylock -f -c 14181C";
+
+          # Distinguishes this machine from the other hosts at a glance. Set on
+          # Sway's output, which renders the background itself and so needs no
+          # extra service. Note DankMaterialShell cannot own it: its whole
+          # settings.json is already a read-only store symlink, so a wallpaper
+          # chosen from its UI could never be written back.
           wayland.windowManager.sway.config.output."*".bg = "${wallpaper} fill";
 
           # Ubuntu ships no portal backend that serves
@@ -170,20 +199,6 @@ in
               # instead of a cursor-plane update -- which the 2560x1440
               # external could not retire before the next one arrived, giving
               # bursts of "Atomic commit failed: Device or resource busy".
-              # This laptop's internal panel is driven by Intel.  Keep wlroots
-              # from probing the discrete GPU, which has no display outputs
-              # and is unused after removing Ubuntu's NVIDIA userspace
-              # packages.
-              #
-              # /dev/dri/cardN indices follow driver probe order and are not
-              # stable across kernel upgrades, so identify the GPU by PCI
-              # path.  WLR_DRM_DEVICES is colon-separated and the by-path name
-              # embeds the PCI address (0000:00:02.0), so it cannot be passed
-              # verbatim -- wlroots would split it into three bogus paths and
-              # fail with "Found 0 GPUs".  Resolve the symlink to its cardN
-              # target instead, and leave the variable unset if the node is
-              # missing so Sway falls back to auto-discovery rather than
-              # exiting.
               # This laptop's internal panel is driven by Intel.  Keep wlroots
               # from probing the discrete GPU, which has no display outputs
               # and is unused after removing Ubuntu's NVIDIA userspace
