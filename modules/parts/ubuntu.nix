@@ -51,6 +51,7 @@ in
             "/sbin"
             "/bin"
           ];
+
           # The units are started by systemd, not spawned by Sway, so they do
           # not inherit what the session script exports. DankSearch's launcher
           # runs inside the shell and needs the profile's .desktop files.
@@ -113,6 +114,13 @@ in
               # jetbrains.idea is the Ultimate build; nixpkgs dropped the
               # -ultimate suffix and keeps idea-community as the free one.
               pkgs.jetbrains.idea
+
+              # Replacing the apt google-chrome-stable. google-chrome rather
+              # than chromium so the existing ~/.config/google-chrome profile
+              # carries over -- chromium reads ~/.config/chromium and would
+              # present as a fresh browser. Firefox is the default browser
+              # (see the shared desktop aspect); this is the second one.
+              pkgs.google-chrome
             ];
           };
 
@@ -207,6 +215,7 @@ in
               # `sh -c`, which would then fail with "ghostty: not found" for
               # every Home Manager program.  Put the profile on PATH first.
               export PATH="${config.home.profileDirectory}/bin:/nix/var/nix/profiles/default/bin:$PATH"
+
               # Same reason as PATH: without a login shell nothing puts the
               # profile on XDG_DATA_DIRS, so the session inherits Ubuntu's
               # (/usr/local/share, /usr/share, /var/lib/snapd/desktop) and
