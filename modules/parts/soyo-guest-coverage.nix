@@ -78,17 +78,6 @@
         "nix-daemon"
         "home-manager-krzysiek"
 
-        # maintenance.nix schedules nix.gc weekly; nix-gc deliberately runs
-        # unisolated by deferral. Its sibling nix-store-optimise IS isolated
-        # (see the guest list); a tight MemoryMax on gc risks OOM-killing a
-        # concurrent nix-collect-garbage store scan, and a considered cap is
-        # deferred until M4 pressure forces the decision. Removing this entry
-        # requires ONE of: add MemoryMax/CPUQuota/Nice to nix-gc in
-        # modules/nixos/maintenance.nix AND move "nix-gc" to the guest list in
-        # lib/soyo-guest-units.nix; or re-record the decision here with a
-        # fresh reason.
-        "nix-gc"
-
         # modules/nixos/base.nix sets `services.nix-optimise.enable = false`
         # (the comment there explains the separate weekly nix-store-optimise
         # guest that supersedes the upstream unit). Its presence in
