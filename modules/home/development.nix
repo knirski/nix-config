@@ -44,6 +44,7 @@
         nushell
         # github
         actionlint
+        nodejs
       ];
 
       programs = {
