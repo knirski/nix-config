@@ -51,6 +51,13 @@ in
             "/sbin"
             "/bin"
           ];
+          # The units are started by systemd, not spawned by Sway, so they do
+          # not inherit what the session script exports. DankSearch's launcher
+          # runs inside the shell and needs the profile's .desktop files.
+          graphicalServiceEnvironment = [
+            "PATH=${graphicalServicePath}"
+            "XDG_DATA_DIRS=${config.home.profileDirectory}/share:/nix/var/nix/profiles/default/share:/usr/local/share:/usr/share:/var/lib/snapd/desktop"
+          ];
 
           wallpaper = pkgs.callPackage ../_pkgs/hive-grid-wallpaper.nix { };
         in
@@ -110,8 +117,8 @@ in
           };
 
           systemd.user.services = {
-            dms.Service.Environment = [ "PATH=${graphicalServicePath}" ];
-            dcal.Service.Environment = [ "PATH=${graphicalServicePath}" ];
+            dms.Service.Environment = graphicalServiceEnvironment;
+            dcal.Service.Environment = graphicalServiceEnvironment;
           };
 
           # Hand locking to Ubuntu's swaylock. DankMaterialShell's own lock
@@ -200,6 +207,14 @@ in
               # `sh -c`, which would then fail with "ghostty: not found" for
               # every Home Manager program.  Put the profile on PATH first.
               export PATH="${config.home.profileDirectory}/bin:/nix/var/nix/profiles/default/bin:$PATH"
+              # Same reason as PATH: without a login shell nothing puts the
+              # profile on XDG_DATA_DIRS, so the session inherits Ubuntu's
+              # (/usr/local/share, /usr/share, /var/lib/snapd/desktop) and
+              # every .desktop file Home Manager installs is invisible -- the
+              # launcher cannot find them and mime defaults naming, say,
+              # firefox.desktop resolve to Ubuntu's copy instead of the Nix
+              # one. The profile goes first so Nix entries win.
+              export XDG_DATA_DIRS="${config.home.profileDirectory}/share:/nix/var/nix/profiles/default/share:''${XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}"
 
               export NIXOS_OZONE_WL=1
               export MOZ_ENABLE_WAYLAND=1
