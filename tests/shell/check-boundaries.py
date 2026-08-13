@@ -8,6 +8,7 @@ from pathlib import Path
 
 
 EXPECTED_SOURCES = {
+    "scripts/bootstrap-ubuntu-system.sh",
     "scripts/healthcheck.sh",
     "scripts/recover-secrets.sh",
     "scripts/set-tailscale-keys.sh",
