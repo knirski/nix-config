@@ -13,34 +13,14 @@
       services = inputs.self.nixosConfigurations.soyo.config.systemd.services;
       soyoConfig = inputs.self.nixosConfigurations.soyo.config;
 
-      guestUnits = [
-        # Observability guests.
-        "alloy"
-        "grafana"
-        "grafana-alert-setup"
-        "lan-inventory-exporter"
-        "loki"
-        "prometheus"
-        "prometheus-blackbox-exporter"
-        "prometheus-dnsmasq-exporter"
-        "prometheus-node-exporter"
-        "tempo"
-
-        # Backup and low-priority maintenance guests.
-        "btrbk-soyo"
-        "nix-store-optimise"
-        "restic-backup-metric-bootstrap"
-        "restic-backups-soyo"
-
-        # Remote administration must not contend with DNS or DHCP either.
-        "tailscale-auth"
-        "tailscaled"
-      ]
-      ++ pkgs.lib.optionals soyoConfig.lanAppliance.services.maintenance.enable [
-        "btrfs-scrub"
-        "free-space-check"
-        "ntfy-failure@"
-      ];
+      # The guest list lives in lib/soyo-guest-units.nix as the single source
+      # of truth — also consumed by modules/parts/soyo-guest-coverage.nix, the
+      # deny-by-default check that catches any service added by a future
+      # aspect that escapes both lists. Blocky/dnsmasq (critical roles,
+      # invariant 1) and OpenSSH/boot/network infrastructure are intentionally
+      # absent — see the matching nonGuestUnits list in soyo-guest-coverage.nix
+      # with reasons for each.
+      guestUnits = (import ../../lib/soyo-guest-units.nix) soyoConfig;
 
       validate =
         exists: serviceConfig:
