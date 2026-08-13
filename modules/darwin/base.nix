@@ -24,9 +24,11 @@ in
         ];
         substituters = [
           "https://knirski-nix-config.cachix.org"
+          "https://nix-community.cachix.org"
         ];
         trusted-public-keys = [
           "knirski-nix-config.cachix.org-1:PZGqi8FqCamG8Pna7PdDIoUKFSYmwR15cjyqlgfZEAk="
+          "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8ZY7bkqObtLjGV97qzvxFyzE="
         ];
         warn-dirty = false;
       };
