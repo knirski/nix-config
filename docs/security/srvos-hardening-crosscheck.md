@@ -18,7 +18,7 @@ design. Re-run this comparison periodically — srvos moves.
 
 | Item | srvos source | Where |
 | --- | --- | --- |
-| Hardware watchdog (`RuntimeWatchdogSec=15s`, `RebootWatchdogSec=30s`) | `nixos/server/default.nix` | `modules/nixos/server.nix`; `iTCO_wdt` module in `hosts/soyo/boot.nix` |
+| Hardware watchdog (`RuntimeWatchdogSec=15s`, `RebootWatchdogSec=30s`) | `nixos/server/default.nix` | `modules/nixos/server.nix`; `iTCO_wdt` loaded in the initrd via `hosts/soyo/boot.nix` (see rationale below) |
 | Sleep off (`AllowSuspend`/`AllowHibernation = "no"`) | `nixos/server/default.nix` | `modules/nixos/server.nix` |
 | No emergency mode (`enableEmergencyMode = false`) | `nixos/server/default.nix` | `modules/nixos/server.nix` |
 | LLMNR off in systemd-resolved | `nixos/common/networking.nix` | `modules/nixos/blocky.nix` |
@@ -30,7 +30,12 @@ Rationale, per item:
 - **Watchdog** — AGENTS.md documents a 2026-08-11 total hang (ksoftirqd stuck
   in the rpfilter match) that required a manual cold restart. A hardware
   watchdog would have rebooted the box in ~15 s. Requires `/dev/watchdog`
-  (iTCO_wdt on the N150); see Manual verification below.
+  (iTCO_wdt on the N150). The module is loaded in the **initrd** (`hosts/soyo/boot.nix`):
+  `boot.kernelModules` renders into `/etc/modules-load.d/nixos.conf`, which
+  `systemd-modules-load.service` reads only after PID1 has already tried to
+  arm the watchdog at startup, so the arm would fail silently. From the
+  initrd, `/dev/watchdog` already exists on devtmpfs when stage-2 systemd
+  starts. See Manual verification below.
 - **Sleep off** — an appliance that suspends takes DNS/DHCP offline until
   someone physically wakes it.
 - **No emergency mode** — the emergency shell sits on a console nobody can
@@ -88,8 +93,10 @@ Rationale, per item:
   **not** treat the config as protecting the box until this passes. (The
   systemd option is harmless without a device — it only logs — which is why
   the check is on us.)
-- **Sleep disabled:** `systemctl suspend` must be refused
-  (`Failed to suspend system via logind: Sleep disabled by configuration`).
+- **Sleep disabled:** `systemctl suspend` must exit non-zero and leave the
+  system running. The exact logind message varies by systemd version (e.g.
+  `Call to Suspend failed: Sleep verb 'suspend' is disabled by config`) —
+  treat it as illustrative, not as the pass condition.
 - **Emergency mode:** the config change is verified by a successful normal
   boot; the failure path (boot error → continue instead of emergency shell)
   is covered by the existing boot-generation fallback drills.
