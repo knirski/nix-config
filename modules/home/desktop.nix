@@ -3,7 +3,13 @@
     { pkgs, lib, ... }:
     {
       home = {
-        sessionVariables =
+        sessionVariables = lib.mkMerge [
+          {
+            # $BROWSER for CLI tools that do not speak xdg-open. zbook also
+            # gets this from environment.sessionVariables on the NixOS side.
+            BROWSER = "firefox";
+          }
+
           # GTK_THEME=Adwaita:dark forces Electron's native menu bars
           # (rendered via GTK widgets) to use the dark theme, which
           # Adwaita-dark's CSS/theme settings in dconf don't reliably
@@ -11,9 +17,10 @@
           # Applied globally so every Electron app picks it up without
           # per-app wrapper patches. Harmless on non-Linux/macOS hosts
           # (the env var is simply unused).
-          lib.mkIf pkgs.stdenv.isLinux {
+          (lib.mkIf pkgs.stdenv.isLinux {
             GTK_THEME = "Adwaita:dark";
-          };
+          })
+        ];
 
         # Neovim clipboard integration (requires wl-clipboard on Wayland)
         file.".config/nvim/after/plugin/clipboard.lua".text = ''
@@ -96,6 +103,37 @@
       # stock Ubuntu GNOME base (ubuntu). Darwin (macbook) has no nautilus
       # build: Finder is the default file manager there and `open` resolves
       # folders natively.
+      # Firefox on every desktop host, through the module rather than a bare
+      # package so profiles and policies can be declared later. It supports
+      # darwin (it knows the Library/Application Support layout and the
+      # defaults id), but `package` defaults to pkgs.firefox on every
+      # platform, and that is not in the binary cache for aarch64-darwin --
+      # macbook would compile the browser from source on every bump. Give
+      # darwin firefox-bin, which repackages Mozilla's official build.
+      #
+      # zbook additionally enables NixOS's programs.firefox in
+      # modules/nixos/desktop.nix, so it ends up with the browser in both the
+      # system and user profile. Same derivation, and the user profile takes
+      # precedence on PATH, so this is duplication rather than conflict.
+      programs.firefox = {
+        enable = true;
+        package = if pkgs.stdenv.isDarwin then pkgs.firefox-bin else pkgs.firefox;
+      };
+
+      # Firefox rewrites ~/.config/mimeapps.list itself whenever it decides it
+      # should be the default browser, replacing the symlink with a plain
+      # file. Home Manager then refuses to activate, because backing the file
+      # up would clobber the .backup left by the previous activation. Declare
+      # ownership so it is overwritten instead: the whole point of
+      # xdg.mimeApps is that this file is generated, and anything Firefox
+      # wrote there is exactly what we are overriding.
+      # The guard wraps the whole attribute, not the `force` leaf: setting a
+      # leaf under mkIf still creates the "mimeapps.list" entry, which on
+      # darwin has no source and fails to evaluate.
+      xdg.configFile = lib.mkIf pkgs.stdenv.isLinux {
+        "mimeapps.list".force = true;
+      };
+
       xdg.mimeApps = lib.mkIf pkgs.stdenv.isLinux {
         # HM writes ~/.config/mimeapps.list only when enable is set
         # (default: false) — without it, defaultApplications is inert.
@@ -103,6 +141,19 @@
         defaultApplications = {
           "inode/directory" = "org.gnome.Nautilus.desktop";
           "x-scheme-handler/trash" = "org.gnome.Nautilus.desktop";
+
+          # Firefox for everything web-facing. zbook also gets these at the
+          # system level from modules/nixos/desktop.nix; the user-level file
+          # wins where both exist, and both name firefox.desktop, so they
+          # agree. Ubuntu has no system-level equivalent, which is why the
+          # apt Firefox had claimed the association through a
+          # userapp-Firefox-*.desktop of its own making.
+          "text/html" = "firefox.desktop";
+          "application/xhtml+xml" = "firefox.desktop";
+          "x-scheme-handler/http" = "firefox.desktop";
+          "x-scheme-handler/https" = "firefox.desktop";
+          "x-scheme-handler/about" = "firefox.desktop";
+          "x-scheme-handler/unknown" = "firefox.desktop";
         };
       };
 

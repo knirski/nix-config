@@ -98,21 +98,26 @@ This configuration is shared across multiple hosts. Not all tools are available 
 | **NVIDIA offload** | ✓ | ✗ | ✗ |
 | **Polkit agent** | ✓ | ✗ | ✗ |
 | **XDG portals** | ✓ | ✗ | ✗ |
-| **Firefox** | ✓ | ✗ | ✗ |
+| **Firefox** | ✓ | ✓ | ✓ |
 | **Bitwarden** | ✓ | ✗ | ✓ |
 | **Signal** | ✓ | ✗ | ✓ |
 | **Obsidian** | ✓ | ✗ | ✓ |
 
-Firefox, Bitwarden, Signal, and Obsidian are only declared in
+Bitwarden, Signal, and Obsidian are only declared in
 `modules/home/desktop.nix`'s Linux-only `lib.optionals stdenv.isLinux [...]`
-guard (Bitwarden/Signal/Obsidian) or in `modules/nixos/desktop.nix`'s
-`aspects.nixos.desktop` (Firefox), a NixOS-only aspect namespace that
-neither macbook (nix-darwin) nor ubuntu (standalone Home Manager, no NixOS)
-can import. None of these four are declaratively managed by this repo on
-macbook; Firefox additionally is not declaratively managed on ubuntu. Where
-real hardware needs one of these apps and this repo doesn't manage it,
-install the regular macOS/Ubuntu app yourself (App Store/`.dmg`/`apt`) —
-it is operator-installed, not Nix-managed, on that host.
+guard, so none of the three is declaratively managed on macbook. Where real
+hardware needs one of them and this repo doesn't manage it, install the
+regular macOS app yourself (App Store/`.dmg`) — it is operator-installed,
+not Nix-managed, on that host.
+
+Firefox is managed on all three. `programs.firefox` in the shared
+`modules/home/desktop.nix` covers every host, with darwin taking
+`firefox-bin`: nixpkgs' `firefox` evaluates for aarch64-darwin but is not in
+the binary cache, so macbook would otherwise compile the browser from source
+on every bump. zbook additionally enables NixOS's `programs.firefox` in
+`modules/nixos/desktop.nix`, so it carries the browser in both the system and
+user profile — duplication rather than conflict, since it is the same
+derivation.
 
 The Polkit agent (`polkit_gnome` and its systemd user service) and XDG
 portals (`xdg.portal.enable` plus `xdg-desktop-portal-wlr`/`-gtk`) are

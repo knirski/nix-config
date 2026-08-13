@@ -144,10 +144,14 @@
 
       # Real evaluated presence, per host, for the four apps the matrix
       # claims. zbook/ubuntu/macbook Home Manager closures are compared by
-      # package name (pname falling back to name); Firefox is additionally
-      # checked against zbook's NixOS-level environment.systemPackages,
-      # since it is only ever installed there (aspects.nixos.desktop), never
-      # via Home Manager -- macbook and ubuntu have no route to it at all.
+      # package name (pname falling back to name).
+      #
+      # Firefox now comes from programs.firefox in the shared HM desktop
+      # aspect, so every host has it. zbook is still checked against
+      # environment.systemPackages because aspects.nixos.desktop enables the
+      # NixOS module too, and macbook is checked for firefox-bin: the shared
+      # aspect gives darwin that build, since nixpkgs' firefox is not cached
+      # for aarch64-darwin.
       zbookHome = zbookConfig.home-manager.users.krzysiek;
       zbookSystemPackageNames = packageNames zbookConfig.environment.systemPackages;
       hasPkg = home: name: builtins.elem name (packageNames home.home.packages);
@@ -155,7 +159,7 @@
       evaluatedMatrix = {
         Firefox = {
           zbook = builtins.elem "firefox" zbookSystemPackageNames;
-          macbook = hasPkg macbookHome "firefox";
+          macbook = hasPkg macbookHome "firefox-bin";
           ubuntu = hasPkg ubuntuHome "firefox";
         };
         Bitwarden = {
