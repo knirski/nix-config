@@ -74,7 +74,25 @@ in
             # Requires one system-level file, since /run is a tmpfs -- see
             # docs/ubuntu-adaptations.md.  It points at the profile rather than
             # a store path so it is a GC root and follows each generation.
-            packages = [ pkgs.mesa ];
+            packages = [
+              pkgs.mesa
+
+              # Slack from nixpkgs rather than the snap. The snap's GPU stack
+              # is broken inside its sandbox -- it carries no gpu-2404 content
+              # plug, takes the classic opengl interface, and
+              # /var/lib/snapd/lib/gl is empty, so mesa cannot find
+              # dri_gbm.so and ANGLE fails with "Failed to get system egl
+              # display".  Under X11 Chromium fell back; on Wayland it cannot,
+              # so the process runs fully (network, tray, API) but never maps
+              # a window.  Nothing outside the sandbox can fix that, and
+              # --disable-gpu only buys a software-rendered window.  The
+              # nixpkgs build is the same upstream version and picks up
+              # /run/opengl-driver like every other Nix program here.
+              #
+              # Work-laptop specific, so it stays out of the shared desktop
+              # aspect that zbook and macbook also import.
+              pkgs.slack
+            ];
           };
 
           systemd.user.services = {
