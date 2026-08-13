@@ -9,6 +9,12 @@ default:
 fmt:
     nix fmt
 
+# Apply the Ubuntu-level setup Home Manager cannot own: GDM's display server,
+# /run/opengl-driver, the GDM session entry and the desktop wallpaper.
+# Idempotent; needs sudo for the three system files. See docs/ubuntu-adaptations.md.
+bootstrap-ubuntu-system:
+    ./scripts/bootstrap-ubuntu-system.sh
+
 # Static analysis: all pre-commit hooks (deadnix, statix, typos, shellcheck, ruff, markdownlint, treefmt, ...), gitleaks, and command-code freshness. No special prerequisites (pure Nix build).
 lint:
     nix build path:.#checks.x86_64-linux.pre-commit --no-link
@@ -50,7 +56,7 @@ deploy host="soyo":
     set -euo pipefail
     case "{{host}}" in
       ubuntu)
-        home-manager switch --flake .#ubuntu ;;
+        home-manager switch --flake .#ubuntu -b backup ;;
       macbook)
         darwin-rebuild switch --flake .#macbook ;;
       *)

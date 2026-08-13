@@ -176,6 +176,7 @@ in
           ;
         command-code = pkgs'.callPackage ../../modules/_pkgs/command-code.nix { };
         gcx = pkgs'.callPackage ../../modules/_pkgs/gcx.nix { };
+        rtk = pkgs'.callPackage ../../modules/_pkgs/rtk.nix { };
       };
 
       apps = {
@@ -446,6 +447,7 @@ in
           pkgs.nixos-rebuild
           pkgs.nodejs
           pkgs.sbctl
+          inputs.home-manager.packages.${system}.default
           inputs.agenix-rekey.packages.${system}.default
           inputs.deploy-rs.packages.${system}.default
         ];

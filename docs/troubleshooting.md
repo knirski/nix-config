@@ -190,6 +190,87 @@ pactl list sinks short
 
 **Solution**: Already fixed via `SWAY_UNSUPPORTED_GPU=1` in `modules/nixos/sway.nix`.
 
+### Sway Session Returns Straight to GDM (Ubuntu)
+
+**Symptom**: Selecting the Sway session at GDM drops back to the login screen
+within a second.
+
+**Cause**: Sway could not create a backend. Check which:
+
+```bash
+journalctl -b 0 | grep -E '\[wlr\]|\[sway'
+```
+
+- `Atomic commit failed: Device or resource busy` on every connector — GDM's
+  greeter is running on Xorg and holding DRM master. Fix per step 5 of
+  [`ubuntu-adaptations.md`](ubuntu-adaptations.md).
+- `Found 0 GPUs, cannot create backend` — `WLR_DRM_DEVICES` points at
+  something that does not exist. It is colon-separated, so a
+  `/dev/dri/by-path/pci-0000:00:02.0-card` value is split into three bogus
+  paths; it must be resolved to a `cardN` node first.
+
+### Sway Starts But the Bar Is Missing (Ubuntu)
+
+**Symptom**: Black background and a cursor, no DankMaterialShell.
+
+**Diagnosis**:
+
+```bash
+systemctl --user status dms.service
+systemctl --user show-environment | grep XDG_SESSION_TYPE
+```
+
+- `ConditionEnvironment=XDG_SESSION_TYPE=wayland was not met` while
+  `show-environment` shows `wayland` — the unit was evaluated before Sway
+  pushed the variable and was never retried. `systemctl --user start
+  dms.service` recovers the current session.
+- `show-environment` shows `x11` or a stale desktop inside a Sway session —
+  Sway is on a private D-Bus bus and never reached the user manager. See the
+  `dbus-run-session` note in [`ubuntu-adaptations.md`](ubuntu-adaptations.md).
+- `qt.qpa.wayland: EGL not available` / `Failed to initialize graphics backend
+  for OpenGL` — no EGL vendor. Check `/run/opengl-driver` exists (step 6).
+
+Note that `swaymsg -t get_outputs` returning `[]` is normal when Sway is not
+the foreground VT: logind revokes DRM master, so outputs disappear until you
+switch back. It is not by itself a fault.
+
+### Lock Screen Rejects the Correct Password (Ubuntu)
+
+**Symptom**: after some idle time a lock screen appears and no password is
+accepted. It is not greetd — that is not installed — it is
+DankMaterialShell's own lock, fired by its idle timeout.
+
+**Diagnosis**:
+
+```bash
+journalctl -b 0 | grep dankshell
+```
+
+`pam_unix(dankshell:auth): authentication failure` together with
+`PAM _pam_init_handlers: no default config other` means the shell is using
+Nix's PAM, which cannot reach a setgid `unix_chkpwd`.
+
+**Escape**: from a virtual console, `dms ipc lock unlock` (note that
+`loginctl unlock-session` does not work), or `pkill -x swaylock`.
+
+**Solution**: step 9 of [`ubuntu-adaptations.md`](ubuntu-adaptations.md).
+
+### GTK Apps Hang On Startup Under Sway (Ubuntu)
+
+**Symptom**: Ghostty or another GTK4 app never maps a window; `foot` is fine.
+
+**Cause**: No portal backend implements
+`org.freedesktop.impl.portal.Settings` for a Sway session, so libadwaita
+blocks reading the colour scheme.
+
+**Diagnosis**:
+
+```bash
+journalctl --user -u xdg-desktop-portal.service | grep 'Timeout was reached'
+```
+
+**Solution**: step 7 of [`ubuntu-adaptations.md`](ubuntu-adaptations.md).
+
 ### Screen Tearing
 
 **Symptom**: Visual tearing during video playback or scrolling.

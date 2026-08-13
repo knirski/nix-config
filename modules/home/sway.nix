@@ -1,7 +1,84 @@
 {
   aspects.homeManager.sway =
-    { pkgs, ... }:
+    { lib, pkgs, ... }:
+    let
+      # The shell preferences this repository insists on, recovered by diffing
+      # the old 527-key settings.json dump against the `property` declarations
+      # in DankMaterialShell's SettingsData.qml. Only 19 of those 527 keys
+      # differed from the shell's own defaults; the rest was the shell
+      # agreeing with itself, which is why generating the whole file bought
+      # nothing and cost the shell its ability to persist anything.
+      #
+      # Eight of the 19 were deliberately unpinned and left at the shell's
+      # defaults -- barElevationEnabled, barInsetPaddingSyncAll, cornerRadius,
+      # displayNameMode, dockLauncherLogoColorOverride, dockLauncherLogoMode,
+      # networkPreference and osdPowerProfileEnabled. They are appearance and
+      # convenience toggles worth adjusting from the UI without Nix
+      # reasserting them on the next activation. See the previous commit for
+      # the values they held.
+      #
+      # What remains is behaviour that should be identical on a fresh machine:
+      # when it locks, when it suspends, how it treats the battery, and the
+      # two status icons that are easy to miss are missing.
+      #
+      # Re-applied over the live file on every activation.
+      dmsPinnedSettings = {
+        # Idle, lock and suspend behaviour
+        acLockTimeout = 180;
+        acSuspendTimeout = 600;
+        lockBeforeSuspend = true;
+        lockScreenPowerOffMonitorsOnLock = true;
+        # Power profiles and battery care
+        acProfileName = "2";
+        batteryProfileName = "1";
+        batteryAutoPowerSaver = true;
+        batteryChargeLimit = 80;
+        # Workspace and control-centre indicators
+        showWorkspaceIndex = true;
+        controlCenterShowIdleInhibitorIcon = true;
+        controlCenterShowMicPercent = false;
+      };
+
+      dmsPinnedFile = (pkgs.formats.json { }).generate "dms-pinned.json" dmsPinnedSettings;
+    in
     {
+      # DankMaterialShell owns its own settings.json. It used to be generated
+      # wholesale from a 527-key dump, which made it a read-only store symlink:
+      # the shell could not persist a single change from its UI, and anything
+      # this repository wanted to set had to fight the same file -- the
+      # wallpaper could not go there at all, and the lock command needed
+      # mkForce.
+      #
+      # Now only dmsPinnedSettings above is enforced, merged over whatever the
+      # shell has. Two ordering details matter. This runs *before*
+      # linkGeneration, because that step deletes symlinks the new generation
+      # no longer declares -- an entry ordered after it finds the old file
+      # already gone and silently migrates nothing. And the merge is
+      # `live * pinned`, so pinned keys win while the shell's own keys are
+      # preserved.
+      home.activation.dankMaterialShellSettings = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
+        target="''${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/settings.json"
+        run mkdir -p "$(dirname "$target")"
+
+        # A symlink is the old store-managed file: keep its contents, drop the
+        # link, so no setting is lost on the way out of wholesale management.
+        if [ -L "$target" ]; then
+          resolved=$(readlink -f "$target")
+          run rm -f "$target"
+          [ -f "$resolved" ] && run install -m 0644 "$resolved" "$target"
+        fi
+
+        if [ -f "$target" ]; then
+          tmp=$(mktemp)
+          if ${pkgs.jq}/bin/jq -s '.[0] * .[1]' "$target" ${dmsPinnedFile} >"$tmp"; then
+            run install -m 0644 "$tmp" "$target"
+          fi
+          rm -f "$tmp"
+        else
+          run install -m 0644 ${dmsPinnedFile} "$target"
+        fi
+      '';
+
       home.packages = with pkgs; [
         libnotify
         # Wayland/Sway utilities
@@ -197,7 +274,6 @@
           enableDynamicTheming = true;
           enableVPN = false;
           enableCalendarEvents = false;
-          settings = builtins.fromJSON (builtins.readFile ./dms-settings.json);
           clipboardSettings = {
             disabled = false;
             maxHistory = 100;
@@ -227,6 +303,43 @@
         dank-calendar = {
           enable = true;
           systemd.enable = true;
+        };
+      };
+
+      # These services are enabled by the shared graphical-session target,
+      # which display managers reuse for non-Sway sessions too (Regolith on
+      # the Ubuntu host).  Keep the DMS stack out of X11 sessions so those
+      # remain a usable fallback when Sway is not selected.
+      #
+      # Only the condition is shared.  The services' PATH is a host concern:
+      # on NixOS the inherited systemd-user PATH is already correct, and
+      # overriding it here would drop /run/current-system/sw/bin (where
+      # ddcutil lives for DMS's DDC/CI brightness).  modules/parts/ubuntu.nix
+      # sets it for standalone Home Manager, which has no such PATH.
+      # Upstream wants both units from graphical-session.target.  That target
+      # is activated once and then stays up, and systemd evaluates
+      # ConditionEnvironment only at the start attempt: if anything reaches
+      # graphical-session.target before Sway has pushed XDG_SESSION_TYPE into
+      # the user manager (a crashed session attempt is enough), both units are
+      # recorded as skipped and never retried for the rest of the login.
+      # Also want them from sway-session.target, which Sway starts and stops
+      # on every run, so a fresh compositor always gets a fresh start attempt.
+      systemd.user.services = {
+        dms = {
+          Unit = {
+            ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
+            PartOf = [ "sway-session.target" ];
+            After = [ "sway-session.target" ];
+          };
+          Install.WantedBy = [ "sway-session.target" ];
+        };
+        dcal = {
+          Unit = {
+            ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
+            PartOf = [ "sway-session.target" ];
+            After = [ "sway-session.target" ];
+          };
+          Install.WantedBy = [ "sway-session.target" ];
         };
       };
 
@@ -273,6 +386,7 @@
           Description = "Inhibit sleep while MPRIS media is playing";
           After = [ "graphical-session.target" ];
           PartOf = [ "graphical-session.target" ];
+          ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
         };
         Service = {
           ExecStart = "${

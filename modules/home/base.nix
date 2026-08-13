@@ -441,6 +441,12 @@
 
                 ${sharedEnv}
 
+                # Keep machine-local secrets and shell helpers out of the Nix
+                # store while making them available to every interactive zsh.
+                if [[ -r "$HOME/.envvars" ]]; then
+                  source "$HOME/.envvars"
+                fi
+
                 # Custom functions (interactive shells only)
                 if [[ $- == *i* ]]; then
                   mkcd() { mkdir -p "$1" && cd "$1"; }
@@ -523,14 +529,22 @@
             # Use delta as pager
             core.pager = "delta";
             interactive.diffFilter = "delta --color-only";
+            # SSH commit signing. The key is served by the gcr agent, which
+            # the graphical session points SSH_AUTH_SOCK at, so signing needs
+            # no passphrase prompt in a logged-in session.
+            commit.gpgsign = true;
+            gpg.format = "ssh";
+            # Without this, `git log --show-signature` and `git verify-commit`
+            # report "gpg.ssh.allowedSignersFile needs to be configured" even
+            # though the signatures are perfectly valid -- SSH signing has no
+            # web of trust, so verification needs an explicit principal-to-key
+            # map. Add a line per additional signing key.
+            gpg.ssh.allowedSignersFile = "${config.xdg.configHome}/git/allowed_signers";
             delta = {
               navigate = true;
               light = false;
               line-numbers = true;
             };
-            # SSH commit signing
-            commit.gpgsign = true;
-            gpg.format = "ssh";
             # Useful aliases
             alias = {
               lg = "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
@@ -549,6 +563,13 @@
       # gpg-agent is only meaningful where GPG_TTY/systemd-user-session
       # integration applies; darwin gets its own agent wiring (or none) from
       # aspects.homeManager.desktop/aerospace, not from base.
+      # Principal-to-key map for verifying SSH-signed commits. Public keys
+      # only, so this is safe to keep in the repository; the private half
+      # never leaves the machine. One line per signing key, principal first.
+      xdg.configFile."git/allowed_signers".text = ''
+        krzysztof.nirski+github@gmail.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKnAGjndiJo+t1NCjH0s9i+AMUyJTZEnID4HHdrLWuX7
+      '';
+
       services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {
         enable = true;
         enableZshIntegration = true;

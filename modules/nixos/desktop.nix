@@ -57,9 +57,10 @@
       # overrides inode/directory and trash://; every other type falls
       # through to this file, so http(s) and text/html resolve to Firefox
       # for xdg-open, gio, and apps that open links (Thunderbird, ...).
-      # Kept here (not in the shared HM desktop aspect) because Firefox is
-      # installed only on this host — see macbook-desktop-checks.nix's
-      # Firefox matrix row (zbook ✓, macbook/ubuntu ✗).
+      # Kept as the system-level fallback for anything reading
+      # /etc/xdg/mimeapps.list. The shared HM desktop aspect now sets the same
+      # associations per user on every host, and the user file wins where both
+      # exist; both name firefox.desktop, so they agree.
       xdg.mime.defaultApplications = {
         "text/html" = "firefox.desktop";
         "x-scheme-handler/http" = "firefox.desktop";
