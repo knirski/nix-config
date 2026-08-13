@@ -39,6 +39,12 @@ enforcement belongs to the documentation-check layer.
 - [Ubuntu machine adaptations](ubuntu-adaptations.md) — the Ubuntu-level setup
   Home Manager cannot own: GDM's display server, `/run/opengl-driver`, XDG
   portal backends and the GDM session entry.
+- [The Ubuntu ↔ Nix surface](ubuntu-nix-surface.md) — the boundary reference:
+  every crossing point between the Ubuntu OS and the Home Manager
+  environment, and what breaks when one side drifts.
+- [Upgrade Ubuntu LTS](ubuntu-upgrade.md) — 24.04 → 26.04 in-place upgrade:
+  pre-flight checks, what survives, and the post-upgrade surface
+  verification checklist.
 - [Set up a workstation](workstation-setup.md) — recommended tooling and CLI setup.
 - [Windows on USB SSD (win-usb)](win-usb.md) — boot the USB Windows in a VM, snapshot and restore it.
 - [Troubleshooting](troubleshooting.md) — common issues and debugging steps.
