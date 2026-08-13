@@ -48,6 +48,7 @@
     "hosts/macbook/INSTALL.md": { "status": "active", "role": "macbook installation index" },
     "docs/install-macbook.md": { "status": "active", "role": "macbook installation runbook" },
     "docs/install-ubuntu.md": { "status": "active", "role": "ubuntu installation runbook" },
+    "docs/ubuntu-adaptations.md": { "status": "active", "role": "Ubuntu system setup runbook" },
     "docs/superpowers/specs/repository-gaps-and-improvements.md": { "status": "superseded", "role": "dated gap-analysis record", "replacement": "docs/superpowers/plans/2026-07-23-repository-assessment-remediation.md" }
   }
 }
