@@ -36,7 +36,7 @@ workstation concerns.
 This is the repository's sole active implementation plan. It supersedes the
 [2026-07-12 correctness and resilience plan](2026-07-12-correctness-resilience-docs.md)
 and the earlier
-[repository gaps and improvements plan](../specs/repository-gaps-and-improvements.md).
+[repository gaps and improvements plan](../../archive/2026-07-22-repository-gaps-and-improvements.md).
 Those documents remain available as dated planning evidence, but their task
 lists are frozen and must not be implemented independently.
 
@@ -841,7 +841,7 @@ Dependencies: C1 through M1 as applicable
 Likely files:
 
 - [`docs/learning/project-assessment.md`](../../learning/project-assessment.md)
-- [`docs/superpowers/specs/repository-gaps-and-improvements.md`](../specs/repository-gaps-and-improvements.md)
+- [`docs/archive/2026-07-22-repository-gaps-and-improvements.md`](../../archive/2026-07-22-repository-gaps-and-improvements.md)
 - [`docs/status.json`](../../status.json)
 - [`docs/README.md`](../../README.md)
 - canonical and subsystem documentation touched by earlier tasks

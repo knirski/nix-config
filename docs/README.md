@@ -96,8 +96,6 @@ enforcement belongs to the documentation-check layer.
   — implementation record for local snapshot recovery coverage.
 - [Superseded correctness and resilience plan](superpowers/plans/2026-07-12-correctness-resilience-docs.md)
   — frozen record of the previous implementation phase.
-- [Superseded repository gaps and improvements](superpowers/specs/repository-gaps-and-improvements.md)
-  — dated gap analysis retained for historical context.
 
 ### Architecture and topology
 

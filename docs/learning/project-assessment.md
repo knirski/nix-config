@@ -360,7 +360,7 @@ scope):
   `tailscale.nix`, `backup.nix`, or `maintenance.nix` mirroring the NixOS
   aspects soyo/zbook get; macbook would deploy today without those system-level
   aspects (see the frozen
-  [`repository-gaps-and-improvements.md`](../superpowers/specs/repository-gaps-and-improvements.md)'s
+  [`repository-gaps-and-improvements.md`](../archive/2026-07-22-repository-gaps-and-improvements.md)'s
   H1 finding, still accurate).
 - Hardware validation itself — first `darwin-rebuild switch`, first
   `home-manager switch --flake .#ubuntu`, and confirming the documented login
