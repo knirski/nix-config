@@ -138,11 +138,31 @@ in
           # key as "" for every host that imports the Sway aspect.
           programs.dank-material-shell.settings.customPowerActionLock = lib.mkForce "/usr/bin/swaylock -f -c 14181C";
 
-          # Distinguishes this machine from the other hosts at a glance. Set on
-          # Sway's output, which renders the background itself and so needs no
-          # extra service. Note DankMaterialShell cannot own it: its whole
-          # settings.json is already a read-only store symlink, so a wallpaper
-          # chosen from its UI could never be written back.
+          # Distinguishes this machine from the other hosts at a glance.
+          #
+          # Published at a stable path rather than referenced by store path.
+          # DankMaterialShell records the desktop wallpaper in session.json,
+          # which is mutable runtime state it writes itself (notepad tabs and
+          # the like live there too), so that value cannot be generated from
+          # Nix without freezing the whole file. Pointing it at this symlink
+          # instead keeps the recorded path valid across rebuilds, and the
+          # profile keeps the image from being garbage collected.
+          #
+          # Set it once with:
+          #   dms ipc wallpaper set ~/.local/share/wallpapers/hive-grid.png
+          #
+          # Sway's own background is still set. It is what shows before
+          # DankMaterialShell is up, or at all if the shell is not running;
+          # when it is, its background layer covers swaybg, since that layer
+          # is always an opaque colour and offers no transparent mode.
+          #
+          # Sway takes the store path directly. It must: home-manager
+          # validates the generated config with `sway --validate` inside the
+          # build sandbox, where the home directory does not exist, so a path
+          # under ~ fails the check. Only the shell needs the stable symlink,
+          # because only the shell writes the path into mutable state.
+          home.file.".local/share/wallpapers/hive-grid.png".source = wallpaper;
+
           wayland.windowManager.sway.config.output."*".bg = "${wallpaper} fill";
 
           # Ubuntu ships no portal backend that serves
