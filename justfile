@@ -50,7 +50,7 @@ deploy host="soyo":
     set -euo pipefail
     case "{{host}}" in
       ubuntu)
-        home-manager switch --flake .#ubuntu ;;
+        home-manager switch --flake .#ubuntu -b backup ;;
       macbook)
         darwin-rebuild switch --flake .#macbook ;;
       *)

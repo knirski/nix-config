@@ -230,6 +230,43 @@
         };
       };
 
+      # These services are enabled by the shared graphical-session target,
+      # which display managers reuse for non-Sway sessions too (Regolith on
+      # the Ubuntu host).  Keep the DMS stack out of X11 sessions so those
+      # remain a usable fallback when Sway is not selected.
+      #
+      # Only the condition is shared.  The services' PATH is a host concern:
+      # on NixOS the inherited systemd-user PATH is already correct, and
+      # overriding it here would drop /run/current-system/sw/bin (where
+      # ddcutil lives for DMS's DDC/CI brightness).  modules/parts/ubuntu.nix
+      # sets it for standalone Home Manager, which has no such PATH.
+      # Upstream wants both units from graphical-session.target.  That target
+      # is activated once and then stays up, and systemd evaluates
+      # ConditionEnvironment only at the start attempt: if anything reaches
+      # graphical-session.target before Sway has pushed XDG_SESSION_TYPE into
+      # the user manager (a crashed session attempt is enough), both units are
+      # recorded as skipped and never retried for the rest of the login.
+      # Also want them from sway-session.target, which Sway starts and stops
+      # on every run, so a fresh compositor always gets a fresh start attempt.
+      systemd.user.services = {
+        dms = {
+          Unit = {
+            ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
+            PartOf = [ "sway-session.target" ];
+            After = [ "sway-session.target" ];
+          };
+          Install.WantedBy = [ "sway-session.target" ];
+        };
+        dcal = {
+          Unit = {
+            ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
+            PartOf = [ "sway-session.target" ];
+            After = [ "sway-session.target" ];
+          };
+          Install.WantedBy = [ "sway-session.target" ];
+        };
+      };
+
       # ── Clipboard architecture ────────────────────────────────────────────
       #
       # DMS owns the regular Wayland CLIPBOARD selection (history at Mod4+v).
@@ -273,6 +310,7 @@
           Description = "Inhibit sleep while MPRIS media is playing";
           After = [ "graphical-session.target" ];
           PartOf = [ "graphical-session.target" ];
+          ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
         };
         Service = {
           ExecStart = "${

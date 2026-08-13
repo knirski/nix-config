@@ -447,6 +447,7 @@ in
           pkgs.nixos-rebuild
           pkgs.nodejs
           pkgs.sbctl
+          inputs.home-manager.packages.${system}.default
           inputs.agenix-rekey.packages.${system}.default
           inputs.deploy-rs.packages.${system}.default
         ];
