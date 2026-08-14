@@ -128,11 +128,14 @@
 
           if ddcutil setvcp 0x60 "$vcp"; then
             exit 0
+          else
+            # An `if` without an `else` returns status 0 when its condition
+            # fails, so `$?` must be captured here, not after the `if`.
+            rc=$?
+            notify-send -a desk-switch -u critical "Desk switch to $target failed" \
+              "Monitor unreachable via DDC/CI (exit $rc). Is it on and is the cable connected?"
+            exit "$rc"
           fi
-          rc=$?
-          notify-send -a desk-switch -u critical "Desk switch to $target failed" \
-            "Monitor unreachable via DDC/CI (exit $rc). Is it on and is the cable connected?"
-          exit "$rc"
         '';
       };
     in
