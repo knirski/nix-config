@@ -157,8 +157,10 @@ Existing examples:
   PM QoS block (`pm_qos_latency_tolerance_us` = 0, re-asserted by
   disable-nvme-apst), and `disable-aspm.service` in `modules/nixos/laptop.nix`,
   which clears the LNKCTL bits[1:0] + L1SubCtl1 bits[3:0] enables directly
-  via setpci (the only mechanism that bypasses the firmware's refusal),
-  re-applied on boot and after resume.
+  via [setpci(8)](https://man.archlinux.org/man/setpci.8) — see also the
+  kernel [PCI power management docs](https://docs.kernel.org/driver-api/pci/power-management.html) —
+  the only mechanism that bypasses the firmware's refusal, re-applied on
+  boot and after resume.
   2026-08-11: boot -1 ended abruptly at 02:22:13 with no kernel messages, and
   boot 0 logged `system.journal corrupted or uncleanly shut down` at 03:03:12
   — a ~41-min dark gap resolved by a forced cold shutdown. 2026-08-14: boot -1

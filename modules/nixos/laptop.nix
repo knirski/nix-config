@@ -108,7 +108,9 @@
         # 0x0042/0x0c42, ASPM L1 enabled on both ends of the NVMe link).
         # The real lever is disable-aspm.service below, which clears the
         # LNKCTL/L1SubCtl1 enables directly via setpci on boot and resume.
-        # This param is kept as documentation of intent only.
+        # This param is kept as documentation of intent only. See the
+        # kernel's PCI power management docs for ASPM semantics:
+        # https://docs.kernel.org/driver-api/pci/power-management.html
         # https://docs.kernel.org/admin-guide/kernel-parameters.html
         "pcie_aspm=off"
       ];
@@ -202,6 +204,10 @@
         # root port 00:06.2 caps at 0x40/0x200. Clearing LNKCTL bits[1:0]
         # (ASPM L0s/L1) and L1SubCtl1 bits[3:0] (L1.1/L1.2 substate
         # enables) prevents any L1 entry on the NVMe link.
+        #
+        # References: kernel PCI power management docs (ASPM semantics)
+        # https://docs.kernel.org/driver-api/pci/power-management.html,
+        # setpci(8) man page https://man.archlinux.org/man/setpci.8.
         disable-aspm = {
           description = "Clear PCIe ASPM L1 enables on the NVMe link (boot and resume)";
           after = [
