@@ -302,6 +302,28 @@ DMS provides:
 - **Power menu**: Logout, reboot, shutdown, lock (Mod+X)
 - **Lock screen**: Fade-to-lock with password
 
+### Shared desk switching (zbook ↔ ubuntu)
+
+The Iiyama PL2792Q, Logitech MX Master 2S and K860 are shared between zbook
+(DisplayPort) and ubuntu (HDMI). One keybinding per direction moves both the
+monitor input (DDC/CI via `ddcutil`) and the devices (Logitech HID++
+change-host via `solaar-cli`) — implemented in `modules/home/desk-switch.nix`.
+
+| Key | Action |
+|-----|--------|
+| `Mod+Insert` | Desk → zbook: devices to channel 1, monitor to DisplayPort |
+| `Mod+Home` | Desk → ubuntu: devices to channel 2, monitor to HDMI |
+
+The combo is pressed on the machine the devices are currently connected to
+and works from either host (a device not on the local receiver is already
+on the target). ubuntu additionally needs the system-level peripheral
+access from [docs/ubuntu-adaptations.md](ubuntu-adaptations.md) step 11.
+
+**Prerequisite:** each device must be paired to both receivers on the
+channels above — already done; the one-time pairing recipe (needed again
+only after a factory reset) is in the “One-time pairing” section of the
+`desk-switch` module header.
+
 ### Fonts
 
 - **UI**: Inter Variable

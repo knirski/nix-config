@@ -56,6 +56,7 @@ in
                 config.aspects.homeManager.ssh
                 config.aspects.homeManager.sway
                 config.aspects.homeManager.kanshi
+                config.aspects.homeManager.deskSwitch
                 ../../hosts/zbook/kanshi.nix
                 inputs.dms.homeModules.dank-material-shell
                 inputs.dcal.homeModules.dank-calendar

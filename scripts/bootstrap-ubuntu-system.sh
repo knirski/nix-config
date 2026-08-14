@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Applies the Ubuntu-level setup Home Manager cannot own.
 #
-# Three files live outside every Home Manager generation, so a reinstall (or
+# These files live outside every Home Manager generation, so a reinstall (or
 # anyone who deletes one by accident) silently loses a working session: no
-# Wayland greeter, no GL for Nix programs, or no session entry in GDM. Each
-# failure looks like something else -- a black screen, "Failed to create EGL
-# display", or Sway simply missing from the session list -- so rediscovering
-# them costs far more than reapplying them.
+# Wayland greeter, no GL for Nix programs, no session entry in GDM, or no
+# DDC/CI access for monitor control. Each failure looks like something else
+# -- a black screen, "Failed to create EGL display", Sway simply missing from
+# the session list, or ddcutil "Permission denied" -- so rediscovering them
+# costs far more than reapplying them.
 #
 # Idempotent: every step checks before writing and reports what it did.
-# Requires sudo for the three system files; the wallpaper step does not.
+# Requires sudo for the four system steps; the wallpaper step does not.
 #
 # See docs/ubuntu-adaptations.md for why each one is needed.
 set -euo pipefail
@@ -22,7 +23,7 @@ needs_relogin=0
 say() { printf '  %s\n' "$*"; }
 step() { printf '\n== %s\n' "$*"; }
 
-step "1/4  GDM must run Wayland"
+step "1/5  GDM must run Wayland"
 if [ ! -f /etc/gdm3/custom.conf ]; then
   say "SKIP  /etc/gdm3/custom.conf not present (not a GDM system?)"
 elif grep -qE '^WaylandEnable=false' /etc/gdm3/custom.conf; then
@@ -33,7 +34,7 @@ else
   say "OK    Wayland already enabled"
 fi
 
-step "2/4  /run/opengl-driver for Nix OpenGL"
+step "2/5  /run/opengl-driver for Nix OpenGL"
 tmpfiles=/etc/tmpfiles.d/nix-opengl-driver.conf
 want="L+ /run/opengl-driver - - - - $USER_HOME/.nix-profile"
 if [ -f "$tmpfiles" ] && grep -qF "$want" "$tmpfiles"; then
@@ -51,7 +52,7 @@ else
   say "OK    /run/opengl-driver -> $(readlink /run/opengl-driver)"
 fi
 
-step "3/4  GDM session entry"
+step "3/5  GDM session entry"
 desktop=/usr/share/wayland-sessions/sway-nix.desktop
 launcher="$USER_HOME/.local/bin/sway-ubuntu-session"
 if [ -f "$desktop" ] && grep -qF "Exec=$launcher" "$desktop"; then
@@ -72,7 +73,7 @@ if [ ! -x "$launcher" ]; then
   say "WARN  $launcher is missing -- run the Home Manager switch first"
 fi
 
-step "4/4  Desktop wallpaper"
+step "4/5  Desktop wallpaper"
 # The shell records this in session.json, which is mutable state it writes
 # itself, so it cannot be generated from Nix without freezing the whole file.
 wallpaper="$USER_HOME/.local/share/wallpapers/hive-grid.png"
@@ -89,6 +90,51 @@ else
   else
     say "WARN  could not reach the shell over IPC (is the session running?)"
   fi
+fi
+
+step "5/5  i2c-dev + Logitech hidraw access for desk peripherals"
+# The desk-switch keybinding (Mod4+Insert / Mod4+Home) uses ddcutil over
+# DDC/CI and solaar-cli over the Logitech receiver's hidraw node. Ubuntu's
+# kernel does not auto-load i2c-dev, the /dev/i2c-* nodes are root:root 0600
+# without a udev rule, and the Nix solaar package (unlike the apt one) ships
+# no udev rules for /dev/hidraw*. NixOS hosts get all of this via
+# hardware.i2c and hardware.logitech.wireless (see modules/nixos/sway.nix and
+# modules/nixos/logitech.nix); standalone Home Manager cannot own system
+# files, so they live here.
+modconf=/etc/modules-load.d/i2c-dev.conf
+if [ -f "$modconf" ] && grep -qE '^i2c-dev$' "$modconf"; then
+  say "OK    $modconf already loads i2c-dev"
+else
+  printf 'i2c-dev\n' | sudo tee "$modconf" >/dev/null
+  say "DONE  wrote $modconf"
+  changed=1
+fi
+if ! ls /dev/i2c-* >/dev/null 2>&1; then
+  sudo modprobe i2c-dev
+  say "DONE  loaded i2c-dev"
+  changed=1
+fi
+udev_rule=/etc/udev/rules.d/91-i2c-ddcutil.rules
+want_rule="SUBSYSTEM==\"i2c-dev\", GROUP=\"$USER_NAME\", MODE=\"0660\""
+if [ -f "$udev_rule" ] && grep -qF "GROUP=\"$USER_NAME\"" "$udev_rule"; then
+  say "OK    $udev_rule grants i2c-dev to $USER_NAME"
+else
+  printf '%s\n' "$want_rule" | sudo tee "$udev_rule" >/dev/null
+  sudo udevadm control --reload-rules
+  sudo udevadm trigger --subsystem-match=i2c-dev
+  say "DONE  wrote $udev_rule (i2c nodes now readable by $USER_NAME)"
+  changed=1
+fi
+hidraw_rule=/etc/udev/rules.d/92-logitech-hidraw.rules
+want_hidraw="KERNEL==\"hidraw*\", SUBSYSTEM==\"hidraw\", ATTRS{idVendor}==\"046d\", MODE=\"0660\", GROUP=\"$USER_NAME\""
+if [ -f "$hidraw_rule" ] && grep -qF "ATTRS{idVendor}==\"046d\"" "$hidraw_rule"; then
+  say "OK    $hidraw_rule grants Logitech hidraw to $USER_NAME"
+else
+  printf '%s\n' "$want_hidraw" | sudo tee "$hidraw_rule" >/dev/null
+  sudo udevadm control --reload-rules
+  sudo udevadm trigger --subsystem-match=hidraw
+  say "DONE  wrote $hidraw_rule (Logitech hidraw nodes now readable by $USER_NAME)"
+  changed=1
 fi
 
 printf '\n'
