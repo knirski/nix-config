@@ -1,4 +1,14 @@
 {
+  # Laptop aspect. Currently enabled on zbook only — the flake's sole NixOS
+  # laptop (soyo is an appliance; macbook/ubuntu are nix-darwin/standalone
+  # HM). Generic laptop plumbing (power management, lid handling, backlight)
+  # sits alongside zbook-verified NVMe hardening: the disable-aspm.service
+  # BDFs and capability offsets (03:00.0/00:06.2, caps 0x70/0x1fc/0x40/0x200)
+  # and the firmware-behavior assumptions (HP refuses _OSC ASPM control) are
+  # platform-specific — if another laptop ever enables this aspect, re-verify
+  # those before trusting the ASPM/PCI config-space writes. The APST pieces
+  # (nvme_core.default_ps_max_latency_us=0 param, disable-nvme-apst.service)
+  # are generic and safe on any NVMe machine. See AGENTS.md "Recurrent wedge".
   aspects.nixos.laptop =
     { lib, pkgs, ... }:
     {
