@@ -75,7 +75,7 @@
         smartdSelfTestSchedule = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = "(S/../.././02|L/../../7/03)";
-          description = "smartd -s self-test schedule (short daily 02:00, long Sunday 03:00), or null to disable scheduled self-tests entirely. Set to null on hosts whose drives have wedged during a test — see AGENTS.md 'Recurrent wedge'.";
+          description = "smartd -s self-test schedule (short daily 02:00, long Sunday 03:00), or null to disable scheduled self-tests entirely. Wires the smartd.conf(5) -s directive; see the NixOS services.smartd options reference (https://search.nixos.org/options?query=services.smartd) and AGENTS.md 'Recurrent wedge' for why a host would disable the schedule.";
         };
       };
 
