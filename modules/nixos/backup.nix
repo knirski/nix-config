@@ -399,6 +399,16 @@
                 onCalendar = "daily";
                 settings = {
                   timestamp_format = "long";
+                  # nixpkgs' btrbk module defaults to `backend btrfs-progs-sudo`
+                  # with the service running as user `btrbk` (it even generates
+                  # a NOPASSWD sudoers rule for that user). The srvos hardening
+                  # `security.sudo.execWheelOnly = true` (2026-08-13) makes the
+                  # sudo setuid wrapper executable by wheel only, so that
+                  # default fails on every run with `/run/wrappers/bin/sudo:
+                  # Permission denied`. Running as root with the plain btrfs
+                  # backend needs no sudo at all; the unit override below
+                  # supplies btrfs/mkdir/readlink in PATH.
+                  backend = "btrfs-progs";
                   volume."/" = {
                     subvolume = lib.listToAttrs (
                       map (vol: {
@@ -431,6 +441,13 @@
               };
             };
             systemd.services."btrbk-${hostName}" = {
+              # The plain btrfs-progs backend calls btrfs/mkdir/readlink
+              # directly (no sudo), so add them to PATH — nixpkgs' default
+              # only has /run/wrappers (for the sudo it no longer uses).
+              path = lib.mkAfter [
+                "${pkgs.btrfs-progs}/bin"
+                "${pkgs.coreutils}/bin"
+              ];
               serviceConfig = lib.mkMerge [
                 (lib.mkIf cfg.isolateResources {
                   MemoryMax = "512M";
@@ -439,6 +456,13 @@
                   IOWeight = 25;
                 })
                 {
+                  # Override nixpkgs' User=btrbk/Group=btrbk default (see the
+                  # backend comment above): with execWheelOnly the btrbk user
+                  # cannot exec the sudo wrapper, and as root the plain btrfs
+                  # backend needs no privileges at all. mkForce because nixpkgs
+                  # defines both as plain values.
+                  User = lib.mkForce "root";
+                  Group = lib.mkForce "root";
                   # Same immutable-success-marker rationale as the restic
                   # unit above — btrbk-<host>.service is a single-ExecStart
                   # oneshot, so appending here (lib.mkAfter) still only fires

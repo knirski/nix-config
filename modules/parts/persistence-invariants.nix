@@ -188,8 +188,10 @@
               # The healthcheck's backup-freshness probe reads these markers;
               # without persistence every reboot resets them to "never ran"
               # even when backups are healthy. Ownership matters: btrbk runs
-              # as its own service user, restic as root (the preservation
-              # default for plain-string entries).
+              # as root (since the 2026-08-13 execWheelOnly hardening broke
+              # its nixpkgs-default btrbk user + sudo path — see
+              # modules/nixos/backup.nix), restic as root; both are
+              # plain-string entries (preservation's root-ownership default).
               name = "${host}: backup freshness markers are persisted with correct ownership";
               pass =
                 let
@@ -197,8 +199,8 @@
                   resticEntry = directoryEntry host "/var/lib/restic-backups-${host}";
                 in
                 btrbkEntry != null
-                && btrbkEntry.user == "btrbk"
-                && btrbkEntry.group == "btrbk"
+                && btrbkEntry.user == "root"
+                && btrbkEntry.group == "root"
                 && resticEntry != null
                 && resticEntry.user == "root"
                 && resticEntry.group == "root";

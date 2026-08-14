@@ -70,7 +70,12 @@
         smartdDevices = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ "/dev/disk/by-id/ata-PELADN_512GB_20250522100164" ];
-          description = "Disks monitored by smartd with self-test schedule (short daily 02:00, long Sunday 03:00).";
+          description = "Disks monitored by smartd (attribute polling + scheduled self-tests per smartdSelfTestSchedule).";
+        };
+        smartdSelfTestSchedule = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = "(S/../.././02|L/../../7/03)";
+          description = "smartd -s self-test schedule (short daily 02:00, long Sunday 03:00), or null to disable scheduled self-tests entirely. Wires the smartd.conf(5) -s directive; see the NixOS services.smartd options reference (https://search.nixos.org/options?query=services.smartd) and AGENTS.md 'Recurrent wedge' for why a host would disable the schedule.";
         };
       };
 
@@ -105,7 +110,12 @@
               # smartd to run the script with no stdin and no argv — every
               # event fact arrives as an environment variable instead, which
               # is what smartdNotify below reads.
-              options = "-s (S/../.././02|L/../../7/03) -m <nomailer> -M exec ${lib.getExe smartdNotify}";
+              # The -s schedule is opt-out per host (smartdSelfTestSchedule = null)
+              # because zbook's InnoGrit NVMe has wedged twice within seconds of
+              # the test start — see AGENTS.md "Recurrent wedge".
+              options =
+                lib.optionalString (cfg.smartdSelfTestSchedule != null) "-s ${cfg.smartdSelfTestSchedule} "
+                + "-m <nomailer> -M exec ${lib.getExe smartdNotify}";
             }) cfg.smartdDevices;
           };
         };

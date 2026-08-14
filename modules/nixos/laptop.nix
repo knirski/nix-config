@@ -90,13 +90,27 @@
         # per-controller runtime re-assert.)
         # https://docs.kernel.org/admin-guide/kernel-parameters.html
         "nvme_core.default_ps_max_latency_us=0"
-        # Disable PCIe ASPM entirely. The APST disable above alone did not
-        # stop the wedge (observed: crash recurred with APST fully off), so
-        # the failing power state is the link itself (ASPM L1), not the
+        # Disable PCIe ASPM. The APST disable above alone did not stop the
+        # wedge (observed: crash recurred with APST fully off), so the
+        # failing power state is the link itself (ASPM L1), not the
         # controller's internal states. This platform cannot report PCIe
         # link errors, so a wedged link is silent — the disk just stops
         # answering and only a cold reboot recovers. Costs a little battery;
         # worth it.
+        #
+        # IMPORTANT (verified 2026-08-14): NO pcie_aspm= value has any
+        # effect on this platform. The HP firmware refuses to grant the OS
+        # _OSC control of ASPM — in 30 pre-param boots the kernel requested
+        # it and was granted everything except ASPM every time
+        # (`_OSC: OS now controls [PCIeHotplug PME PCIeCapability LTR]`),
+        # and the kernel docs say the parameter is a no-op without OS
+        # control. The registers stay firmware-programmed (LNKCTL raw
+        # 0x0042/0x0c42, ASPM L1 enabled on both ends of the NVMe link).
+        # The real lever is disable-aspm.service below, which clears the
+        # LNKCTL/L1SubCtl1 enables directly via setpci on boot and resume.
+        # This param is kept as documentation of intent only. See the
+        # kernel's PCI power management docs for ASPM semantics:
+        # https://docs.kernel.org/driver-api/pci/power-management.html
         # https://docs.kernel.org/admin-guide/kernel-parameters.html
         "pcie_aspm=off"
       ];
@@ -170,6 +184,60 @@
               [ -w "$qos" ] || continue
               echo 0 > "$qos"
             done
+          '';
+        };
+
+        # The HP firmware refuses to grant the OS _OSC control of ASPM
+        # (verified: in 30 pre-param boots the kernel requested control and
+        # was granted everything except ASPM every time), so no pcie_aspm=
+        # kernel parameter can ever clear the link's ASPM bits — the
+        # firmware has L1 enabled on both ends of the NVMe link (LNKCTL raw
+        # 0x0042 / 0x0c42). setpci writes the PCI config space directly,
+        # bypassing the _OSC gate; the kernel never touches these registers
+        # because it does not manage ASPM on this platform. The firmware
+        # re-asserts its LNKCTL settings at every boot and after s2idle
+        # resume, so re-apply here and on sleep.target, same pattern as
+        # disable-nvme-apst.
+        #
+        # Offsets (verified 2026-08-14): LNKCTL = Express-cap + 0x10,
+        # L1SubCtl1 = L1PM-cap + 0x08. Endpoint 03:00.0 caps at 0x70/0x1fc;
+        # root port 00:06.2 caps at 0x40/0x200. Clearing LNKCTL bits[1:0]
+        # (ASPM L0s/L1) and L1SubCtl1 bits[3:0] (L1.1/L1.2 substate
+        # enables) prevents any L1 entry on the NVMe link.
+        #
+        # References: kernel PCI power management docs (ASPM semantics)
+        # https://docs.kernel.org/driver-api/pci/power-management.html,
+        # setpci(8) man page https://man.archlinux.org/man/setpci.8.
+        disable-aspm = {
+          description = "Clear PCIe ASPM L1 enables on the NVMe link (boot and resume)";
+          after = [
+            "systemd-suspend.service"
+            "systemd-hibernate.service"
+          ];
+          wantedBy = [
+            "multi-user.target"
+            "sleep.target"
+          ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            setpci=${pkgs.pciutils}/sbin/setpci
+
+            clear_link () {
+              dev="$1"
+              lnkctl_off="$2"
+              l1sub_off="$3"
+              # printf renders the mask result as proper hex — "0x$(( ... ))"
+              # would concatenate the DECIMAL result (e.g. 0x64 for 100).
+              val=$("$setpci" -s "$dev" "$lnkctl_off".w)
+              newval=$(printf '0x%x' $(( 16#$val & 16#fffc )))
+              "$setpci" -s "$dev" "''${lnkctl_off}.w=$newval"
+              val=$("$setpci" -s "$dev" "$l1sub_off".l)
+              newval=$(printf '0x%x' $(( 16#$val & 16#fffffff0 )))
+              "$setpci" -s "$dev" "''${l1sub_off}.l=$newval"
+            }
+
+            clear_link 03:00.0 0x80 0x204
+            clear_link 00:06.2 0x50 0x208
           '';
         };
 
