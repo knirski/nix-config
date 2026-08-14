@@ -26,14 +26,10 @@ in
       # They live in systemd StateDirectories that would otherwise be wiped
       # with the ephemeral root each boot, making the healthcheck report
       # NEVER_RAN until the next daily run.  Persist them so the check is
-      # meaningful right after a reboot.  The btrbk marker dir is owned by
-      # the btrbk service user; restic's is root-owned (preservation's
-      # default for plain-string entries).
-      {
-        directory = "/var/lib/btrbk-zbook";
-        user = "btrbk";
-        group = "btrbk";
-      }
+      # meaningful right after a reboot.  Both markers are root-owned
+      # (btrbk runs as root — see modules/nixos/backup.nix); preservation's
+      # default for plain-string entries is root ownership.
+      "/var/lib/btrbk-zbook"
       "/var/lib/restic-backups-zbook"
       "/var/log"
       "/etc/NetworkManager/system-connections"

@@ -177,7 +177,7 @@ Existing examples:
   controller (subsystem NQN `nqn.2016-11.com.innogrit:2N11292JQEJC`); the
   kernel's own recommendation is a vendor firmware update, and the in-kernel
   power-state mitigations are maxed out (APST disabled; `pcie_aspm=` is
-  inert on this platform — firmware refuses _OSC ASPM control, see above;
+  inert on this platform — firmware refuses `_OSC` ASPM control, see above;
   `disable-aspm.service` clears LNKCTL/L1SubCtl1 via setpci instead). Firmware at time of wedge:
   `3.2.F.74` per `nvme id-ctrl`. A firmware check via AData SSD Toolbox
   (booted from a live Windows 10 USB, 2026-08-12) reports **no update
