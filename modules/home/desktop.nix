@@ -154,6 +154,13 @@
           "x-scheme-handler/https" = "firefox.desktop";
           "x-scheme-handler/about" = "firefox.desktop";
           "x-scheme-handler/unknown" = "firefox.desktop";
+
+          # Desktop login callbacks must return to the application that
+          # started the browser flow. Keep these explicit in the user-level
+          # database because Firefox may rewrite this file when it claims the
+          # ordinary web associations.
+          "x-scheme-handler/claude" = "com.anthropic.Claude.desktop";
+          "x-scheme-handler/com.cloudflare.warp" = "com.cloudflare.warp.desktop";
         };
       };
 
