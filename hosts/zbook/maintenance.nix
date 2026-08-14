@@ -5,5 +5,11 @@
     smartdDevices = [
       "/dev/disk/by-id/nvme-XPG_GAMMIX_S70_BLADE_2N11292JQEJC"
     ];
+    # Both fatal NVMe wedges (2026-08-11, 2026-08-14) followed the smartd
+    # scheduled short self-test start by ≤13 s, and the controller can't even
+    # read back its own self-test log page — tests add risk without signal on
+    # this drive. SMART attribute monitoring stays on; only the tests are
+    # dropped. Soyo's SATA SSD keeps its schedule (see AGENTS.md).
+    smartdSelfTestSchedule = null;
   };
 }

@@ -138,25 +138,61 @@ Existing examples:
   plus `pcie_aspm=off` (APST alone did not stop the wedge — the failing
   power state is the link itself) and the `disable-nvme-apst` service, which
   re-asserts the disable per controller (PM QoS sysfs node) on every resume,
-  in `modules/nixos/laptop.nix`. Requires a reboot.
-- **Recurrent wedge + VPD access failure (2026-08-11).** All three mitigations
-  above were active (`/proc/cmdline` confirmed `nvme_core.default_ps_max_latency_us=0`
-  and `pcie_aspm=off`, `disable-nvme-apst.service` enabled and ran on boot), yet
-  the wedge recurred: boot -1 ended abruptly at 02:22:13 with no kernel
-  messages, and boot 0 logged `system.journal corrupted or uncleanly shut down`
-  at 03:03:12 — a ~41-min dark gap resolved by a forced cold shutdown. The
-  leading symptom this time was `nvme 0000:03:00.0: VPD access failed. This is
-  likely a firmware bug on this device. Contact the card vendor for a firmware
-  update` at 02:12:05, ~3 s after a resume — a PCIe config-space (VPD) read
-  failure that predates any filesystem symptom. The S70 Blade runs an InnoGrit
+  in `modules/nixos/laptop.nix`. Requires a reboot. (Note: `pcie_aspm=off`
+  is inert on this platform — BIOS retains ASPM control; see the Recurrent
+  wedge entry below.)
+- **Recurrent wedge + VPD access failure (2026-08-11, 2026-08-14).** All three
+  mitigations above were active (`/proc/cmdline` confirmed
+  `nvme_core.default_ps_max_latency_us=0` and `pcie_aspm=off`,
+  `disable-nvme-apst.service` enabled and ran on boot), yet the wedge recurred.
+  Note: `pcie_aspm=off` was later verified **inert** on this platform — the
+  BIOS retains ASPM control (dmesg `_OSC: not requesting OS control; OS
+  requires [... ASPM ...]`), and `lspci` showed `LnkCtl: ASPM L1 Enabled`
+  (raw `0x0042`) on both link ends (00:06.2, 03:00.0) despite the param. In
+  fact **no `pcie_aspm=` value can ever work here**: in 30 pre-param boots
+  the kernel requested _OSC ASPM control and the firmware granted everything
+  except ASPM every time (`OS now controls [PCIeHotplug PME PCIeCapability
+  LTR]`). The effective levers are the controller-level APST disable
+  (verified via `nvme get-feature 0x0c`: APSTE off, all entries 0), the LTR
+  PM QoS block (`pm_qos_latency_tolerance_us` = 0, re-asserted by
+  disable-nvme-apst), and `disable-aspm.service` in `modules/nixos/laptop.nix`,
+  which clears the LNKCTL bits[1:0] + L1SubCtl1 bits[3:0] enables directly
+  via setpci (the only mechanism that bypasses the firmware's refusal),
+  re-applied on boot and after resume.
+  2026-08-11: boot -1 ended abruptly at 02:22:13 with no kernel messages, and
+  boot 0 logged `system.journal corrupted or uncleanly shut down` at 03:03:12
+  — a ~41-min dark gap resolved by a forced cold shutdown. 2026-08-14: boot -1
+  (Aug 13 06:45 → Aug 14 02:15:37) again ended abruptly with no kernel
+  messages (they're stuck in journald's buffer on the dead disk), and the
+  next boot recovered via btrfs tree-log replay. Both times the leading
+  symptom was `nvme 0000:03:00.0: VPD access failed...` — 2026-08-11 at
+  02:12:05 (~3 s after a resume) and 2026-08-14 at 22:45:41 (~2 s after the
+  22:45:39 resume) — a PCIe config-space (VPD) read failure that predates any
+  filesystem symptom. Both deaths themselves followed the smartd scheduled
+  short self-test start within seconds (2026-08-11: the final journal line
+  was the test start at 02:22:13; 2026-08-14: test start 02:15:24, last entry
+  02:15:37), while ~8 earlier short/long tests (Jul 30–Aug 10) completed
+  without incident — the test command is the proximate trigger, not just a
+  witness. The S70 Blade runs an InnoGrit
   controller (subsystem NQN `nqn.2016-11.com.innogrit:2N11292JQEJC`); the
   kernel's own recommendation is a vendor firmware update, and the in-kernel
-  power-state mitigations are already maxed out (`pcie_aspm=off`, APST
-  disabled) — no further software lever remains. Firmware at time of wedge:
+  power-state mitigations are maxed out (APST disabled; `pcie_aspm=` is
+  inert on this platform — firmware refuses _OSC ASPM control, see above;
+  `disable-aspm.service` clears LNKCTL/L1SubCtl1 via setpci instead). Firmware at time of wedge:
   `3.2.F.74` per `nvme id-ctrl`. A firmware check via AData SSD Toolbox
   (booted from a live Windows 10 USB, 2026-08-12) reports **no update
-  available** — `3.2.F.74` is current. All mitigations therefore stay in
-  force permanently; treat s2idle on this drive as unreliable: prefer
+  available** — `3.2.F.74` is current. The one remaining software lever:
+  **scheduled smartd self-tests are disabled on zbook**
+  (`smartdSelfTestSchedule = null` in `hosts/zbook/maintenance.nix`); SMART
+  attribute monitoring stays on, and soyo's SATA SSD keeps its schedule.
+  SMART health currently PASSED (media errors 0, unsafe shutdowns 13); the
+  controller's log pages are unreliable: smartctl can't read the error log
+  (`PRP Offset Invalid`) though `nvme-cli error-log` reads it fine (all
+  zeros), and the self-test log holds only vendor garbage (every entry
+  `Operation Result 0xf` — no valid test result has ever been recorded, not
+  even for the tests that ran clean), so trust btrfs scrub +
+  restic for integrity signals, not NVMe log pages. All mitigations therefore
+  stay in force permanently; treat s2idle on this drive as unreliable: prefer
   `systemctl hibernate` or a full shutdown over suspend, and treat
   `VPD access failed` in the journal as an early-warning signal that the next
   wedge is imminent.
