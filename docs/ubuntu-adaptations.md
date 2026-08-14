@@ -388,6 +388,49 @@ Home Manager cannot install or configure these system-level components:
     (ACPI/PECI); without it, cooling falls back to the kernel's static ACPI
     thermal zones.
 
+11. **Peripheral access: i2c-dev + Logitech hidraw**
+
+    The `desk-switch` keybinding (Mod4+Insert / Mod4+Home) does two things:
+    it hops the MX Master 2S and K860 between this host and zbook via the
+    Logitech HID++ change-host feature (`solaar config <device> change-host`),
+    and it switches the shared Iiyama PL2792Q between DisplayPort (zbook) and
+    HDMI (this machine) over DDC/CI.
+
+    **Prerequisite — one-time pairing.** `change-host` only hops between
+    pairings the device already has, one per Easy-Switch channel: channel 1
+    = zbook, channel 2 = this host (the script selects hosts by position).
+    Both devices are already paired that way. Re-pairing is only needed
+    after a factory reset; the recipe lives in the “One-time pairing”
+    section of `modules/home/desk-switch.nix` — optionally run it directly
+    on this host with `solaar-cli -D /dev/hidrawX pair` while pressing the
+    Easy-Switch channel on the device.
+
+    DDC/CI reads and writes go over the I²C bus of the driven input, which
+    needs the `i2c-dev` kernel module and a udev rule granting your user group
+    access to `/dev/i2c-*`. The Nix `solaar` package ships no udev rules, so
+    the receiver's `/dev/hidraw*` node needs its own rule too. Ubuntu's kernel
+    does not auto-load `i2c-dev`, and without rules the nodes are
+    `root:root 0600`. Both are applied idempotently by
+    `scripts/bootstrap-ubuntu-system.sh` step 5/5
+    (`/etc/modules-load.d/i2c-dev.conf`, `/etc/udev/rules.d/91-i2c-ddcutil.rules`
+    and `/etc/udev/rules.d/92-logitech-hidraw.rules`). NixOS hosts get the
+    same via `hardware.i2c` and `hardware.logitech.wireless`.
+
+    Verify once the desk-switch aspect is deployed and the monitor is on:
+
+    ```bash
+    ddcutil detect        # should list the PL2792Q, not just the laptop panel
+    ddcutil setvcp 0x60 0x11   # switch to HDMI-1
+    ddcutil setvcp 0x60 0x0f   # switch back to DisplayPort-1
+    solaar-cli -D /dev/hidrawX config "MX Master" change-host  # reads current host
+    ```
+
+    The monitor answers DDC/CI on both inputs (input-source codes come from
+    `ddcutil capabilities`: `0x0f` DisplayPort-1, `0x11` HDMI-1), and the
+    change-host command only reaches a device while it is connected to this
+    host's receiver — which is exactly the case when this machine runs the
+    keybinding.
+
 ## Optional Ubuntu-level setup
 
 ### Make Nix zsh the login shell
