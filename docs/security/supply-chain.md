@@ -169,7 +169,7 @@ unattended.
 ## Nixpkgs unfree and insecure package policy
 
 `lib/mk-nixpkgs-args.nix` centralizes `nixpkgs.config` (`allowUnfree`,
-`permittedInsecurePackages`) and the `command-code`/`gcx` package overlay so
+`permittedInsecurePackages`) and the `command-code` package overlay so
 they can't drift between the NixOS, darwin, and standalone Home Manager host
 assemblers.
 
@@ -177,15 +177,10 @@ assemblers.
   every host, including Soyo. This is a licensing acknowledgment, not a
   security boundary — the repository owner has deliberately decided
   per-host scoping here would add complexity with no real security benefit.
-- **The `command-code`/`gcx` overlay** also stays global. It looks like it
-  should be scoped alongside `command-code`'s Home Manager installation
-  (confined to `aspects.homeManager.development` — zbook/macbook/ubuntu,
-  not Soyo), but `gcx` is installed unconditionally by
-  `aspects.homeManager.base` on every Linux host (`modules/home/base.nix`),
-  Soyo included — confirmed via `nix eval` against
-  `nixosConfigurations.soyo`'s evaluated `home.packages`. Scoping the
-  overlay away from Soyo would break Soyo's real package resolution, so
-  leaving it global is required, not merely harmless.
+- **`gcx` comes from the locked unstable nixpkgs input.** It is installed
+  unconditionally by `aspects.homeManager.base` on every Linux host
+  (`modules/home/base.nix`), including Soyo. The repository no longer carries
+  a custom package or overlay for it.
 - **`permittedInsecurePackages`** is scoped per host. Unlike the two
   policies above, an insecure-package allowance is genuinely
   host-specific: only bitwarden-desktop (pulled in by

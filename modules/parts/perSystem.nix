@@ -175,7 +175,6 @@ in
           update-command-code
           ;
         command-code = pkgs'.callPackage ../../modules/_pkgs/command-code.nix { };
-        gcx = pkgs'.callPackage ../../modules/_pkgs/gcx.nix { };
         rtk = pkgs'.callPackage ../../modules/_pkgs/rtk.nix { };
       };
 
