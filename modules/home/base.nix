@@ -14,7 +14,7 @@
         };
         packages =
           with pkgs;
-          lib.optionals stdenv.isLinux [
+          lib.optionals stdenv.hostPlatform.isLinux [
             gcx
           ]
           ++ [
@@ -35,6 +35,8 @@
           ];
 
       };
+
+      news.display = "silent";
 
       programs = {
         atuin = {
@@ -306,7 +308,7 @@
                   # macOS's opener is `open`; every other host here is Linux
                   # and uses `xdg-open` (provided by xdg-utils via desktop.nix
                   # or the base package set).
-                  run = if pkgs.stdenv.isDarwin then "open \"$@\"" else "xdg-open \"$@\"";
+                  run = if pkgs.stdenv.hostPlatform.isDarwin then "open \"$@\"" else "xdg-open \"$@\"";
                   desc = "Open";
                 }
               ];
@@ -571,7 +573,7 @@
         krzysztof.nirski+github@gmail.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKnAGjndiJo+t1NCjH0s9i+AMUyJTZEnID4HHdrLWuX7
       '';
 
-      services.gpg-agent = lib.optionalAttrs pkgs.stdenv.isLinux {
+      services.gpg-agent = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
         enable = true;
         enableZshIntegration = true;
         # pinentry-curses: a full-screen ncurses prompt that works over any

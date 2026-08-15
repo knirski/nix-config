@@ -17,7 +17,7 @@
       # when the (workstation-only) secret has actually been rekeyed onto this
       # host, and only read the file at shell-start time, never at evaluation
       # time.
-      githubTokenShellInit = lib.optionalString pkgs.stdenv.isLinux ''
+      githubTokenShellInit = lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
         if [ -r /run/agenix/github-token ]; then
           export GITHUB_TOKEN="$(cat /run/agenix/github-token)"
           export GH_TOKEN="$GITHUB_TOKEN"
