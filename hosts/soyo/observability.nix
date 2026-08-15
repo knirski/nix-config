@@ -16,6 +16,9 @@ in
       # Host identity for the Grafana root URL (http://soyo:3000); equals the
       # hostname, but the aspect must not assume that, so it is stated here.
       domain = "soyo";
+      # Host identity for Grafana resource UIDs (datasources, dashboard
+      # folder, dashboards, alert rules); stated explicitly like domain.
+      uidPrefix = "soyo";
     };
     openFirewall = true;
   };

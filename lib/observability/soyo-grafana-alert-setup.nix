@@ -2,6 +2,9 @@
   config,
   pkgs,
   lanInterface,
+  folderUid,
+  folderTitle,
+  datasourceUid,
   ...
 }:
 let
@@ -56,12 +59,12 @@ in
               ensure_folder() {
                 command curl -sS -u "$AUTH" -o /dev/null -w '%{http_code}' \
                   -X POST -H 'Content-Type: application/json' \
-                  -d '{"uid":"soyo","title":"Soyo"}' \
+                  -d '{"uid":"${folderUid}","title":"${folderTitle}"}' \
                   "$BASE/api/folders" | grep -qE '^200|^409|^412'
                 curl -sS -o /dev/null -X PUT \
                   -H 'Content-Type: application/json' \
-                  -d '{"uid":"soyo","title":"Soyo","overwrite":true}' \
-                  "$BASE/api/folders/soyo" || :
+                  -d '{"uid":"${folderUid}","title":"${folderTitle}","overwrite":true}' \
+                  "$BASE/api/folders/${folderUid}" || :
               }
 
 
@@ -111,14 +114,15 @@ in
                   --arg uid "$uid" --arg title "$2" \
                   --arg expr "$3" --arg for "$4" \
                   --arg noData "$5" --arg summary "$6" \
+                  --arg folderUid "${folderUid}" --arg datasourceUid "${datasourceUid}" \
                   '{uid: $uid, title: $title,
-                    folderUID: "soyo", ruleGroup: "soyo", orgID: 1,
+                    folderUID: $folderUid, ruleGroup: $folderUid, orgID: 1,
                     condition: "A", noDataState: $noData,
                     execErrState: "KeepLast", for: $for,
                     data: [{
                       refId: "A",
                       relativeTimeRange: {from: 600, to: 0},
-                      datasourceUid: "soyo-prometheus",
+                      datasourceUid: $datasourceUid,
                       model: {type: "prometheus", expr: $expr}
                     }],
                     annotations: {summary: $summary},

@@ -1,4 +1,12 @@
 {
+  # Observability aspect — appliance-scoped by design: assembles
+  # Prometheus/Loki/Tempo/Alloy/Grafana and monitors the LAN appliance stack
+  # (blocky, dnsmasq, LAN inventory). Enabled only on soyo today
+  # (modules/parts/soyo.nix). Host identity — LAN interface, Grafana domain,
+  # datasource UID prefix, dnsmasq target, log host label — is per-host data
+  # via lanAppliance.services.observability.*. The remaining soyo references
+  # are display content and the deliberately soyo-scoped artifacts
+  # (soyo-dashboard.nix, soyo-grafana-alert-setup, grafana-gcx-setup).
   aspects.nixos.observability =
     {
       lib,
@@ -10,6 +18,17 @@
       cfg = config.lanAppliance.services.observability;
       hardening = import ../../lib/systemd-hardening.nix;
       grafanaCfg = cfg.grafana;
+
+      # Grafana identity is host data: one required prefix
+      # (cfg.grafana.uidPrefix) derives every UID consumers reference —
+      # datasources, dashboard folder, dashboard datasource UIDs, alert-rule
+      # folder/datasource — so a host change stays consistent everywhere. The
+      # folder title is just the capitalized prefix ("soyo" -> "Soyo").
+      grafanaUidPrefix = cfg.grafana.uidPrefix;
+      grafanaFolderTitle =
+        lib.toUpper (lib.substring 0 1 grafanaUidPrefix)
+        + lib.substring 1 (lib.stringLength grafanaUidPrefix - 1) grafanaUidPrefix;
+      grafanaDatasourceUid = "${grafanaUidPrefix}-prometheus";
 
       inherit (cfg) networkData;
       deviceMeta = networkData.deviceMeta or { };
@@ -42,11 +61,11 @@
 
       builder = import ../../lib/observability/dashboard-builder.nix {
         inherit lib pkgs;
-        ds = "soyo-prometheus";
+        ds = grafanaDatasourceUid;
       };
-      soyoBuilder = import ../../lib/observability/dashboard-builder.nix {
+      homeBuilder = import ../../lib/observability/dashboard-builder.nix {
         inherit lib pkgs;
-        ds = "soyo-prometheus";
+        ds = grafanaDatasourceUid;
         fillOpacity = 16;
       };
 
@@ -56,10 +75,11 @@
       };
       homeJson = import ../../lib/observability/soyo-dashboard.nix {
         inherit pkgs;
-        builder = soyoBuilder;
+        builder = homeBuilder;
       };
       lanOverviewJson = import ../../lib/observability/lan-dashboard.nix {
         inherit pkgs;
+        ds = grafanaDatasourceUid;
       };
       sloJson = import ../../lib/observability/slo-dashboard.nix {
         inherit pkgs;
@@ -93,11 +113,11 @@
         replacements = [
           {
             key = "DS_PROMETHEUS";
-            value = "soyo-prometheus";
+            value = grafanaDatasourceUid;
           }
           {
             key = "datasource";
-            value = "soyo-prometheus";
+            value = grafanaDatasourceUid;
           }
           {
             key = "job";
@@ -122,11 +142,11 @@
         replacements = [
           {
             key = "DS_PROMETHEUS";
-            value = "soyo-prometheus";
+            value = grafanaDatasourceUid;
           }
           {
             key = "datasource";
-            value = "soyo-prometheus";
+            value = grafanaDatasourceUid;
           }
           {
             key = "job";
@@ -151,7 +171,7 @@
         replacements = [
           {
             key = "ds_prometheus";
-            value = "soyo-prometheus";
+            value = grafanaDatasourceUid;
           }
           {
             key = "job";
@@ -193,10 +213,15 @@
       #   deviceMeta       — observability-only labels (kind, displayName, monitor
       #                      flag) keyed by reservation name, keeping rich labels
       #                      off the reservations schema so the critical path stays boring.
-      alloyConfig = import ../../lib/observability/alloy-config.nix { };
+      alloyConfig = import ../../lib/observability/alloy-config.nix {
+        hostName = config.networking.hostName;
+      };
       soyoGrafanaAlertSetup = import ../../lib/observability/soyo-grafana-alert-setup.nix {
         inherit lib config pkgs;
         inherit (cfg) lanInterface;
+        folderUid = grafanaUidPrefix;
+        folderTitle = grafanaFolderTitle;
+        datasourceUid = grafanaDatasourceUid;
       };
       grafanaGcxSetup = import ../../lib/observability/grafana-gcx-setup.nix {
         inherit lib config pkgs;
@@ -248,6 +273,10 @@
           domain = lib.mkOption {
             type = lib.types.str;
             description = "Grafana root URL domain (used for redirects and links). Host identity — set per host, like lanInterface, not a shared default.";
+          };
+          uidPrefix = lib.mkOption {
+            type = lib.types.str;
+            description = "Prefix for Grafana resource UIDs (datasources, dashboard folder, dashboard datasource references, alert-rule folder/datasource). Host identity — set per host; must stay stable because Grafana persists UIDs and the provisioned dashboards/alert rules reference them.";
           };
         };
 
@@ -579,7 +608,7 @@
                             type = "prometheus";
                             access = "proxy";
                             url = "http://localhost:9090";
-                            uid = "soyo-prometheus";
+                            uid = "${grafanaUidPrefix}-prometheus";
                             isDefault = true;
                           }
                           {
@@ -587,14 +616,14 @@
                             type = "loki";
                             access = "proxy";
                             url = "http://localhost:3100";
-                            uid = "soyo-loki";
+                            uid = "${grafanaUidPrefix}-loki";
                           }
                           {
                             name = "Tempo";
                             type = "tempo";
                             access = "proxy";
                             url = "http://localhost:3200";
-                            uid = "soyo-tempo";
+                            uid = "${grafanaUidPrefix}-tempo";
                           }
                         ];
                       };
@@ -613,11 +642,11 @@
                             '';
                           }
                           {
-                            name = "soyo";
+                            name = grafanaUidPrefix;
                             type = "file";
-                            folder = "Soyo";
-                            folderUid = "soyo";
-                            options.path = pkgs.runCommand "soyo-grafana-dashboards" { } ''
+                            folder = grafanaFolderTitle;
+                            folderUid = grafanaUidPrefix;
+                            options.path = pkgs.runCommand "${grafanaUidPrefix}-grafana-dashboards" { } ''
                               mkdir -p $out
                               cp ${homeJson} $out/001-soyo-control-plane.json
                               cp ${dnsmasqJson} $out/dnsmasq.json

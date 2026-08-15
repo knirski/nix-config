@@ -1,5 +1,5 @@
 # LAN Overview dashboard — blackbox probe insights and device inventory.
-{ pkgs }:
+{ pkgs, ds }:
 pkgs.writeText "lan-overview.json" (
   builtins.toJSON {
     title = "LAN Overview";
@@ -31,7 +31,7 @@ pkgs.writeText "lan-overview.json" (
             refId = "A";
             datasource = {
               type = "prometheus";
-              uid = "soyo-prometheus";
+              uid = ds;
             };
             expr = "max by (display_name, target_kind, instance, job) (probe_success{job=~\"blackbox-(icmp|http)\", site=\"lan\"})";
             format = "table";
@@ -54,7 +54,7 @@ pkgs.writeText "lan-overview.json" (
             refId = "A";
             datasource = {
               type = "prometheus";
-              uid = "soyo-prometheus";
+              uid = ds;
             };
             expr = "probe_duration_seconds{job=~\"blackbox-(icmp|http)\", site=\"lan\"}";
             legendFormat = "{{display_name}} ({{job}})";
@@ -76,7 +76,7 @@ pkgs.writeText "lan-overview.json" (
             refId = "A";
             datasource = {
               type = "prometheus";
-              uid = "soyo-prometheus";
+              uid = ds;
             };
             expr = "lan_device_seen{name!~\"unknown-.*\"}";
             format = "table";
@@ -99,7 +99,7 @@ pkgs.writeText "lan-overview.json" (
             refId = "A";
             datasource = {
               type = "prometheus";
-              uid = "soyo-prometheus";
+              uid = ds;
             };
             expr = "lan_device_seen{name=~\"unknown-.*\"}";
             format = "table";
@@ -122,7 +122,7 @@ pkgs.writeText "lan-overview.json" (
             refId = "A";
             datasource = {
               type = "prometheus";
-              uid = "soyo-prometheus";
+              uid = ds;
             };
             expr = "lan_device_reserved unless on (ip, name, mac) lan_device_seen";
             format = "table";
