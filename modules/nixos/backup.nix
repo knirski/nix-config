@@ -314,9 +314,17 @@
                         name = "restic-wait-for-host";
                         runtimeInputs = [
                           pkgs.coreutils
-                          pkgs.glibc.bin
                         ];
                         text = ''
+                          # Call getent by absolute path: nixpkgs (since
+                          # glibc 2.42-67) split `getent` out of glibc.bin
+                          # into its own `getent` output/package, so relying
+                          # on PATH would silently fail inside the unit's
+                          # minimal environment (the systemd service PATH has
+                          # no /run/current-system/sw/bin). lib.getExe' below
+                          # fails the BUILD if the binary is ever missing
+                          # again instead of failing every backup silently.
+                          getent_bin="${lib.getExe' pkgs.getent "getent"}"
                           host="${cfg.restic.sftp.host}"
                           # Absolute 200s deadline — getent can block for many
                           # seconds per call on a slow resolver, so an attempt
@@ -325,7 +333,7 @@
                           # past the deadline.
                           deadline=$(( $(date +%s) + 200 ))
                           while [ "$(date +%s)" -lt "$deadline" ]; do
-                            if timeout 5 getent ahosts "$host" >/dev/null 2>&1; then
+                            if timeout 5 "$getent_bin" ahosts "$host" >/dev/null 2>&1; then
                               exit 0
                             fi
                             remaining=$(( deadline - $(date +%s) ))
