@@ -52,6 +52,16 @@ in
             # comment in modules/parts/zbook.nix for why disjoint keys make
             # this merge order-independent.
             config.permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
+            # dgop's gops subpackage tests assume Linux /proc paths and fail on
+            # the macOS builder — this has reddened main's CI since dgop was
+            # added to home.base (#189). The monitor itself is platform-neutral;
+            # only the tests are wrong, so keep doCheck on Linux hosts (zbook,
+            # ubuntu) and skip it on Darwin only.
+            overlays = [
+              (_: prev: {
+                dgop = prev.dgop.overrideAttrs { doCheck = false; };
+              })
+            ];
           };
 
           # TODO: uncomment and create secrets once macbook hardware is available.
