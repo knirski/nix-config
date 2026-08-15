@@ -12,26 +12,23 @@
         sessionVariables = {
           EDITOR = "nvim";
         };
-        packages =
-          with pkgs;
-          lib.optionals stdenv.isLinux [
-            gcx
-          ]
-          ++ [
-            # Modern CLI replacements (no HM modules)
-            dust
-            sd
-            yq
-            hyperfine
-            ncdu
-            doggo
-            duf # df replacement
-            # Security tools
-            age
-            # Other tools without HM modules
-            procs
-            unrar # for extract() function
-          ];
+        packages = with pkgs; [
+          # Modern CLI replacements (no HM modules)
+          dust
+          sd
+          yq
+          hyperfine
+          ncdu
+          doggo
+          duf # df replacement
+          # Security tools
+          age
+          # Other tools without HM modules
+          procs
+          dgop # system monitor (top-like TUI/CLI)
+          gcx # Grafana Cloud CLI
+          unrar # for extract() function
+        ];
 
       };
 
