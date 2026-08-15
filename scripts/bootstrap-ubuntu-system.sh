@@ -19,11 +19,12 @@ USER_NAME=${SUDO_USER:-$USER}
 USER_HOME=$(getent passwd "$USER_NAME" | cut -d: -f6)
 changed=0
 needs_relogin=0
+needs_reboot=0
 
 say() { printf '  %s\n' "$*"; }
 step() { printf '\n== %s\n' "$*"; }
 
-step "1/6  GDM must run Wayland"
+step "1/7  GDM must run Wayland"
 if [ ! -f /etc/gdm3/custom.conf ]; then
   say "SKIP  /etc/gdm3/custom.conf not present (not a GDM system?)"
 elif grep -qE '^WaylandEnable=false' /etc/gdm3/custom.conf; then
@@ -34,7 +35,7 @@ else
   say "OK    Wayland already enabled"
 fi
 
-step "2/6  /run/opengl-driver for Nix OpenGL"
+step "2/7  /run/opengl-driver for Nix OpenGL"
 tmpfiles=/etc/tmpfiles.d/nix-opengl-driver.conf
 want="L+ /run/opengl-driver - - - - $USER_HOME/.nix-profile"
 if [ -f "$tmpfiles" ] && grep -qF "$want" "$tmpfiles"; then
@@ -52,7 +53,7 @@ else
   say "OK    /run/opengl-driver -> $(readlink /run/opengl-driver)"
 fi
 
-step "3/6  GDM session entry"
+step "3/7  GDM session entry"
 desktop=/usr/share/wayland-sessions/sway-nix.desktop
 launcher="$USER_HOME/.local/bin/sway-ubuntu-session"
 if [ -f "$desktop" ] && grep -qF "Exec=$launcher" "$desktop"; then
@@ -73,7 +74,7 @@ if [ ! -x "$launcher" ]; then
   say "WARN  $launcher is missing -- run the Home Manager switch first"
 fi
 
-step "4/6  Desktop wallpaper"
+step "4/7  Desktop wallpaper"
 # The shell records this in session.json, which is mutable state it writes
 # itself, so it cannot be generated from Nix without freezing the whole file.
 wallpaper="$USER_HOME/.local/share/wallpapers/hive-grid.png"
@@ -92,7 +93,7 @@ else
   fi
 fi
 
-step "5/6  i2c-dev + Logitech hidraw access for desk peripherals"
+step "5/7  i2c-dev + Logitech hidraw access for desk peripherals"
 # The desk-switch keybinding (Mod4+Insert / Mod4+Home) uses ddcutil over
 # DDC/CI and solaar-cli over the Logitech receiver's hidraw node. Ubuntu's
 # kernel does not auto-load i2c-dev, the /dev/i2c-* nodes are root:root 0600
@@ -137,7 +138,7 @@ else
   changed=1
 fi
 
-step "6/6  Disable Logitech receiver spurious suspend wakeups"
+step "6/7  Disable Logitech receiver spurious suspend wakeups"
 # The Unifying Receiver (idVendor 046d, idProduct c52b) forwards HID++
 # battery-status pings from the ERGO K860 keyboard and MX Master mouse as USB
 # remote wakeup, waking the laptop from suspend every 10-50 min. Confirmed via
@@ -157,12 +158,48 @@ else
   changed=1
 fi
 
+step "7/7  Disable dGPU suspend wakeups + NVIDIA runtime power management"
+# The RTX A1000's PCIe root port (0000:00:01.0) fires a PME during s2idle for
+# no external reason (`PM: Triggering wakeup from IRQ 122` in dmesg),
+# confirmed via the same /sys/kernel/debug/wakeup_sources diffs used for the
+# Logitech receiver above. The udev rule masks the symptom (the root port can
+# no longer signal a wake); the cause is Ubuntu's nvidia-driver package
+# leaving NVreg_DynamicPowerManagement at its coarse-grained default, which
+# flaps the RTX A1000 between power states and fires the PME in the first
+# place. Fine-grained (0x02) is NVIDIA's recommended mode for Turing+ mobile
+# GPUs (this is Ampere/GA107) and is markedly less prone to spurious wakeups.
+# The modprobe change requires a reboot -- the parameter is read at module
+# load, baked into the initramfs.
+pme_rule=/etc/udev/rules.d/93-disable-dgpu-wake.rules
+want_pme='SUBSYSTEM=="pci", KERNEL=="0000:00:01.0", ATTR{power/wakeup}="disabled"'
+if [ -f "$pme_rule" ] && grep -qF "$want_pme" "$pme_rule"; then
+  say "OK    $pme_rule already disables dGPU root port wakeup"
+else
+  printf '%s\n' "$want_pme" | sudo tee "$pme_rule" >/dev/null
+  sudo udevadm control --reload-rules
+  sudo udevadm trigger --subsystem-match=pci
+  say "DONE  wrote $pme_rule"
+  changed=1
+fi
+nvidia_pm_conf=/etc/modprobe.d/nvidia-pm.conf
+want_nvidia_pm='options nvidia NVreg_DynamicPowerManagement=0x02'
+if [ -f "$nvidia_pm_conf" ] && grep -qF "$want_nvidia_pm" "$nvidia_pm_conf"; then
+  say "OK    $nvidia_pm_conf already sets fine-grained runtime PM"
+else
+  printf '%s\n' "$want_nvidia_pm" | sudo tee "$nvidia_pm_conf" >/dev/null
+  sudo update-initramfs -u
+  say "DONE  wrote $nvidia_pm_conf and refreshed initramfs"
+  changed=1
+  needs_reboot=1
+fi
+
 printf '\n'
 if [ "$changed" -eq 0 ]; then
   echo "Nothing to do -- system-level setup already in place."
 else
   echo "Applied changes."
   [ "$needs_relogin" -eq 1 ] && echo "Log out and back in to pick up the session entry."
+  [ "$needs_reboot" -eq 1 ] && echo "Reboot to pick up the NVIDIA power-management change."
 fi
 
 # Apt packages are deliberately not installed here: they are a one-time

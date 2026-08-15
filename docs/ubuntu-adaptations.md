@@ -411,7 +411,7 @@ Home Manager cannot install or configure these system-level components:
     the receiver's `/dev/hidraw*` node needs its own rule too. Ubuntu's kernel
     does not auto-load `i2c-dev`, and without rules the nodes are
     `root:root 0600`. Both are applied idempotently by
-    `scripts/bootstrap-ubuntu-system.sh` step 5/6
+    `scripts/bootstrap-ubuntu-system.sh` step 5/7
     (`/etc/modules-load.d/i2c-dev.conf`, `/etc/udev/rules.d/91-i2c-ddcutil.rules`
     and `/etc/udev/rules.d/92-logitech-hidraw.rules`). NixOS hosts get the
     same via `hardware.i2c` and `hardware.logitech.wireless`.
@@ -441,10 +441,30 @@ Home Manager cannot install or configure these system-level components:
     more often than every other entry in the same window.
 
     Disabled via a `power/wakeup=disabled` udev rule, applied idempotently by
-    `scripts/bootstrap-ubuntu-system.sh` step 6/6
+    `scripts/bootstrap-ubuntu-system.sh` step 6/7
     (`/etc/udev/rules.d/94-disable-logitech-wake.rules`). Trade-off: the
     keyboard/mouse can no longer wake the laptop from suspend afterward —
     only the lid or power button can.
+
+13. **Suspend woke the laptop on its own every 10-50 minutes (dGPU PME)**
+
+    The RTX A1000's PCIe root port (`0000:00:01.0`) fires a PME during
+    `s2idle` for no external reason (`PM: Triggering wakeup from IRQ 122` in
+    `dmesg`), confirmed the same way as item 12 above.
+
+    Two fixes, applied idempotently by `scripts/bootstrap-ubuntu-system.sh`
+    step 7/7:
+
+    - A `power/wakeup=disabled` udev rule
+      (`/etc/udev/rules.d/93-disable-dgpu-wake.rules`) masks the symptom —
+      the root port can no longer signal a wake.
+    - `/etc/modprobe.d/nvidia-pm.conf`
+      (`NVreg_DynamicPowerManagement=0x02`) fixes the cause: Ubuntu's
+      `nvidia-driver` package leaves runtime power management at its
+      coarse-grained default, which flaps the RTX A1000 between power states
+      and fires the PME. Fine-grained is NVIDIA's recommended mode for
+      Turing+ mobile GPUs (this is Ampere/GA107). Requires a reboot — the
+      parameter is read at module load, baked into the initramfs.
 
 ## Optional Ubuntu-level setup
 
