@@ -28,7 +28,6 @@ in
   # Observability guests (modules/nixos/observability.nix + lib/observability/*).
   "alloy"
   "grafana"
-  "grafana-alert-setup"
   "grafana-gcx-setup"
   "lan-inventory-exporter"
   "loki"
@@ -36,6 +35,7 @@ in
   "prometheus-blackbox-exporter"
   "prometheus-dnsmasq-exporter"
   "prometheus-node-exporter"
+  "soyo-grafana-alert-setup"
   "tempo"
 
   # Boot/activation/health trace emitters (lib/observability/tempo-traces.nix).

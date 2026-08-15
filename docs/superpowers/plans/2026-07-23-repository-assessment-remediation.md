@@ -220,7 +220,7 @@ Dependencies: B0
 Likely files:
 
 - [`modules/nixos/maintenance.nix`](../../../modules/nixos/maintenance.nix)
-- [`lib/observability/grafana-alert-setup.nix`](../../../lib/observability/grafana-alert-setup.nix)
+- [`lib/observability/soyo-grafana-alert-setup.nix`](../../../lib/observability/soyo-grafana-alert-setup.nix)
 - a small shared helper under `lib/observability/`
 - observability or maintenance checks under `modules/parts/`
 

@@ -33,7 +33,7 @@
         "free-space-check"
         "nix-gc"
         "btrbk-${hostName}"
-        "grafana-alert-setup"
+        "soyo-grafana-alert-setup"
         "btrfs-scrub"
         "restic-backups-${hostName}"
         "nix-store-optimise"

@@ -289,7 +289,7 @@
                         # same signal as the ntfy check, not df-style filesystem stats.
                         # Metric names come from lib/observability/btrfs-metrics.nix, the
                         # single source of truth shared with the Grafana alert rule in
-                        # lib/observability/grafana-alert-setup.nix — keep them in sync there,
+                        # lib/observability/soyo-grafana-alert-setup.nix — keep them in sync there,
                         # not by hand here.
                         mkdir -p /var/lib/prometheus/textfiles
                         ${btrfsMetrics.hostLabel}="${config.networking.hostName}"

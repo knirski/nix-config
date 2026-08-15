@@ -194,7 +194,7 @@
       #                      flag) keyed by reservation name, keeping rich labels
       #                      off the reservations schema so the critical path stays boring.
       alloyConfig = import ../../lib/observability/alloy-config.nix { };
-      grafanaAlertSetup = import ../../lib/observability/grafana-alert-setup.nix {
+      soyoGrafanaAlertSetup = import ../../lib/observability/soyo-grafana-alert-setup.nix {
         inherit lib config pkgs;
         inherit (cfg) lanInterface;
       };
@@ -656,7 +656,7 @@
                   };
                 };
               }
-              grafanaAlertSetup
+              soyoGrafanaAlertSetup
               grafanaGcxSetup
               tempoTraces
             ]

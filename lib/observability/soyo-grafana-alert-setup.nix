@@ -11,7 +11,7 @@ let
   btrfsMetrics = import ./btrfs-metrics.nix;
 in
 {
-  systemd.services.grafana-alert-setup = {
+  systemd.services.soyo-grafana-alert-setup = {
     description = "Provision Grafana alerting rules and ntfy contact point";
     after = [ "grafana.service" ];
     wants = [ "grafana.service" ];
@@ -31,7 +31,7 @@ in
       ExecStart =
         let
           script = pkgs.writeShellApplication {
-            name = "grafana-alert-setup";
+            name = "soyo-grafana-alert-setup";
             runtimeInputs = [
               pkgs.curl
               pkgs.jq
@@ -183,7 +183,7 @@ in
             '';
           };
         in
-        "${script}/bin/grafana-alert-setup";
+        "${script}/bin/soyo-grafana-alert-setup";
       LoadCredential = [
         "ntfy_topic:${config.age.secrets.soyo-ntfy-topic.path}"
         "ntfy_token:${config.age.secrets.soyo-ntfy-token.path}"
