@@ -17,7 +17,7 @@
           # Applied globally so every Electron app picks it up without
           # per-app wrapper patches. Harmless on non-Linux/macOS hosts
           # (the env var is simply unused).
-          (lib.mkIf pkgs.stdenv.isLinux {
+          (lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
             GTK_THEME = "Adwaita:dark";
           })
         ];
@@ -37,7 +37,7 @@
             mpv
             spotify
           ]
-          ++ lib.optionals stdenv.isLinux [
+          ++ lib.optionals stdenv.hostPlatform.isLinux [
             bitwarden-desktop
             bitwarden-cli
             rbw
@@ -117,7 +117,7 @@
       # precedence on PATH, so this is duplication rather than conflict.
       programs.firefox = {
         enable = true;
-        package = if pkgs.stdenv.isDarwin then pkgs.firefox-bin else pkgs.firefox;
+        package = if pkgs.stdenv.hostPlatform.isDarwin then pkgs.firefox-bin else pkgs.firefox;
       };
 
       # Firefox rewrites ~/.config/mimeapps.list itself whenever it decides it
@@ -130,11 +130,11 @@
       # The guard wraps the whole attribute, not the `force` leaf: setting a
       # leaf under mkIf still creates the "mimeapps.list" entry, which on
       # darwin has no source and fails to evaluate.
-      xdg.configFile = lib.mkIf pkgs.stdenv.isLinux {
+      xdg.configFile = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         "mimeapps.list".force = true;
       };
 
-      xdg.mimeApps = lib.mkIf pkgs.stdenv.isLinux {
+      xdg.mimeApps = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         # HM writes ~/.config/mimeapps.list only when enable is set
         # (default: false) — without it, defaultApplications is inert.
         enable = true;
@@ -164,7 +164,7 @@
         };
       };
 
-      services.gpg-agent = lib.mkIf pkgs.stdenv.isLinux {
+      services.gpg-agent = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
         pinentry.package = pkgs.pinentry-gnome3;
       };
     };

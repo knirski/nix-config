@@ -10,7 +10,7 @@
 # costs far more than reapplying them.
 #
 # Idempotent: every step checks before writing and reports what it did.
-# Requires sudo for the four system steps; the wallpaper step does not.
+# Requires sudo for every step except the wallpaper one.
 #
 # See docs/ubuntu-adaptations.md for why each one is needed.
 set -euo pipefail
@@ -19,11 +19,12 @@ USER_NAME=${SUDO_USER:-$USER}
 USER_HOME=$(getent passwd "$USER_NAME" | cut -d: -f6)
 changed=0
 needs_relogin=0
+needs_reboot=0
 
 say() { printf '  %s\n' "$*"; }
 step() { printf '\n== %s\n' "$*"; }
 
-step "1/5  GDM must run Wayland"
+step "1/7  GDM must run Wayland"
 if [ ! -f /etc/gdm3/custom.conf ]; then
   say "SKIP  /etc/gdm3/custom.conf not present (not a GDM system?)"
 elif grep -qE '^WaylandEnable=false' /etc/gdm3/custom.conf; then
@@ -34,7 +35,7 @@ else
   say "OK    Wayland already enabled"
 fi
 
-step "2/5  /run/opengl-driver for Nix OpenGL"
+step "2/7  /run/opengl-driver for Nix OpenGL"
 tmpfiles=/etc/tmpfiles.d/nix-opengl-driver.conf
 want="L+ /run/opengl-driver - - - - $USER_HOME/.nix-profile"
 if [ -f "$tmpfiles" ] && grep -qF "$want" "$tmpfiles"; then
@@ -52,7 +53,7 @@ else
   say "OK    /run/opengl-driver -> $(readlink /run/opengl-driver)"
 fi
 
-step "3/5  GDM session entry"
+step "3/7  GDM session entry"
 desktop=/usr/share/wayland-sessions/sway-nix.desktop
 launcher="$USER_HOME/.local/bin/sway-ubuntu-session"
 if [ -f "$desktop" ] && grep -qF "Exec=$launcher" "$desktop"; then
@@ -73,7 +74,7 @@ if [ ! -x "$launcher" ]; then
   say "WARN  $launcher is missing -- run the Home Manager switch first"
 fi
 
-step "4/5  Desktop wallpaper"
+step "4/7  Desktop wallpaper"
 # The shell records this in session.json, which is mutable state it writes
 # itself, so it cannot be generated from Nix without freezing the whole file.
 wallpaper="$USER_HOME/.local/share/wallpapers/hive-grid.png"
@@ -92,7 +93,7 @@ else
   fi
 fi
 
-step "5/5  i2c-dev + Logitech hidraw access for desk peripherals"
+step "5/7  i2c-dev + Logitech hidraw access for desk peripherals"
 # The desk-switch keybinding (Mod4+Insert / Mod4+Home) uses ddcutil over
 # DDC/CI and solaar-cli over the Logitech receiver's hidraw node. Ubuntu's
 # kernel does not auto-load i2c-dev, the /dev/i2c-* nodes are root:root 0600
@@ -137,12 +138,87 @@ else
   changed=1
 fi
 
+step "6/7  Disable Logitech receiver spurious suspend wakeups"
+# The Unifying Receiver (idVendor 046d, idProduct c52b) forwards HID++
+# battery-status pings from the ERGO K860 keyboard and MX Master mouse as USB
+# remote wakeup, waking the laptop from suspend every 10-50 min. Confirmed via
+# /sys/kernel/debug/wakeup_sources before/after diffs across suspend cycles
+# (hidpp_battery_0/hidpp_battery_1 firing far more often than every other
+# entry in the same window). Trade-off: the keyboard/mouse can no longer wake
+# the laptop from suspend afterward -- only the lid or power button can.
+#
+# Same fix zbook uses for its dock's RTL8153 (modules/nixos/laptop.nix): a
+# usbcore.quirks kernel param disables remote wakeup at USB-core enumeration,
+# before any driver binds, so it can't be raced or re-enabled by
+# hid-logitech-hidpp's own probe the way a udev attribute write can -- no
+# separate udev rule needed alongside it.
+grub_conf=/etc/default/grub
+quirk_param="usbcore.quirks=046d:c52b:j"
+if [ -f "$grub_conf" ] && grep -qF "$quirk_param" "$grub_conf"; then
+  say "OK    $grub_conf already sets $quirk_param"
+elif [ -f "$grub_conf" ]; then
+  sudo sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $quirk_param\"/" "$grub_conf"
+  sudo update-grub
+  say "DONE  added $quirk_param to $grub_conf (reboot to apply)"
+  changed=1
+  needs_reboot=1
+else
+  say "SKIP  $grub_conf not present (not a GRUB system?)"
+fi
+# Superseded by the quirk above -- clean up if an earlier run left it behind.
+receiver_rule=/etc/udev/rules.d/94-disable-logitech-wake.rules
+if [ -f "$receiver_rule" ]; then
+  sudo rm -f "$receiver_rule"
+  sudo udevadm control --reload-rules
+  sudo udevadm trigger --subsystem-match=usb
+  say "DONE  removed $receiver_rule (superseded by usbcore.quirks)"
+  changed=1
+else
+  say "OK    $receiver_rule already absent"
+fi
+
+step "7/7  Disable dGPU suspend wakeups + NVIDIA runtime power management"
+# The RTX A1000's PCIe root port (0000:00:01.0) fires a PME during s2idle for
+# no external reason (`PM: Triggering wakeup from IRQ 122` in dmesg),
+# confirmed via the same /sys/kernel/debug/wakeup_sources diffs used for the
+# Logitech receiver above. The udev rule masks the symptom (the root port can
+# no longer signal a wake); the cause is Ubuntu's nvidia-driver package
+# leaving NVreg_DynamicPowerManagement at its coarse-grained default, which
+# flaps the RTX A1000 between power states and fires the PME in the first
+# place. Fine-grained (0x02) is NVIDIA's recommended mode for Turing+ mobile
+# GPUs (this is Ampere/GA107) and is markedly less prone to spurious wakeups.
+# The modprobe change requires a reboot -- the parameter is read at module
+# load, baked into the initramfs.
+pme_rule=/etc/udev/rules.d/93-disable-dgpu-wake.rules
+want_pme='SUBSYSTEM=="pci", KERNEL=="0000:00:01.0", ATTR{power/wakeup}="disabled"'
+if [ -f "$pme_rule" ] && grep -qF "$want_pme" "$pme_rule"; then
+  say "OK    $pme_rule already disables dGPU root port wakeup"
+else
+  printf '%s\n' "$want_pme" | sudo tee "$pme_rule" >/dev/null
+  sudo udevadm control --reload-rules
+  sudo udevadm trigger --subsystem-match=pci
+  say "DONE  wrote $pme_rule"
+  changed=1
+fi
+nvidia_pm_conf=/etc/modprobe.d/nvidia-pm.conf
+want_nvidia_pm='options nvidia NVreg_DynamicPowerManagement=0x02'
+if [ -f "$nvidia_pm_conf" ] && grep -qF "$want_nvidia_pm" "$nvidia_pm_conf"; then
+  say "OK    $nvidia_pm_conf already sets fine-grained runtime PM"
+else
+  printf '%s\n' "$want_nvidia_pm" | sudo tee "$nvidia_pm_conf" >/dev/null
+  sudo update-initramfs -u
+  say "DONE  wrote $nvidia_pm_conf and refreshed initramfs"
+  changed=1
+  needs_reboot=1
+fi
+
 printf '\n'
 if [ "$changed" -eq 0 ]; then
   echo "Nothing to do -- system-level setup already in place."
 else
   echo "Applied changes."
   [ "$needs_relogin" -eq 1 ] && echo "Log out and back in to pick up the session entry."
+  [ "$needs_reboot" -eq 1 ] && echo "Reboot to pick up the kernel cmdline / NVIDIA power-management change."
 fi
 
 # Apt packages are deliberately not installed here: they are a one-time
