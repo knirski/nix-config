@@ -10,7 +10,7 @@
 # costs far more than reapplying them.
 #
 # Idempotent: every step checks before writing and reports what it did.
-# Requires sudo for the four system steps; the wallpaper step does not.
+# Requires sudo for every step except the wallpaper one.
 #
 # See docs/ubuntu-adaptations.md for why each one is needed.
 set -euo pipefail
@@ -23,7 +23,7 @@ needs_relogin=0
 say() { printf '  %s\n' "$*"; }
 step() { printf '\n== %s\n' "$*"; }
 
-step "1/5  GDM must run Wayland"
+step "1/6  GDM must run Wayland"
 if [ ! -f /etc/gdm3/custom.conf ]; then
   say "SKIP  /etc/gdm3/custom.conf not present (not a GDM system?)"
 elif grep -qE '^WaylandEnable=false' /etc/gdm3/custom.conf; then
@@ -34,7 +34,7 @@ else
   say "OK    Wayland already enabled"
 fi
 
-step "2/5  /run/opengl-driver for Nix OpenGL"
+step "2/6  /run/opengl-driver for Nix OpenGL"
 tmpfiles=/etc/tmpfiles.d/nix-opengl-driver.conf
 want="L+ /run/opengl-driver - - - - $USER_HOME/.nix-profile"
 if [ -f "$tmpfiles" ] && grep -qF "$want" "$tmpfiles"; then
@@ -52,7 +52,7 @@ else
   say "OK    /run/opengl-driver -> $(readlink /run/opengl-driver)"
 fi
 
-step "3/5  GDM session entry"
+step "3/6  GDM session entry"
 desktop=/usr/share/wayland-sessions/sway-nix.desktop
 launcher="$USER_HOME/.local/bin/sway-ubuntu-session"
 if [ -f "$desktop" ] && grep -qF "Exec=$launcher" "$desktop"; then
@@ -73,7 +73,7 @@ if [ ! -x "$launcher" ]; then
   say "WARN  $launcher is missing -- run the Home Manager switch first"
 fi
 
-step "4/5  Desktop wallpaper"
+step "4/6  Desktop wallpaper"
 # The shell records this in session.json, which is mutable state it writes
 # itself, so it cannot be generated from Nix without freezing the whole file.
 wallpaper="$USER_HOME/.local/share/wallpapers/hive-grid.png"
@@ -92,7 +92,7 @@ else
   fi
 fi
 
-step "5/5  i2c-dev + Logitech hidraw access for desk peripherals"
+step "5/6  i2c-dev + Logitech hidraw access for desk peripherals"
 # The desk-switch keybinding (Mod4+Insert / Mod4+Home) uses ddcutil over
 # DDC/CI and solaar-cli over the Logitech receiver's hidraw node. Ubuntu's
 # kernel does not auto-load i2c-dev, the /dev/i2c-* nodes are root:root 0600
@@ -134,6 +134,26 @@ else
   sudo udevadm control --reload-rules
   sudo udevadm trigger --subsystem-match=hidraw
   say "DONE  wrote $hidraw_rule (Logitech hidraw nodes now readable by $USER_NAME)"
+  changed=1
+fi
+
+step "6/6  Disable Logitech receiver spurious suspend wakeups"
+# The Unifying Receiver (idVendor 046d, idProduct c52b) forwards HID++
+# battery-status pings from the ERGO K860 keyboard and MX Master mouse as USB
+# remote wakeup, waking the laptop from suspend every 10-50 min. Confirmed via
+# /sys/kernel/debug/wakeup_sources before/after diffs across suspend cycles
+# (hidpp_battery_0/hidpp_battery_1 firing far more often than every other
+# entry in the same window). Trade-off: the keyboard/mouse can no longer wake
+# the laptop from suspend afterward -- only the lid or power button can.
+receiver_rule=/etc/udev/rules.d/94-disable-logitech-wake.rules
+want_receiver='SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c52b", ATTR{power/wakeup}="disabled"'
+if [ -f "$receiver_rule" ] && grep -qF "$want_receiver" "$receiver_rule"; then
+  say "OK    $receiver_rule already disables Unifying Receiver wakeup"
+else
+  printf '%s\n' "$want_receiver" | sudo tee "$receiver_rule" >/dev/null
+  sudo udevadm control --reload-rules
+  sudo udevadm trigger --subsystem-match=usb
+  say "DONE  wrote $receiver_rule (Unifying Receiver can no longer wake the laptop)"
   changed=1
 fi
 

@@ -411,7 +411,7 @@ Home Manager cannot install or configure these system-level components:
     the receiver's `/dev/hidraw*` node needs its own rule too. Ubuntu's kernel
     does not auto-load `i2c-dev`, and without rules the nodes are
     `root:root 0600`. Both are applied idempotently by
-    `scripts/bootstrap-ubuntu-system.sh` step 5/5
+    `scripts/bootstrap-ubuntu-system.sh` step 5/6
     (`/etc/modules-load.d/i2c-dev.conf`, `/etc/udev/rules.d/91-i2c-ddcutil.rules`
     and `/etc/udev/rules.d/92-logitech-hidraw.rules`). NixOS hosts get the
     same via `hardware.i2c` and `hardware.logitech.wireless`.
@@ -430,6 +430,21 @@ Home Manager cannot install or configure these system-level components:
     change-host command only reaches a device while it is connected to this
     host's receiver — which is exactly the case when this machine runs the
     keybinding.
+
+12. **Suspend woke the laptop on its own every 10-50 minutes (Logitech receiver)**
+
+    The Logitech Unifying Receiver (idVendor `046d`, idProduct `c52b`)
+    forwards HID++ battery-status pings from the ERGO K860 keyboard and MX
+    Master mouse as USB remote wakeup, waking the laptop from suspend every
+    10-50 min. Confirmed with `/sys/kernel/debug/wakeup_sources` before/after
+    diffs across suspend cycles: `hidpp_battery_0`/`hidpp_battery_1` fired far
+    more often than every other entry in the same window.
+
+    Disabled via a `power/wakeup=disabled` udev rule, applied idempotently by
+    `scripts/bootstrap-ubuntu-system.sh` step 6/6
+    (`/etc/udev/rules.d/94-disable-logitech-wake.rules`). Trade-off: the
+    keyboard/mouse can no longer wake the laptop from suspend afterward —
+    only the lid or power button can.
 
 ## Optional Ubuntu-level setup
 
