@@ -45,7 +45,12 @@ in
         ];
         trusted-public-keys = [
           "knirski-nix-config.cachix.org-1:PZGqi8FqCamG8Pna7PdDIoUKFSYmwR15cjyqlgfZEAk="
-          "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8ZY7bkqObtLjGV97qzvxFyzE="
+          # The genuine nix-community key. The previous value here
+          # (…qzovxFyzE=) was a different, malformed base64 string: Nix
+          # parses every trusted key before verifying any signature, so a
+          # single bad entry made ALL substitution fail with
+          # "public key is not valid".
+          "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
         ];
         experimental-features = [
           "nix-command"
