@@ -230,8 +230,7 @@
           };
           dnsmasqListenAddress = lib.mkOption {
             type = lib.types.str;
-            default = "soyo:5353";
-            description = "dnsmasq address for lease stats; must match where dnsmasq is reachable from Soyo.";
+            description = "dnsmasq address (host:port) for lease stats; must match where dnsmasq is reachable from this host.";
           };
           leasesPath = lib.mkOption {
             type = lib.types.str;
@@ -248,8 +247,7 @@
           };
           domain = lib.mkOption {
             type = lib.types.str;
-            default = "soyo";
-            description = "Grafana root URL domain (used for redirects and links).";
+            description = "Grafana root URL domain (used for redirects and links). Host identity — set per host, like lanInterface, not a shared default.";
           };
         };
 
