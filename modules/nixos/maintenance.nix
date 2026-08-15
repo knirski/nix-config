@@ -40,8 +40,8 @@
           FAILTYPE="''${SMARTD_FAILTYPE:-unknown}"
           MESSAGE="''${SMARTD_MESSAGE:-no message provided}"
 
-          TOKEN=$(cat ${config.age.secrets.ntfy-token.path})
-          TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
+          TOKEN=$(cat ${config.age.secrets.${cfg.ntfyTokenSecret}.path})
+          TOPIC=$(cat ${config.age.secrets.${cfg.ntfyTopicSecret}.path})
           curl -sS --max-time 15 -o /dev/null \
             -H "Authorization: Bearer $TOKEN" \
             -H "Title: ${config.networking.hostName} SMART warning" \
@@ -76,6 +76,22 @@
           type = lib.types.nullOr lib.types.str;
           default = "(S/../.././02|L/../../7/03)";
           description = "smartd -s self-test schedule (short daily 02:00, long Sunday 03:00), or null to disable scheduled self-tests entirely. Wires the smartd.conf(5) -s directive; see the NixOS services.smartd options reference (https://search.nixos.org/options?query=services.smartd) and AGENTS.md 'Recurrent wedge' for why a host would disable the schedule.";
+        };
+        # Which agenix secrets hold the ntfy credentials for this host's
+        # channel. Every host's alerts go to its own ntfy.sh channel, so the
+        # secret names are required per-host data: each host assembler
+        # declares <host>-ntfy-token / <host>-ntfy-topic and its
+        # hosts/<host>/maintenance.nix names them here (see
+        # modules/parts/soyo.nix and modules/parts/zbook.nix). Secret
+        # *names*, not paths — the per-host rekeyed paths are derived from
+        # the names by agenix.
+        ntfyTokenSecret = lib.mkOption {
+          type = lib.types.str;
+          description = "Name of the agenix secret holding this host's ntfy.sh access token.";
+        };
+        ntfyTopicSecret = lib.mkOption {
+          type = lib.types.str;
+          description = "Name of the agenix secret holding this host's ntfy.sh topic URL.";
         };
       };
 
@@ -208,8 +224,8 @@
                           ntfy-failure*) exit 0 ;;
                         esac
 
-                        TOKEN=$(cat ${config.age.secrets.ntfy-token.path})
-                        TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
+                        TOKEN=$(cat ${config.age.secrets.${cfg.ntfyTokenSecret}.path})
+                        TOPIC=$(cat ${config.age.secrets.${cfg.ntfyTopicSecret}.path})
                         curl -sS -o /dev/null \
                           -H "Authorization: Bearer $TOKEN" \
                           -H "Title: ${config.networking.hostName} unit failed" \
@@ -282,8 +298,8 @@
                       ''}
 
                         if [ "$USED_PCT" -gt "$THRESHOLD" ]; then
-                          TOKEN=$(cat ${config.age.secrets.ntfy-token.path})
-                          TOPIC=$(cat ${config.age.secrets.ntfy-topic.path})
+                          TOKEN=$(cat ${config.age.secrets.${cfg.ntfyTokenSecret}.path})
+                          TOPIC=$(cat ${config.age.secrets.${cfg.ntfyTopicSecret}.path})
                           curl -sS -o /dev/null \
                             -H "Authorization: Bearer $TOKEN" \
                             -H "Title: ${config.networking.hostName} low disk space" \

@@ -70,8 +70,8 @@ Existing examples:
 - **Adding a secret:**
   1. `agenix edit secrets/<name>.age`
   2. Register the `rekeyFile`:
-     - **User/password/ntfy secrets** → `modules/nixos/users.nix` (`rekeyFile = ../../secrets/<name>.age;`)
-     - **Service/host-specific secrets** (restic passwords, Tailscale auth keys, dev tokens) → the host assembler `modules/parts/<host>.nix` inside its `age.secrets` block
+     - **User/password secrets** → `modules/nixos/users.nix` (`rekeyFile = ../../secrets/<name>.age;`)
+     - **Service/host-specific secrets** (restic passwords, Tailscale auth keys, dev tokens, a host's own ntfy channel) → the host assembler `modules/parts/<host>.nix` inside its `age.secrets` block
      - Optionally set `owner`/`group`/`mode` for service access
   3. `agenix rekey` → generates per-host copies
   4. Commit `secrets/<name>.age` and the updated `secrets/rekeyed/`

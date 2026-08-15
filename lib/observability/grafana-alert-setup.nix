@@ -185,8 +185,8 @@ in
         in
         "${script}/bin/grafana-alert-setup";
       LoadCredential = [
-        "ntfy_topic:${config.age.secrets.ntfy-topic.path}"
-        "ntfy_token:${config.age.secrets.ntfy-token.path}"
+        "ntfy_topic:${config.age.secrets.soyo-ntfy-topic.path}"
+        "ntfy_token:${config.age.secrets.soyo-ntfy-token.path}"
         "admin_password:${config.age.secrets.grafana-admin-password.path}"
       ];
     };
