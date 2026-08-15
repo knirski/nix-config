@@ -30,6 +30,7 @@
             age
             # Other tools without HM modules
             procs
+            dgop # system monitor (top-like TUI/CLI)
             unrar # for extract() function
           ];
 
