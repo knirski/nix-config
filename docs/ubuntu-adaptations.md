@@ -440,11 +440,17 @@ Home Manager cannot install or configure these system-level components:
     diffs across suspend cycles: `hidpp_battery_0`/`hidpp_battery_1` fired far
     more often than every other entry in the same window.
 
-    Disabled via a `power/wakeup=disabled` udev rule, applied idempotently by
-    `scripts/bootstrap-ubuntu-system.sh` step 6/7
-    (`/etc/udev/rules.d/94-disable-logitech-wake.rules`). Trade-off: the
-    keyboard/mouse can no longer wake the laptop from suspend afterward —
-    only the lid or power button can.
+    Same fix as zbook's dock RTL8153 (`modules/nixos/laptop.nix`): a
+    `usbcore.quirks=046d:c52b:j` kernel param (added to
+    `GRUB_CMDLINE_LINUX_DEFAULT`, `update-grub` run) disables remote wakeup
+    at USB-core enumeration, before `hid-logitech-hidpp` binds, so the
+    driver's own probe can't race it and re-enable wakeup the way it could
+    with a plain udev attribute write — no separate udev rule needed
+    alongside it. Applied idempotently by
+    `scripts/bootstrap-ubuntu-system.sh` step 6/7, which also removes the
+    udev rule from an earlier iteration of this fix if present. Needs a
+    reboot to take effect. Trade-off: the keyboard/mouse can no longer wake
+    the laptop from suspend afterward — only the lid or power button can.
 
 13. **Suspend woke the laptop on its own every 10-50 minutes (dGPU PME)**
 

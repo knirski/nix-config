@@ -10,7 +10,7 @@
   # (nvme_core.default_ps_max_latency_us=0 param, disable-nvme-apst.service)
   # are generic and safe on any NVMe machine. See AGENTS.md "Recurrent wedge".
   aspects.nixos.laptop =
-    { lib, pkgs, ... }:
+    { pkgs, ... }:
     {
       services = {
         power-profiles-daemon.enable = true;
@@ -131,17 +131,6 @@
         HandleLidSwitchExternalPower = "lock";
         HandleLidSwitchDocked = "ignore";
       };
-
-      # Disable USB wake for the dock's Realtek RTL8153 Ethernet adapter.
-      # On s2idle (S0ix), link-state changes from the >1Gbps LAN chip
-      # trigger an immediate re-wake after suspend entry, even when the
-      # cable is idle. Only the dock LAN is targeted, not internal USB.
-      # Belt-and-suspenders: the authoritative fix is the 0bda:8153:j
-      # usbcore quirk above (this rule alone races the r8152 driver probe,
-      # which re-enables wakeup).
-      services.udev.extraRules = lib.mkAfter ''
-        ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", ATTR{power/wakeup}="disabled"
-      '';
 
       # Disable Thunderbolt host controller and DMA wake sources before every
       # suspend. /proc/acpi/wakeup is a toggle — writing a device name

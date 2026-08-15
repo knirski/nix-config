@@ -146,16 +146,35 @@ step "6/7  Disable Logitech receiver spurious suspend wakeups"
 # (hidpp_battery_0/hidpp_battery_1 firing far more often than every other
 # entry in the same window). Trade-off: the keyboard/mouse can no longer wake
 # the laptop from suspend afterward -- only the lid or power button can.
-receiver_rule=/etc/udev/rules.d/94-disable-logitech-wake.rules
-want_receiver='SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c52b", ATTR{power/wakeup}="disabled"'
-if [ -f "$receiver_rule" ] && grep -qF "$want_receiver" "$receiver_rule"; then
-  say "OK    $receiver_rule already disables Unifying Receiver wakeup"
+#
+# Same fix zbook uses for its dock's RTL8153 (modules/nixos/laptop.nix): a
+# usbcore.quirks kernel param disables remote wakeup at USB-core enumeration,
+# before any driver binds, so it can't be raced or re-enabled by
+# hid-logitech-hidpp's own probe the way a udev attribute write can -- no
+# separate udev rule needed alongside it.
+grub_conf=/etc/default/grub
+quirk_param="usbcore.quirks=046d:c52b:j"
+if [ -f "$grub_conf" ] && grep -qF "$quirk_param" "$grub_conf"; then
+  say "OK    $grub_conf already sets $quirk_param"
+elif [ -f "$grub_conf" ]; then
+  sudo sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $quirk_param\"/" "$grub_conf"
+  sudo update-grub
+  say "DONE  added $quirk_param to $grub_conf (reboot to apply)"
+  changed=1
+  needs_reboot=1
 else
-  printf '%s\n' "$want_receiver" | sudo tee "$receiver_rule" >/dev/null
+  say "SKIP  $grub_conf not present (not a GRUB system?)"
+fi
+# Superseded by the quirk above -- clean up if an earlier run left it behind.
+receiver_rule=/etc/udev/rules.d/94-disable-logitech-wake.rules
+if [ -f "$receiver_rule" ]; then
+  sudo rm -f "$receiver_rule"
   sudo udevadm control --reload-rules
   sudo udevadm trigger --subsystem-match=usb
-  say "DONE  wrote $receiver_rule (Unifying Receiver can no longer wake the laptop)"
+  say "DONE  removed $receiver_rule (superseded by usbcore.quirks)"
   changed=1
+else
+  say "OK    $receiver_rule already absent"
 fi
 
 step "7/7  Disable dGPU suspend wakeups + NVIDIA runtime power management"
@@ -199,7 +218,7 @@ if [ "$changed" -eq 0 ]; then
 else
   echo "Applied changes."
   [ "$needs_relogin" -eq 1 ] && echo "Log out and back in to pick up the session entry."
-  [ "$needs_reboot" -eq 1 ] && echo "Reboot to pick up the NVIDIA power-management change."
+  [ "$needs_reboot" -eq 1 ] && echo "Reboot to pick up the kernel cmdline / NVIDIA power-management change."
 fi
 
 # Apt packages are deliberately not installed here: they are a one-time
