@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  lib,
   lanInterface,
   folderUid,
   folderTitle,
@@ -59,11 +60,26 @@ in
               ensure_folder() {
                 command curl -sS -u "$AUTH" -o /dev/null -w '%{http_code}' \
                   -X POST -H 'Content-Type: application/json' \
-                  -d '{"uid":"${folderUid}","title":"${folderTitle}"}' \
+                  -d ${
+                    lib.escapeShellArg (
+                      builtins.toJSON {
+                        uid = folderUid;
+                        title = folderTitle;
+                      }
+                    )
+                  } \
                   "$BASE/api/folders" | grep -qE '^200|^409|^412'
                 curl -sS -o /dev/null -X PUT \
                   -H 'Content-Type: application/json' \
-                  -d '{"uid":"${folderUid}","title":"${folderTitle}","overwrite":true}' \
+                  -d ${
+                    lib.escapeShellArg (
+                      builtins.toJSON {
+                        uid = folderUid;
+                        title = folderTitle;
+                        overwrite = true;
+                      }
+                    )
+                  } \
                   "$BASE/api/folders/${folderUid}" || :
               }
 
