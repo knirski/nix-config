@@ -1,4 +1,4 @@
-_: ''
+{ hostName }: ''
   loki.relabel "journal_drilldown" {
     forward_to = []
 
@@ -47,13 +47,13 @@ _: ''
     }
   }
 
-  loki.source.journal "soyo" {
+  loki.source.journal "${hostName}" {
     max_age       = "30m"
     forward_to    = [loki.write.local_loki.receiver]
     relabel_rules = loki.relabel.journal_drilldown.rules
     labels        = {
       job  = "systemd-journal",
-      host = "soyo",
+      host = "${hostName}",
     }
   }
 

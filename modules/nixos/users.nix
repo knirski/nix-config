@@ -29,8 +29,6 @@
     age.secrets = {
       root-password.rekeyFile = ../../secrets/root-password.age;
       krzysiek-password.rekeyFile = ../../secrets/krzysiek-password.age;
-      ntfy-token.rekeyFile = ../../secrets/ntfy-token.age;
-      ntfy-topic.rekeyFile = ../../secrets/ntfy-topic.age;
     };
   };
 }

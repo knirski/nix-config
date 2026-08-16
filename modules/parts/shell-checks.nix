@@ -67,12 +67,12 @@
       # require a deliberate inventory update and an absolute executable.
       repositoryExecServices = {
         soyo = [
-          "grafana-alert-setup"
           "lan-inventory-exporter"
           "nix-store-optimise"
           "restic-backup-metric-bootstrap"
           "soyo-activation-trace"
           "soyo-boot-trace"
+          "soyo-grafana-alert-setup"
           "soyo-health-trace"
           "tailscale-auth"
         ];

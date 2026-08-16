@@ -12,8 +12,8 @@ treating a threshold alert as proof a unit didn't crash) hides real gaps:
 
 | Class | Trigger | Transport | Covers | Cannot cover |
 | --- | --- | --- | --- | --- |
-| Threshold alert | A Prometheus expression crosses a bound (e.g. `soyo_disk_space_low`) | Grafana → its `ntfy` contact point, provisioned by `grafana-alert-setup` | Gradual, measurable drift (disk filling, backup metric stale) | A unit that never ran, or a metric pipeline itself down |
-| Unit execution failure | Any reviewed unit's `systemd` job exits non-zero or times out | `OnFailure=ntfy-failure@%N.service` → the shared `ntfy-failure@` template | The reviewed units in `checks.failure-notification-invariants` (Btrfs scrub, `nix-gc`, free-space check, restic, btrbk, `grafana-alert-setup`, `nix-store-optimise`) crashing outright, even before any metric would reflect it | Units outside the reviewed list; a fully hung (not failed) unit |
+| Threshold alert | A Prometheus expression crosses a bound (e.g. `soyo_disk_space_low`) | Grafana → its `ntfy` contact point, provisioned by `soyo-grafana-alert-setup` | Gradual, measurable drift (disk filling, backup metric stale) | A unit that never ran, or a metric pipeline itself down |
+| Unit execution failure | Any reviewed unit's `systemd` job exits non-zero or times out | `OnFailure=ntfy-failure@%N.service` → the shared `ntfy-failure@` template | The reviewed units in `checks.failure-notification-invariants` (Btrfs scrub, `nix-gc`, free-space check, restic, btrbk, `soyo-grafana-alert-setup`, `nix-store-optimise`) crashing outright, even before any metric would reflect it | Units outside the reviewed list; a fully hung (not failed) unit |
 | SMART warning | `smartd` self-test/attribute failure on a monitored disk | `smartd`'s `-M exec` hook → `ntfy-smartd-notify` (see `modules/nixos/maintenance.nix`) | Disk-level hardware degradation, independent of any systemd unit | Data loss already in progress; this is an early-warning signal only |
 | Total host outage | Soyo is unreachable at all (panic, dead PSU, hung kernel) | The Synology's Uptime Kuma, probing from an independent failure domain | The one case none of the above can self-report — a dead box can't push its own notification | Everything above; Uptime Kuma only proves liveness, not that a specific job succeeded |
 
@@ -47,7 +47,7 @@ restart loops through named negative fixtures.
 | `free-space-check` | Read Btrfs usage and credentials; write Prometheus textfile; optional HTTPS | Network-client profile with only the textfile directory writable |
 | `restic-backup-metric-bootstrap` | Write the initial Prometheus textfile | Offline profile with only the textfile directory writable |
 | `lan-inventory-exporter` | Read leases, neighbor data and vendor database; write metrics | Offline profile with only the textfile directory writable |
-| `grafana-alert-setup` | Read systemd credentials; call loopback Grafana | Network-client profile, no persistent writes, bounded start |
+| `soyo-grafana-alert-setup` | Read systemd credentials; call loopback Grafana | Network-client profile, no persistent writes, bounded start |
 | `soyo-{boot,activation,health}-trace` | Read system/runtime state; send OTLP to loopback Tempo | Network-client profile, no persistent writes, one-minute timeout |
 
 All profiles also protect the host filesystem, home directories, kernel

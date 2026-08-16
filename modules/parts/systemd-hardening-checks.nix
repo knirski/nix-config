@@ -34,7 +34,7 @@
           writes = [ "/var/lib/prometheus/textfiles" ];
           timeout = "1m";
         };
-        grafana-alert-setup = {
+        soyo-grafana-alert-setup = {
           network = true;
           writes = [ ];
           timeout = "2m";
@@ -169,7 +169,7 @@
           wants = services.tailscale-auth.wants;
           tailscaledExists = builtins.hasAttr "tailscaled" services;
         }
-        && lib.elem "grafana.service" services.grafana-alert-setup.after
+        && lib.elem "grafana.service" services.soyo-grafana-alert-setup.after
         && !(notification.unitConfig ? OnFailure)
         && notification.unitConfig.StartLimitBurst == 3;
     in

@@ -122,6 +122,18 @@ in
               group = "users";
               mode = "0400";
             };
+            # zbook's own ntfy.sh channel: alerts from the maintenance aspect
+            # (ntfy-failure@, smartd, free-space-check) go to zbook-alerts-*,
+            # not soyo's shared channel. Host-specific, so declared here like
+            # zbook-restic-password — see docs/secrets.md. The maintenance
+            # aspect is pointed at these by lanAppliance.services.maintenance
+            # in hosts/zbook/maintenance.nix.
+            zbook-ntfy-token = {
+              rekeyFile = ../../secrets/zbook-ntfy-token.age;
+            };
+            zbook-ntfy-topic = {
+              rekeyFile = ../../secrets/zbook-ntfy-topic.age;
+            };
           };
         }
       ];

@@ -1,6 +1,6 @@
 # Enforces that the Btrfs usage/threshold Prometheus metric names emitted by
 # free-space-check (modules/nixos/maintenance.nix) and referenced by the
-# soyo_disk_space_low Grafana alert (lib/observability/grafana-alert-setup.nix)
+# soyo_disk_space_low Grafana alert (lib/observability/soyo-grafana-alert-setup.nix)
 # never drift apart. Both sides import the same lib/observability/btrfs-metrics.nix
 # helper; this check proves the generated artifacts actually agree, not just
 # that the source files look right.
@@ -18,7 +18,7 @@
       # (rather than trusting the source, which could import the helper and
       # still typo the interpolation) is what proves the contract holds.
       producerScript = services.free-space-check.serviceConfig.ExecStart;
-      alertScript = services.grafana-alert-setup.serviceConfig.ExecStart;
+      alertScript = services.soyo-grafana-alert-setup.serviceConfig.ExecStart;
       requiredAlertUids = [
         "soyo_prometheus_scrape_failure"
         "soyo_loki_down"

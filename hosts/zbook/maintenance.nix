@@ -11,5 +11,10 @@
     # this drive. SMART attribute monitoring stays on; only the tests are
     # dropped. Soyo's SATA SSD keeps its schedule (see AGENTS.md).
     smartdSelfTestSchedule = null;
+    # zbook alerts go to its own ntfy.sh channel (zbook-alerts-*), so the
+    # maintenance aspect reads zbook's host-specific secrets (declared in
+    # modules/parts/zbook.nix) rather than soyo's channel secrets.
+    ntfyTokenSecret = "zbook-ntfy-token";
+    ntfyTopicSecret = "zbook-ntfy-topic";
   };
 }

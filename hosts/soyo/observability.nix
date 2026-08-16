@@ -13,6 +13,12 @@ in
       # Bind on all interfaces — reachable both from localhost and the LAN
       # (openFirewall below opens port 3000 on lanInterface for the latter).
       listenAddress = "0.0.0.0";
+      # Host identity for the Grafana root URL (http://soyo:3000); equals the
+      # hostname, but the aspect must not assume that, so it is stated here.
+      domain = "soyo";
+      # Host identity for Grafana resource UIDs (datasources, dashboard
+      # folder, dashboards, alert rules); stated explicitly like domain.
+      uidPrefix = "soyo";
     };
     openFirewall = true;
   };

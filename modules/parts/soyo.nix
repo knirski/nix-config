@@ -83,6 +83,18 @@
             restic-password = {
               rekeyFile = ../../secrets/soyo-restic-password.age;
             };
+            # Soyo's own ntfy.sh channel (soyo-alerts-*): read by the
+            # maintenance aspect (lanAppliance.services.maintenance in
+            # hosts/soyo/maintenance.nix) and by Grafana alerting. Declared
+            # per-host like restic-password — the shared users aspect no
+            # longer carries ntfy secrets since every host has its own
+            # channel; see docs/secrets.md.
+            soyo-ntfy-token = {
+              rekeyFile = ../../secrets/soyo-ntfy-token.age;
+            };
+            soyo-ntfy-topic = {
+              rekeyFile = ../../secrets/soyo-ntfy-topic.age;
+            };
           };
         }
       ];
