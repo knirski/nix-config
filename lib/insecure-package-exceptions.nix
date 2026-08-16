@@ -55,7 +55,7 @@
     reviewIntervalDays = 180;
   }
   {
-    package = "ventoy-gtk3-1.1.12";
+    package = "ventoy-gtk3-1.1.17";
     knownVulnerability = ''
       Ventoy uses binary blobs which can't be trusted to be free of malware
       or compliant to their licenses (nixpkgs issue #404663, Ventoy issues
@@ -74,10 +74,12 @@
       ventoy-full-gtk.name` after wiring the exception: evaluation succeeds,
       and only the registry entry (not a broader allowInsecurePredicate)
       permits it. Bump the version string here together with the package
-      when updating desktop.nix.
+      when updating desktop.nix. Re-verified 2026-08-16 on the nixpkgs
+      bump to ventoy-gtk3-1.1.17 (same binary-blob knownVulnerabilities,
+      same consumer).
     '';
     owner = "krzysiek (repo owner)";
-    reviewed = "2026-08-11";
+    reviewed = "2026-08-16";
     reviewIntervalDays = 180;
   }
 ]
