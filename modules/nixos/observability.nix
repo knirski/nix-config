@@ -387,6 +387,17 @@
                         http = {
                           preferred_ip_protocol = "ip4";
                           method = "GET";
+                          valid_status_codes = [
+                            200
+                            201
+                            202
+                            204
+                            301
+                            302
+                            307
+                            308
+                            401
+                          ];
                         };
                       };
                     };
