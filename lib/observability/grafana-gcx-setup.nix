@@ -27,7 +27,7 @@ in
       MemoryMax = "64M";
       CPUQuota = "10%";
       Nice = 10;
-      TimeoutStartSec = "2m";
+      TimeoutStartSec = "3m";
       Restart = "no";
       ExecStart =
         let
@@ -48,7 +48,7 @@ in
               curl() { command curl -sf -u "$AUTH" "$@"; }
 
               wait_ready() {
-                for _ in $(seq 1 30); do
+                for _ in $(seq 1 90); do
                   curl "$BASE/api/health" >/dev/null 2>&1 && return 0
                   sleep 2
                 done

@@ -37,7 +37,7 @@
         soyo-grafana-alert-setup = {
           network = true;
           writes = [ ];
-          timeout = "2m";
+          timeout = "3m";
         };
         soyo-boot-trace = {
           network = true;
