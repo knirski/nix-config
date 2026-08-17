@@ -5,9 +5,11 @@
       home = {
         sessionVariables = lib.mkMerge [
           {
-            # $BROWSER for CLI tools that do not speak xdg-open. zbook also
-            # gets this from environment.sessionVariables on the NixOS side.
-            BROWSER = "firefox";
+            # $BROWSER for CLI tools that do not speak xdg-open. Use the XDG
+            # launcher so the managed MIME associations select Firefox.
+            # zbook also gets this from environment.sessionVariables on the
+            # NixOS side.
+            BROWSER = "xdg-open";
           }
 
           # GTK_THEME=Adwaita:dark forces Electron's native menu bars
