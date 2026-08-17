@@ -10,6 +10,12 @@
     };
     dhcpcd.enable = false;
     firewall.enable = true;
+
+    # Prepend local LAN search domain ahead of Tailscale MagicDNS so
+    # unqualified lookups like 'soyo' resolve to the LAN IP first.
+    resolvconf.extraConfig = ''
+      search_domains="home.arpa"
+    '';
   };
 
   lanAppliance.services.tailscale = {
