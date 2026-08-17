@@ -1,7 +1,7 @@
 # Package: command-code — AI coding agent that learns your coding taste.
 #
 # Fetches the pre-built npm tarball (dist/ ships compiled JS, no tsc needed)
-# and installs it as the `cmd` CLI tool via buildNpmPackage so that all
+# and installs it as the `cmdc` CLI tool via buildNpmPackage so that all
 # runtime dependencies are available in the Nix store and survive
 # nixos-rebuild (no bare `npm i -g`).
 #
@@ -38,11 +38,11 @@
 
 buildNpmPackage rec {
   pname = "command-code";
-  version = "1.22.0";
+  version = "1.26.0";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/command-code/-/command-code-${version}.tgz";
-    hash = "sha512-zg3UyMVHSnvmVscO2/sImSRy3nJjJ0D1srOMcN+r4aNTSBpEvR5s1QkcICuZwQDtKGanI0OGz8GnzAu8vwL2Pg==";
+    hash = "sha512-QiyAy0NJHS6QfGMHgIuK/r1shi26TJz+XbjVcRhU3yriAVRwBHUckyKxAyEMB/IsTIzYsFnl/hdKHzlna2BK8w==";
   };
 
   dontNpmBuild = true;
@@ -59,7 +59,7 @@ buildNpmPackage rec {
     sed -i '$s/^}$/,\n  "overrides": {"@opentelemetry\/core":"2.10.0","@opentelemetry\/propagator-jaeger":"2.10.0"}\n}/' package.json
   '';
 
-  npmDepsHash = "sha256-1KGq+PfofxatpXJpb0TvG6zO7mv/19VFk/mC2fkl6+A=";
+  npmDepsHash = "sha256-KRR9dKVIr5uZYOz7XDbiX6wKXSd8obFHye96fXjgj7k=";
 
   nativeBuildInputs = [
     makeWrapper
@@ -74,10 +74,13 @@ buildNpmPackage rec {
     cp -r package.json dist node_modules "$out/lib/node_modules/${pname}/"
 
     mkdir -p "$out/bin"
-    makeWrapper "${nodejs}/bin/node" "$out/bin/cmd" \
+    # The upstream package ships `cmd`/`cmdc`/`command-code`/`commandcode`
+    # bin aliases; this repo standardizes on `cmdc` to avoid the very short
+    # `cmd` name colliding with other tools on PATH.
+    makeWrapper "${nodejs}/bin/node" "$out/bin/cmdc" \
       --add-flags "$out/lib/node_modules/${pname}/dist/index.mjs"
-    ln -s "$out/bin/cmd" "$out/bin/command-code"
-    ln -s "$out/bin/cmd" "$out/bin/commandcode"
+    ln -s "$out/bin/cmdc" "$out/bin/command-code"
+    ln -s "$out/bin/cmdc" "$out/bin/commandcode"
 
     runHook postInstall
   '';
