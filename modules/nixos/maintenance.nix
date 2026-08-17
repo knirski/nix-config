@@ -294,6 +294,7 @@
                         mkdir -p /var/lib/prometheus/textfiles
                         ${btrfsMetrics.hostLabel}="${config.networking.hostName}"
                         printf '%s\n' '# HELP ${btrfsMetrics.usagePercent} Percent of Btrfs device space currently used.' '# TYPE ${btrfsMetrics.usagePercent} gauge' "${btrfsMetrics.usagePercent}{${btrfsMetrics.hostLabel}=\"${"$" + btrfsMetrics.hostLabel}\"} $USED_PCT" '# HELP ${btrfsMetrics.thresholdPercent} Configured Btrfs usage alert threshold.' '# TYPE ${btrfsMetrics.thresholdPercent} gauge' "${btrfsMetrics.thresholdPercent}{${btrfsMetrics.hostLabel}=\"${"$" + btrfsMetrics.hostLabel}\"} $THRESHOLD" > /var/lib/prometheus/textfiles/btrfs-space.prom.$$
+                        chmod 0644 /var/lib/prometheus/textfiles/btrfs-space.prom.$$
                         mv /var/lib/prometheus/textfiles/btrfs-space.prom.$$ /var/lib/prometheus/textfiles/btrfs-space.prom
                       ''}
 
