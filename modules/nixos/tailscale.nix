@@ -44,6 +44,9 @@
       config = lib.mkIf cfg.enable {
         services.tailscale.enable = true;
 
+        # Tailscale authenticated traffic is trusted across the overlay network.
+        networking.firewall.trustedInterfaces = [ "tailscale0" ];
+
         # Tailscale is remote-administration infrastructure, not one of Soyo's
         # two critical LAN roles. Keep it useful during an incident without
         # allowing it to crowd out DNS or DHCP.
