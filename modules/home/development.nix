@@ -45,6 +45,8 @@
         # github
         actionlint
         nodejs
+        # AWS command-line client for workstation cloud administration.
+        awscli2
       ];
 
       programs = {
