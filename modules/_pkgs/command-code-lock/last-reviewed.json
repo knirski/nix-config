@@ -1,6 +1,6 @@
 {
   "_comment": "Locally-recorded review timestamp for the vendored command-code npm dependency tree (package-lock.json). Updated by hand whenever a human reviews the vendored tree after running scripts/update-command-code.sh or re-confirming the current upstream version. Read offline by tests/security/check_command_code_freshness.py; never fetched or inferred from the network.",
-  "date": "2026-08-17",
-  "version": "1.26.0",
+  "date": "2026-08-18",
+  "version": "1.27.2",
   "staleAfterDays": 14
 }
