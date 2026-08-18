@@ -138,7 +138,7 @@ else
   changed=1
 fi
 
-step "6/7  Disable Logitech receiver spurious suspend wakeups"
+step "6/7  Disable USB receiver and dock spurious suspend wakeups"
 # The Unifying Receiver (idVendor 046d, idProduct c52b) forwards HID++
 # battery-status pings from the ERGO K860 keyboard and MX Master mouse as USB
 # remote wakeup, waking the laptop from suspend every 10-50 min. Confirmed via
@@ -147,17 +147,22 @@ step "6/7  Disable Logitech receiver spurious suspend wakeups"
 # entry in the same window). Trade-off: the keyboard/mouse can no longer wake
 # the laptop from suspend afterward -- only the lid or power button can.
 #
-# Same fix zbook uses for its dock's RTL8153 (modules/nixos/laptop.nix): a
-# usbcore.quirks kernel param disables remote wakeup at USB-core enumeration,
-# before any driver binds, so it can't be raced or re-enabled by
-# hid-logitech-hidpp's own probe the way a udev attribute write can -- no
-# separate udev rule needed alongside it.
+# The same USB-core mechanism also covers the dock's Realtek RTL8153. Its
+# link-state changes were confirmed to wake this Ubuntu laptop from s2idle;
+# disabling its runtime power/wakeup attribute stopped the reproducer. Keep
+# both IDs in one parameter so the kernel applies the policy before either
+# driver can re-enable remote wake. No separate udev rule is needed.
 grub_conf=/etc/default/grub
-quirk_param="usbcore.quirks=046d:c52b:j"
+old_quirk_param="usbcore.quirks=046d:c52b:j"
+quirk_param="usbcore.quirks=046d:c52b:j,0bda:8153:j"
 if [ -f "$grub_conf" ] && grep -qF "$quirk_param" "$grub_conf"; then
   say "OK    $grub_conf already sets $quirk_param"
 elif [ -f "$grub_conf" ]; then
-  sudo sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $quirk_param\"/" "$grub_conf"
+  if grep -qF "$old_quirk_param" "$grub_conf"; then
+    sudo sed -i "s/$old_quirk_param/$quirk_param/" "$grub_conf"
+  else
+    sudo sed -i "s/^\(GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*\)\"/\1 $quirk_param\"/" "$grub_conf"
+  fi
   sudo update-grub
   say "DONE  added $quirk_param to $grub_conf (reboot to apply)"
   changed=1

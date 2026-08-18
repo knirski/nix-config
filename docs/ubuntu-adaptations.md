@@ -440,17 +440,21 @@ Home Manager cannot install or configure these system-level components:
     diffs across suspend cycles: `hidpp_battery_0`/`hidpp_battery_1` fired far
     more often than every other entry in the same window.
 
-    Same fix as zbook's dock RTL8153 (`modules/nixos/laptop.nix`): a
-    `usbcore.quirks=046d:c52b:j` kernel param (added to
+    The same USB-core fix also covers the dock's Realtek RTL8153, which was
+    separately confirmed on this host by disabling
+    `/sys/bus/usb/devices/2-1.2/power/wakeup` at runtime: the unwanted wakes
+    stopped. Keep both IDs in one kernel parameter:
+    `usbcore.quirks=046d:c52b:j,0bda:8153:j` (added to
     `GRUB_CMDLINE_LINUX_DEFAULT`, `update-grub` run) disables remote wakeup
-    at USB-core enumeration, before `hid-logitech-hidpp` binds, so the
-    driver's own probe can't race it and re-enable wakeup the way it could
-    with a plain udev attribute write — no separate udev rule needed
-    alongside it. Applied idempotently by
+    at USB-core enumeration, before the drivers bind, so their own probes
+    cannot race it and re-enable wakeup the way they could with plain udev
+    attribute writes — no separate udev rule is needed alongside it. Applied
+    idempotently by
     `scripts/bootstrap-ubuntu-system.sh` step 6/7, which also removes the
     udev rule from an earlier iteration of this fix if present. Needs a
-    reboot to take effect. Trade-off: the keyboard/mouse can no longer wake
-    the laptop from suspend afterward — only the lid or power button can.
+    reboot to take effect. Trade-off: the keyboard/mouse and dock Ethernet
+    can no longer wake the laptop from suspend afterward — only the lid or
+    power button can.
 
 13. **Suspend woke the laptop on its own every 10-50 minutes (dGPU PME)**
 
