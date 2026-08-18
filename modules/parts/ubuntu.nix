@@ -157,6 +157,7 @@ in
             # a store path so it is a GC root and follows each generation.
             packages = [
               pkgs.mesa
+              pkgs.aegis-rs
 
               # Slack from nixpkgs rather than the snap. The snap's GPU stack
               # is broken inside its sandbox -- it carries no gpu-2404 content
