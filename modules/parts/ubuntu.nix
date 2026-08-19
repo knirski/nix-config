@@ -170,6 +170,19 @@ in
               pkgs.mesa
               pkgs.aegis-rs
 
+              # The official Ubuntu package is intentionally retained, but
+              # its Electron binary must be told which Secret Service backend
+              # to use.  Under Sway/DMS autodetection falls back to
+              # basic_text, so Claude cannot persist the OAuth token and
+              # repeatedly asks for elevated reauthentication.
+              (pkgs.writeShellApplication {
+                name = "claude-desktop";
+                text = ''
+                  exec /usr/bin/claude-desktop \
+                    --password-store=gnome-libsecret "$@"
+                '';
+              })
+
               # Slack from nixpkgs rather than the snap. The snap's GPU stack
               # is broken inside its sandbox -- it carries no gpu-2404 content
               # plug, takes the classic opengl interface, and
