@@ -124,7 +124,10 @@ in
               MD031 = false;
               MD032 = false;
             };
-            excludes = [ "\.commandcode" ];
+            excludes = [
+              "\.commandcode"
+              "\.agents/skills"
+            ];
           };
           ruff.enable = true;
           gitleaks = {
