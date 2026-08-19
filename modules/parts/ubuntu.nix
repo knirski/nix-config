@@ -213,6 +213,20 @@ in
             dcal.Service.Environment = graphicalServiceEnvironment;
           };
 
+          # Cloudflare's vendor-installed warp-taskbar.service is started by
+          # the systemd user manager rather than by Sway.  Its Re-authenticate
+          # action uses $BROWSER to hand the Access refresh URL to a browser;
+          # standalone Home Manager's `home.sessionVariables` reach shell
+          # sessions but not this service.  Export the managed launcher and
+          # profile paths to the user manager so WARP follows the Firefox MIME
+          # association.  Without XDG_DATA_DIRS, xdg-open cannot resolve the
+          # profile's firefox.desktop and falls back to a stale Chrome handler.
+          systemd.user.sessionVariables = {
+            BROWSER = "xdg-open";
+            PATH = graphicalServicePath;
+            XDG_DATA_DIRS = "${config.home.profileDirectory}/share:/nix/var/nix/profiles/default/share:/usr/local/share:/usr/share:/var/lib/snapd/desktop";
+          };
+
           # Hand locking to Ubuntu's swaylock. DankMaterialShell's own lock
           # screen cannot authenticate here: it is built against Nix's PAM, so
           # pam_unix looks for unix_chkpwd in the Nix store, where nothing can
