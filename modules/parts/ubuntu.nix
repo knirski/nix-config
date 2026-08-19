@@ -227,41 +227,6 @@ in
             XDG_DATA_DIRS = "${config.home.profileDirectory}/share:/nix/var/nix/profiles/default/share:/usr/local/share:/usr/share:/var/lib/snapd/desktop";
           };
 
-          # This user-created launcher was claiming HTTP(S) and was ranked
-          # ahead of Firefox by GTK/GIO.  WARP uses that API directly, so its
-          # re-authentication flow ignored the explicit mimeapps.list default
-          # and repeatedly tried the stale launcher.  Keep Chrome available,
-          # but make Firefox the only browser claiming web URLs.
-          xdg.desktopEntries.chrome-nvidia = {
-            name = "Chrome (NVIDIA GPU)";
-            exec = "env __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia LIBVA_DRIVER_NAME=nvidia NVD_BACKEND=direct ${pkgs.google-chrome}/bin/google-chrome --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiOnNvidiaGPUs,CanvasOopRasterization --disable-features=UseChromeOSDirectVideoDecoder --gpu-no-context-lost --ozone-platform-hint=auto %U";
-            icon = "chromium";
-            categories = [
-              "Network"
-              "WebBrowser"
-            ];
-            mimeType = [ ];
-            settings.StartupWMClass = "google-chrome";
-          };
-
-          # The old unmanaged copy in ~/.local/share/applications shadows the
-          # profile entry above, so explicitly replace that file as well.
-          home.file.".local/share/applications/chrome-nvidia.desktop" = {
-            force = true;
-            source = "${
-              pkgs.makeDesktopItem {
-                name = "chrome-nvidia";
-                desktopName = "Chrome (NVIDIA GPU)";
-                exec = "env __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia LIBVA_DRIVER_NAME=nvidia NVD_BACKEND=direct ${pkgs.google-chrome}/bin/google-chrome --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy --enable-features=VaapiVideoDecoder,VaapiVideoEncoder,VaapiOnNvidiaGPUs,CanvasOopRasterization --disable-features=UseChromeOSDirectVideoDecoder --gpu-no-context-lost --ozone-platform-hint=auto %U";
-                icon = "chromium";
-                categories = [
-                  "Network"
-                  "WebBrowser"
-                ];
-              }
-            }/share/applications/chrome-nvidia.desktop";
-          };
-
           # WARP is launched by a vendor systemd service whose PATH does not
           # include the Nix profile.  Give the plain Firefox handler an
           # absolute binary path so the browser handoff works without any
@@ -272,7 +237,7 @@ in
               pkgs.makeDesktopItem {
                 name = "firefox";
                 desktopName = "Firefox";
-                exec = "${pkgs.firefox}/bin/firefox --name firefox %U";
+                exec = "${config.home.homeDirectory}/.nix-profile/bin/firefox --name firefox %U";
                 icon = "firefox";
                 categories = [
                   "Network"
@@ -297,6 +262,7 @@ in
           # entries so GTK/GIO stops recommending Chrome for web URLs.
           home.activation.refreshLocalDesktopDatabase = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
             rm -f "$HOME/.local/share/applications/firefox-nvidia.desktop"
+            rm -f "$HOME/.local/share/applications/chrome-nvidia.desktop"
             rm -f "$HOME/.local/share/applications/mimeinfo.cache"
             ${pkgs.desktop-file-utils}/bin/update-desktop-database \
               "$HOME/.local/share/applications"

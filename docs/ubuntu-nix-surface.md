@@ -109,6 +109,43 @@ launcher exports: `modules/parts/ubuntu.nix` hands their units the same
 `PATH`/`XDG_DATA_DIRS` via `Service.Environment` (NixOS hosts must not get
 this — they inherit a correct PATH from `pam_env`).
 
+### 3.1 Cloudflare WARP and browser handoff
+
+Cloudflare WARP is Ubuntu-owned. The official package provides
+`/usr/bin/warp-cli`, `/bin/warp-taskbar`, and the vendor
+`warp-taskbar.service`; Home Manager does not install or replace the WARP GUI.
+Home Manager owns the browser side of the boundary:
+
+- `~/.config/mimeapps.list` selects `firefox.desktop` for HTTP(S).
+- The user-local `firefox.desktop` is generated with the stable
+  `~/.nix-profile/bin/firefox` path. This matters because the vendor systemd
+  service does not inherit the interactive shell's Nix `PATH`.
+- The stale `firefox-nvidia.desktop` and `chrome-nvidia.desktop` handlers are
+  removed, and the local desktop MIME cache is regenerated during activation.
+  A stale cache or NVIDIA handler can make WARP launch a different browser
+  even when `mimeapps.list` says Firefox.
+- The WARP service receives `BROWSER=xdg-open`, `PATH`, and `XDG_DATA_DIRS`
+  through `systemd.user.sessionVariables`, so its GTK/GIO browser lookup sees
+  the Home Manager profile.
+
+To force re-authentication without the GUI button, run:
+
+```bash
+warp-cli debug access-reauth --no-paginate
+```
+
+If the GUI or CLI reports that a browser should have opened, check the handler
+and service state before changing associations:
+
+```bash
+gio mime x-scheme-handler/https
+systemctl --user status warp-taskbar.service
+warp-cli status
+```
+
+Apply the durable configuration with `just deploy ubuntu`; restart the vendor
+GUI after deployment with `systemctl --user restart warp-taskbar.service`.
+
 ### 3. Ubuntu-owned system files that exist to serve Nix
 
 These live outside every Home Manager generation. `scripts/bootstrap-ubuntu-system.sh`
@@ -185,6 +222,7 @@ Symptom → surface point → fix:
 | Electron apps store secrets in plaintext (`Detected change in safeStorage backend`) | `--password-store` overlay | add the app to `chromiumSecretStoreOverlay` in `modules/parts/ubuntu.nix` |
 | Git signing: `agent refused operation` | gcr vs gpg-agent split | `gitSshSign` in `modules/parts/ubuntu.nix` |
 | GTK4 apps hang; portal answers `Failed to ReadAll() from Settings implementation: Timeout was reached` | portal backend selection | `~/.config/xdg-desktop-portal/sway-portals.conf` (HM) + apt portal packages |
+| WARP re-authentication opens nothing or selects the wrong browser | Ubuntu WARP GUI + user MIME cache + systemd service environment | `just deploy ubuntu`; verify plain `firefox.desktop`, then restart `warp-taskbar.service` |
 | Snap Electron apps never map a window under Sway | snap sandbox GL | operator: `sudo snap remove slack code intellij-idea spotify bitwarden` (one-time) |
 
 ## What guarantees the surface
