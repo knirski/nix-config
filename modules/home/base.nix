@@ -28,6 +28,7 @@
           dgop # system monitor (top-like TUI/CLI)
           gcx # Grafana Cloud CLI
           unrar # for extract() function
+          tree
         ];
 
       };
