@@ -24,8 +24,8 @@
       # Re-applied over the live file on every activation.
       dmsPinnedSettings = {
         # Idle, lock and suspend behaviour
-        acLockTimeout = 180;
-        acSuspendTimeout = 600;
+        acLockTimeout = 900;
+        acSuspendTimeout = 3600;
         lockBeforeSuspend = true;
         lockScreenPowerOffMonitorsOnLock = true;
         # Power profiles and battery care
