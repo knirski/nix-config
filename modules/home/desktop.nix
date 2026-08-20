@@ -53,6 +53,7 @@
               text = ''exec pinentry-gnome3 "$@"'';
             })
             wl-clipboard
+            eog
             loupe
             freetube
             signal-desktop
