@@ -26,6 +26,8 @@
     in
     {
       home.packages = with pkgs; [
+        antigravity-cli
+        antigravity
         command-code
         # Rust Token Killer — CLI proxy that filters git/grep/find output
         # before it reaches an AI coding agent's context.

@@ -35,8 +35,7 @@
         packages =
           with pkgs;
           [
-            antigravity-cli
-            mpv
+            vlc
             spotify
           ]
           ++ lib.optionals stdenv.hostPlatform.isLinux [
