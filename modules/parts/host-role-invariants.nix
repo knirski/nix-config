@@ -84,6 +84,7 @@
         "nushell"
       ];
       packageNames = pkgList: map (p: p.pname or p.name or "") pkgList;
+      homeHasPackage = home: name: builtins.elem name (packageNames home.home.packages);
       homeHasNoDevelopmentPackages =
         home:
         let
@@ -185,6 +186,13 @@
         ubuntu-has-development-programs = developmentProgramsEnabled ubuntuHome;
         ubuntu-selects-sway-not-aerospace =
           ubuntuHome.wayland.windowManager.sway.enable && !ubuntuHome.programs.aerospace.enable;
+
+        zbook-has-android-studio = homeHasPackage zbookHome "android-studio";
+        zbook-has-android-sdk = homeHasPackage zbookHome "android-sdk-cmdline-tools";
+        ubuntu-has-android-studio = homeHasPackage ubuntuHome "android-studio";
+        ubuntu-has-android-sdk = homeHasPackage ubuntuHome "android-sdk-cmdline-tools";
+        macbook-no-android-studio = !(homeHasPackage macbookHome "android-studio");
+        macbook-no-android-sdk = !(homeHasPackage macbookHome "android-sdk-cmdline-tools");
 
         # R2: the headless Linux base (soyo-equivalent — homeBaseOnly has no
         # desktop aspect imported) must get a terminal-safe pinentry, never

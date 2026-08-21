@@ -23,33 +23,51 @@
           export GH_TOKEN="$GITHUB_TOKEN"
         fi
       '';
+      # Keep the IDE and SDK separate: the IDE is a Linux-only binary, while
+      # the SDK is also useful to Gradle and command-line Android tooling.
+      # The host assemblers explicitly accept the SDK license where this
+      # package is enabled.
+      androidSdk = pkgs.androidenv.androidPkgs.androidsdk;
     in
     {
-      home.packages = with pkgs; [
-        antigravity-cli
-        antigravity
-        command-code
-        # Rust Token Killer — CLI proxy that filters git/grep/find output
-        # before it reaches an AI coding agent's context.
-        rtk
-        # Nix language servers
-        nil
-        nixd
-        # Language servers for neovim (see programs.neovim.extraPackages below)
-        lua-language-server
-        pyright
-        typescript-language-server
-        rust-analyzer
-        gopls
-        # Used by AI coding agents (claude-code, codex, opencode, command-code)
-        # for script execution — not an interactive admin shell.
-        nushell
-        # github
-        actionlint
-        nodejs
-        # AWS command-line client for workstation cloud administration.
-        awscli2
-      ];
+      home.packages =
+        with pkgs;
+        [
+          jetbrains.idea
+          vscode
+          antigravity-ide
+          antigravity-cli
+          command-code
+          # Rust Token Killer — CLI proxy that filters git/grep/find output
+          # before it reaches an AI coding agent's context.
+          rtk
+          # Nix language servers
+          nil
+          nixd
+          # Language servers for neovim (see programs.neovim.extraPackages below)
+          lua-language-server
+          pyright
+          typescript-language-server
+          rust-analyzer
+          gopls
+          # Used by AI coding agents (claude-code, codex, opencode, command-code)
+          # for script execution — not an interactive admin shell.
+          nushell
+          # github
+          actionlint
+          nodejs
+          # AWS command-line client for workstation cloud administration.
+          awscli2
+        ]
+        ++ lib.optionals stdenv.hostPlatform.isLinux [
+          android-studio
+          androidSdk
+        ];
+
+      home.sessionVariables = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+        ANDROID_HOME = "${androidSdk}/libexec/android-sdk";
+        ANDROID_SDK_ROOT = "${androidSdk}/libexec/android-sdk";
+      };
 
       programs = {
         claude-code.enable = true;

@@ -93,7 +93,12 @@ in
             # args), so the module system's merge is unambiguous regardless
             # of definition order. Soyo, the other nixos.base consumer, does
             # not add this and so gets none of it.
-            config.permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
+            config = {
+              permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
+              # Android Studio's separate SDK is installed by the shared
+              # development aspect on this Linux workstation.
+              android_sdk.accept_license = true;
+            };
           };
 
           age.rekey = {

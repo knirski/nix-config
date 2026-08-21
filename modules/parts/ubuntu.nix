@@ -52,9 +52,20 @@ let
       google-chrome = withLibsecret "google-chrome" [ "google-chrome-stable" ];
     };
 
-  nixpkgsArgs = import ../../lib/mk-nixpkgs-args.nix {
-    permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
-  };
+  nixpkgsArgs =
+    let
+      args = import ../../lib/mk-nixpkgs-args.nix {
+        permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
+      };
+    in
+    args
+    // {
+      config = args.config // {
+        # Android Studio's separate SDK is installed by the shared
+        # development aspect on this Linux workstation.
+        android_sdk.accept_license = true;
+      };
+    };
 in
 {
   flake.homeConfigurations.ubuntu = inputs.home-manager.lib.homeManagerConfiguration {
@@ -174,14 +185,6 @@ in
               # Work-laptop specific, so it stays out of the shared desktop
               # aspect that zbook and macbook also import.
               pkgs.slack
-
-              # Replacing the snaps of the same name. Both are unfree, which
-              # lib/mk-nixpkgs-args.nix already permits. Spotify and Bitwarden
-              # need no entry here: aspects.homeManager.desktop provides them.
-              pkgs.vscode
-              # jetbrains.idea is the Ultimate build; nixpkgs dropped the
-              # -ultimate suffix and keeps idea-community as the free one.
-              pkgs.jetbrains.idea
 
               # Replacing the apt google-chrome-stable. google-chrome rather
               # than chromium so the existing ~/.config/google-chrome profile
