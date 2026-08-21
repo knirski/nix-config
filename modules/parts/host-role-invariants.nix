@@ -85,6 +85,10 @@
       ];
       packageNames = pkgList: map (p: p.pname or p.name or "") pkgList;
       homeHasPackage = home: name: builtins.elem name (packageNames home.home.packages);
+      androidSdkComposition = import ../../lib/android-sdk.nix {
+        pkgs = inputs.nixpkgs-unstable.legacyPackages.x86_64-linux;
+      };
+      androidSystemImageNames = map (image: image.name) androidSdkComposition.system-images;
       homeHasNoDevelopmentPackages =
         home:
         let
@@ -193,6 +197,10 @@
         ubuntu-has-android-sdk = homeHasPackage ubuntuHome "android-sdk-cmdline-tools";
         macbook-no-android-studio = !(homeHasPackage macbookHome "android-studio");
         macbook-no-android-sdk = !(homeHasPackage macbookHome "android-sdk-cmdline-tools");
+        android-sdk-has-x86_64-image =
+          androidSystemImageNames != [ ]
+          && builtins.all (name: lib.hasInfix "x86_64" name) androidSystemImageNames
+          && builtins.all (name: !(lib.hasInfix "arm" name)) androidSystemImageNames;
 
         # R2: the headless Linux base (soyo-equivalent — homeBaseOnly has no
         # desktop aspect imported) must get a terminal-safe pinentry, never

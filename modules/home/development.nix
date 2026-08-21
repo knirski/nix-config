@@ -27,7 +27,8 @@
       # the SDK is also useful to Gradle and command-line Android tooling.
       # The host assemblers explicitly accept the SDK license where this
       # package is enabled.
-      androidSdk = pkgs.androidenv.androidPkgs.androidsdk;
+      androidSdkComposition = import ../../lib/android-sdk.nix { inherit pkgs; };
+      androidSdk = androidSdkComposition.androidsdk;
     in
     {
       home.packages =
