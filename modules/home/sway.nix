@@ -93,6 +93,78 @@
         config = rec {
           modifier = "Mod4";
           terminal = "ghostty";
+          # Prefer the docked monitor for every workspace except 8. The
+          # make/model/serial identifier survives DP connector renumbering;
+          # eDP-1 is the fallback for the docked workspaces when undocked.
+          workspaceOutputAssign = [
+            {
+              workspace = "1";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "2";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "3";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "4";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "5";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "6";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "7";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "8";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "9";
+              output = [
+                "Iiyama North America PL2792Q 1152194804219"
+                "eDP-1"
+              ];
+            }
+            {
+              workspace = "10";
+              output = "eDP-1";
+            }
+          ];
           seat = {
             "*" = {
               xcursor_theme = "Adwaita 24";
