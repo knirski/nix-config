@@ -53,7 +53,15 @@
             })
             wl-clipboard
             eog
+            evince
             loupe
+            file-roller
+            gnome-calculator
+            gnome-disk-utility
+            baobab
+            seahorse
+            cheese
+            gnome-boxes
             freetube
             signal-desktop
             grim
@@ -156,6 +164,17 @@
           "x-scheme-handler/https" = "firefox.desktop";
           "x-scheme-handler/about" = "firefox.desktop";
           "x-scheme-handler/unknown" = "firefox.desktop";
+
+          # Evince as the default PDF viewer
+          "application/pdf" = "org.gnome.Evince.desktop";
+
+          # File Roller as the default archive handler
+          "application/zip" = "org.gnome.FileRoller.desktop";
+          "application/x-tar" = "org.gnome.FileRoller.desktop";
+          "application/gzip" = "org.gnome.FileRoller.desktop";
+          "application/x-7z-compressed" = "org.gnome.FileRoller.desktop";
+          "application/x-bzip2" = "org.gnome.FileRoller.desktop";
+          "application/x-xz" = "org.gnome.FileRoller.desktop";
 
           # Desktop login callbacks must return to the application that
           # started the browser flow. Keep these explicit in the user-level
