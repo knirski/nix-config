@@ -79,6 +79,17 @@ in
         ];
         text = builtins.readFile ../../scripts/update-command-code.sh;
       };
+      update-command-code-desktop = pkgs.writeShellApplication {
+        name = "update-command-code-desktop";
+        runtimeInputs = with pkgs; [
+          coreutils
+          curl
+          git
+          jq
+          nix
+        ];
+        text = builtins.readFile ../../scripts/update-command-code-desktop.sh;
+      };
       sourceFilter = import ../../lib/source-filter.nix { inherit (pkgs) lib; };
       sourceFilterPredicate = import ../../lib/source-filter-predicate.nix { inherit (pkgs) lib; };
       filteredSource = sourceFilter inputs.self;
@@ -176,6 +187,7 @@ in
           recover-secrets
           set-tailscale-keys
           update-command-code
+          update-command-code-desktop
           ;
         command-code = pkgs'.callPackage ../../modules/_pkgs/command-code.nix { };
         rtk = pkgs'.callPackage ../../modules/_pkgs/rtk.nix { };
@@ -211,6 +223,11 @@ in
           type = "app";
           program = pkgs.lib.getExe update-command-code;
           meta.description = "Fetch a command-code version, regenerate its vendored lockfile, and print hashes to paste into command-code.nix";
+        };
+        update-command-code-desktop = {
+          type = "app";
+          program = pkgs.lib.getExe update-command-code-desktop;
+          meta.description = "Fetch a command-code-desktop version from GitHub releases and print the hash to paste into command-code-desktop.nix";
         };
       };
 

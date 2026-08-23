@@ -98,6 +98,10 @@ set-tailscale-keys *args:
 update-command-code version:
     nix run .#update-command-code -- {{version}}
 
+# Fetch a command-code-desktop version from GitHub releases and print the hash to paste into command-code-desktop.nix; never edits the file or commits.
+update-command-code-desktop *args:
+    nix run .#update-command-code-desktop -- {{args}}
+
 # Run dendritic option-namespace tests (wired into nix flake check, also runs there).
 test:
     nix build path:.#checks.x86_64-linux.dendritic-options --no-link --print-out-paths

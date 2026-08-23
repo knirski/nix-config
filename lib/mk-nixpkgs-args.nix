@@ -39,6 +39,7 @@
   overlays = [
     (final: _: {
       command-code = final.callPackage ../modules/_pkgs/command-code.nix { };
+      command-code-desktop = final.callPackage ../modules/_pkgs/command-code-desktop.nix { };
       rtk = final.callPackage ../modules/_pkgs/rtk.nix { };
     })
 

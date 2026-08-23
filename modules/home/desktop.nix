@@ -67,6 +67,9 @@
             grim
             slurp
             swappy
+            # AI coding agent desktop apps
+            command-code-desktop
+            opencode-desktop
             # Communication and media
             thunderbird
             obs-studio
