@@ -4,7 +4,7 @@
 - When waiting for PR checks to pass, use `gh run watch` instead of `sleep` to poll for completion. Confidence: 0.70
 - When monitoring PR-level CI checks specifically, use `gh pr checks <PR> --watch --interval 30` to watch check statuses (not just workflow runs). Confidence: 0.75
 - Include `Co-authored-by: CommandCodeBot <noreply@commandcode.ai>` in commit messages for automated/bot-assisted commits. Confidence: 0.80
-- Use `gh` CLI for GitHub code search (e.g., `gh search code`) as the primary way to find existing implementations and patterns across repos, not just for PR operations. Confidence: 0.90
+- Use `gh` CLI for all GitHub interactions — code search, reading file contents from repos (via `gh api repos/.../contents/...`), and PR operations — instead of `web_fetch` or `web_search` for GitHub-hosted content. The user explicitly corrected an attempt to use `web_fetch` for fetching a repo's flake.nix, preferring `gh api` with base64 decode. Confidence: 0.90
 - Before blindly applying bot-generated PR review comments (from gemini-code-assist, coderabbitai, etc.), critically evaluate each comment for validity — not all automated suggestions are correct or worth applying. Confidence: 0.65
 - When CI is stuck on a non-substantive post-run cleanup step but all substantive job steps passed, prefer merging the PR directly rather than continuing to debug/cancel/rerun the CI infrastructure issue. Confidence: 0.65
 - When merging PRs, use `gh pr merge --squash` with a conventional-commit-formatted subject line and a detailed body explaining the changes, then clean up both local and remote branches. Confidence: 0.60
