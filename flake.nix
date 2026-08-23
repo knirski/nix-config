@@ -66,6 +66,11 @@
       url = "github:AvengeMedia/dms-plugin-registry";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+
+    omniroute-nix = {
+      url = "github:mqnoy/omniroute-nix";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   # The whole flake is built by auto-importing every flake-parts module

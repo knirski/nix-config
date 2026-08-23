@@ -32,7 +32,10 @@
             useUserPackages = true;
             users.krzysiek = {
               imports = [ config.aspects.homeManager.base ];
-              home.stateVersion = "26.05";
+              home = {
+                packages = [ inputs.omniroute-nix.packages.x86_64-linux.default ];
+                stateVersion = "26.05";
+              };
             };
           };
         }
