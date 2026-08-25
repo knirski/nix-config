@@ -239,14 +239,11 @@
             "${modifier}+x" = "exec dms ipc call powermenu toggle";
             "${modifier}+n" = "exec dms ipc call notifications toggle";
             "${modifier}+v" = "exec dms ipc call clipboard toggle";
-            "${modifier}+Print" =
-              "exec bash -c 'cd ~/Pictures/Screenshots && grim - | swappy -f - -o screenshot-$(date +%Y%m%d-%H%M%S).png && notify-send \"Screenshot saved\"'";
-            "${modifier}+Ctrl+Shift+3" =
-              "exec bash -c 'cd ~/Pictures/Screenshots && grim - | swappy -f - -o screenshot-$(date +%Y%m%d-%H%M%S).png && notify-send \"Screenshot saved\"'";
-            "${modifier}+Ctrl+Print" =
-              "exec bash -c 'cd ~/Pictures/Screenshots && grim -g \"$(slurp)\" - | swappy -f - -o screenshot-$(date +%Y%m%d-%H%M%S).png && notify-send \"Screenshot saved\"'";
-            "${modifier}+Ctrl+Shift+4" =
-              "exec bash -c 'cd ~/Pictures/Screenshots && grim -g \"$(slurp)\" - | swappy -f - -o screenshot-$(date +%Y%m%d-%H%M%S).png && notify-send \"Screenshot saved\"'";
+            # Flameshot owns the interactive capture/annotation flow. It does
+            # not receive a save path, so screenshots are only saved or copied
+            # when chosen in its UI.
+            "Print" = "exec flameshot gui";
+            "Ctrl+${modifier}+s" = "exec flameshot gui";
             "XF86AudioRaiseVolume" = "exec dms ipc call audio increment 3";
             "XF86AudioLowerVolume" = "exec dms ipc call audio decrement 3";
             "XF86AudioMute" = "exec dms ipc call audio mute";
@@ -320,6 +317,17 @@
             ];
           };
         };
+
+        # Flameshot v14 captures through xdg-desktop-portal-wlr. Import the
+        # compositor's runtime variables into the user manager and D-Bus so
+        # portal-activated services can see the same Wayland session as Sway.
+        # The window rule keeps the capture surface floating across monitors;
+        # see https://github.com/flameshot-org/flameshot/blob/master/docs/UsageHyprlandSwayWlroots.md.
+        extraConfig = ''
+          exec ${pkgs.systemd}/bin/systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK
+          exec ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP
+          for_window [app_id="flameshot"] border pixel 0, floating enable, fullscreen disable, move absolute position 0 0
+        '';
       };
 
       programs = {

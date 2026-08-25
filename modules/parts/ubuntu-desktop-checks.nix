@@ -56,6 +56,7 @@
         # desktop: apps only ever installed via Home Manager on Linux hosts.
         "signal-desktop"
         "obsidian"
+        "flameshot"
         # sway: the Wayland compositor and its shell.
         "sway"
       ];
@@ -77,7 +78,7 @@
           ''
             homePath=$(readlink -f "$activation/home-path")
 
-            for bin in zsh bat eza jq fd rg sway ghostty dms; do
+            for bin in zsh bat eza jq fd rg sway ghostty dms flameshot; do
               if [ ! -x "$homePath/bin/$bin" ]; then
                 echo "expected binary '$bin' missing from ubuntu's built home-path: $homePath" >&2
                 exit 1

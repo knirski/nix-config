@@ -102,6 +102,12 @@ This configuration is shared across multiple hosts. Not all tools are available 
 | **Bitwarden** | ✓ | ✗ | ✓ |
 | **Signal** | ✓ | ✗ | ✓ |
 | **Obsidian** | ✓ | ✗ | ✓ |
+| **Flameshot** | ✓ | ✗ | ✓ |
+
+Flameshot is managed by the shared Linux desktop aspect. The Sway screenshot
+bindings open `flameshot gui` for interactive capture and annotation through
+the Sway `xdg-desktop-portal-wlr` backend; no save path is configured, so each
+capture can be copied or saved only when desired.
 
 Bitwarden, Signal, and Obsidian are only declared in
 `modules/home/desktop.nix`'s Linux-only `lib.optionals stdenv.isLinux [...]`
@@ -268,8 +274,8 @@ Full IDE-like configuration with:
 | `Mod+F` | Fullscreen |
 | `Mod+1-9` | Switch workspace |
 | `Mod+Shift+1-9` | Move to workspace |
-| `Mod+Print` | Screenshot (full) |
-| `Mod+Ctrl+Print` | Screenshot (selection) |
+| `Print` | Open Flameshot capture and annotation |
+| `Ctrl+Mod+S` | Open Flameshot capture and annotation |
 | `XF86AudioRaiseVolume` | Volume up |
 | `XF86AudioLowerVolume` | Volume down |
 | `XF86MonBrightnessUp` | Brightness up |

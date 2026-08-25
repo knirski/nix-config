@@ -64,9 +64,10 @@
             gnome-boxes
             freetube
             signal-desktop
-            grim
-            slurp
-            swappy
+            # Interactive screenshot capture and annotation. No save path is
+            # configured, so Flameshot leaves saving/copying to the capture
+            # action instead of writing every shortcut invocation to disk.
+            flameshot
             # AI coding agent desktop apps
             command-code-desktop
             opencode-desktop
@@ -101,6 +102,19 @@
           ];
         };
         git.settings.alias.visual = "!gitk";
+      };
+
+      # Flameshot is Linux-only in the current Home Manager service module.
+      # Keep it with the graphical session so its tray instance is ready when
+      # Sway keybindings invoke `flameshot gui`. Flameshot v14 uses the XDG
+      # desktop portal for Wayland capture; the Sway aspect wires the live
+      # portal environment below rather than selecting the deprecated Grim
+      # adapter.
+      services.flameshot = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
+        enable = true;
+        settings.General = {
+          showStartupLaunchMessage = false;
+        };
       };
 
       # Upgrade base's terminal-safe pinentry to a GUI prompt now that a

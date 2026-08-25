@@ -68,6 +68,7 @@
       QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
       XDG_SESSION_TYPE = "wayland";
       XDG_CURRENT_DESKTOP = "sway";
+      XDG_SESSION_DESKTOP = "sway";
       XDG_CURRENT_PORTAL = "wlr";
       XCURSOR_THEME = "Adwaita";
       XCURSOR_SIZE = "24";

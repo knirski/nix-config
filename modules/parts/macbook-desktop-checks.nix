@@ -177,6 +177,11 @@
           macbook = hasPkg macbookHome "obsidian";
           ubuntu = hasPkg ubuntuHome "obsidian";
         };
+        Flameshot = {
+          zbook = hasPkg zbookHome "flameshot";
+          macbook = false;
+          ubuntu = hasPkg ubuntuHome "flameshot";
+        };
       };
 
       matrixDrift = lib.filterAttrs (_: matches: !matches) (
