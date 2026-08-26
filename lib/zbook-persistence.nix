@@ -16,6 +16,9 @@ rec {
     ".local/state/wireplumber"
     ".local/share/atuin"
     ".local/share/zed"
+    # agent-browser keeps its downloaded browser and session state here;
+    # retain it across zbook's erase-your-darlings root rollback.
+    ".agent-browser"
     "github"
     "Downloads"
     "Documents"

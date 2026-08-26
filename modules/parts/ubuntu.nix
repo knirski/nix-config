@@ -371,7 +371,7 @@ in
               # Ubuntu's system default.  Sway runs keybindings through
               # `sh -c`, which would then fail with "ghostty: not found" for
               # every Home Manager program.  Put the profile on PATH first.
-              export PATH="${config.home.profileDirectory}/bin:/nix/var/nix/profiles/default/bin:$PATH"
+              export PATH="${config.home.profileDirectory}/bin:${config.home.homeDirectory}/.local/bin:/nix/var/nix/profiles/default/bin:$PATH"
 
               # Same reason as PATH: without a login shell nothing puts the
               # profile on XDG_DATA_DIRS, so the session inherits Ubuntu's

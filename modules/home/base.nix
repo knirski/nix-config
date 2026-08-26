@@ -9,6 +9,9 @@
     }:
     {
       home = {
+        # Keep user-local CLI installations (for example agent-browser) on
+        # PATH in every interactive Home Manager session.
+        sessionPath = [ "${config.home.homeDirectory}/.local/bin" ];
         sessionVariables = {
           EDITOR = "nvim";
         };
