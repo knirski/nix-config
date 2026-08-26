@@ -20,6 +20,7 @@
         maintenance
         backup
         observability
+        python
       ])
       ++ [
         inputs.disko.nixosModules.disko
@@ -31,7 +32,10 @@
             useGlobalPkgs = true;
             useUserPackages = true;
             users.krzysiek = {
-              imports = [ config.aspects.homeManager.base ];
+              imports = [
+                config.aspects.homeManager.base
+                config.aspects.homeManager.python
+              ];
               home = {
                 packages = [ inputs.omniroute-nix.packages.x86_64-linux.default ];
                 stateVersion = "26.05";

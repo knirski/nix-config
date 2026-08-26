@@ -191,6 +191,15 @@
         ubuntu-selects-sway-not-aerospace =
           ubuntuHome.wayland.windowManager.sway.enable && !ubuntuHome.programs.aerospace.enable;
 
+        all-hosts-have-python-and-uv =
+          builtins.all (home: homeHasPackage home "python3" && homeHasPackage home "uv")
+            [
+              soyoHome
+              zbookHome
+              macbookHome
+              ubuntuHome
+            ];
+
         zbook-has-android-studio = homeHasPackage zbookHome "android-studio";
         zbook-has-android-sdk = homeHasPackage zbookHome "android-sdk-cmdline-tools";
         ubuntu-has-android-studio = homeHasPackage ubuntuHome "android-studio";
