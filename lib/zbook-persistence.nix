@@ -25,6 +25,9 @@ rec {
     "Pictures"
     "Music"
     "Videos"
+    # Game installs and prefixes live here (Lutris/bottles drop data outside
+    # ~/.local/share), so they must survive the ephemeral root rollback.
+    "Games"
     ".local/share/Steam"
     ".local/share/lutris"
     # win-usb VM state: OVMF NVRAM vars. Must survive the ephemeral root
