@@ -24,7 +24,7 @@ needs_reboot=0
 say() { printf '  %s\n' "$*"; }
 step() { printf '\n== %s\n' "$*"; }
 
-step "1/7  GDM must run Wayland"
+step "1/8  GDM must run Wayland"
 if [ ! -f /etc/gdm3/custom.conf ]; then
   say "SKIP  /etc/gdm3/custom.conf not present (not a GDM system?)"
 elif grep -qE '^WaylandEnable=false' /etc/gdm3/custom.conf; then
@@ -35,7 +35,7 @@ else
   say "OK    Wayland already enabled"
 fi
 
-step "2/7  /run/opengl-driver for Nix OpenGL"
+step "2/8  /run/opengl-driver for Nix OpenGL"
 tmpfiles=/etc/tmpfiles.d/nix-opengl-driver.conf
 want="L+ /run/opengl-driver - - - - $USER_HOME/.nix-profile"
 if [ -f "$tmpfiles" ] && grep -qF "$want" "$tmpfiles"; then
@@ -53,7 +53,7 @@ else
   say "OK    /run/opengl-driver -> $(readlink /run/opengl-driver)"
 fi
 
-step "3/7  GDM session entry"
+step "3/8  GDM session entry"
 desktop=/usr/share/wayland-sessions/sway-nix.desktop
 launcher="$USER_HOME/.local/bin/sway-ubuntu-session"
 if [ -f "$desktop" ] && grep -qF "Exec=$launcher" "$desktop"; then
@@ -74,7 +74,7 @@ if [ ! -x "$launcher" ]; then
   say "WARN  $launcher is missing -- run the Home Manager switch first"
 fi
 
-step "4/7  Desktop wallpaper"
+step "4/8  Desktop wallpaper"
 # The shell records this in session.json, which is mutable state it writes
 # itself, so it cannot be generated from Nix without freezing the whole file.
 wallpaper="$USER_HOME/.local/share/wallpapers/hive-grid.png"
@@ -93,7 +93,7 @@ else
   fi
 fi
 
-step "5/7  i2c-dev + Logitech hidraw access for desk peripherals"
+step "5/8  i2c-dev + Logitech hidraw access for desk peripherals"
 # The desk-switch keybinding (Mod4+Insert / Mod4+Home) uses ddcutil over
 # DDC/CI and solaar-cli over the Logitech receiver's hidraw node. Ubuntu's
 # kernel does not auto-load i2c-dev, the /dev/i2c-* nodes are root:root 0600
@@ -138,7 +138,7 @@ else
   changed=1
 fi
 
-step "6/7  Disable USB receiver and dock spurious suspend wakeups"
+step "6/8  Disable USB receiver and dock spurious suspend wakeups"
 # The Unifying Receiver (idVendor 046d, idProduct c52b) forwards HID++
 # battery-status pings from the ERGO K860 keyboard and MX Master mouse as USB
 # remote wakeup, waking the laptop from suspend every 10-50 min. Confirmed via
@@ -182,7 +182,7 @@ else
   say "OK    $receiver_rule already absent"
 fi
 
-step "7/7  Disable dGPU suspend wakeups + NVIDIA runtime power management"
+step "7/8  Disable dGPU suspend wakeups + NVIDIA runtime power management"
 # The RTX A1000's PCIe root port (0000:00:01.0) fires a PME during s2idle for
 # no external reason (`PM: Triggering wakeup from IRQ 122` in dmesg),
 # confirmed via the same /sys/kernel/debug/wakeup_sources diffs used for the
@@ -215,6 +215,64 @@ else
   say "DONE  wrote $nvidia_pm_conf and refreshed initramfs"
   changed=1
   needs_reboot=1
+fi
+
+step "8/8  Schedule Nix garbage collection"
+# Standalone Home Manager cannot create a system-level nix.gc timer, and the
+# multi-user Nix store is root-owned. Keep this at Ubuntu's system boundary so
+# it can collect unused paths from all profiles without granting the desktop
+# user a broad passwordless sudo rule. Retain 30 days of generations so a
+# failed Home Manager activation still has a practical rollback window.
+gc_service=/etc/systemd/system/nix-store-gc.service
+gc_timer=/etc/systemd/system/nix-store-gc.timer
+gc_service_contents='[Unit]
+Description=Garbage-collect unused Nix store paths
+
+[Service]
+Type=oneshot
+ExecStart=/nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-older-than 30d
+Nice=19
+IOSchedulingClass=idle'
+gc_timer_contents='[Unit]
+Description=Weekly Nix garbage collection
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target'
+
+gc_units_changed=0
+for unit_spec in "$gc_service:$gc_service_contents" "$gc_timer:$gc_timer_contents"; do
+  unit_path=${unit_spec%%:*}
+  unit_contents=${unit_spec#*:}
+  if [ -f "$unit_path" ] && printf '%s\n' "$unit_contents" | cmp -s - "$unit_path"; then
+    say "OK    $unit_path already correct"
+  else
+    printf '%s\n' "$unit_contents" | sudo tee "$unit_path" >/dev/null
+    say "DONE  wrote $unit_path"
+    gc_units_changed=1
+    changed=1
+  fi
+done
+if [ "$gc_units_changed" -eq 1 ]; then
+  sudo systemctl daemon-reload
+fi
+if sudo systemctl is-enabled --quiet nix-store-gc.timer 2>/dev/null; then
+  say "OK    nix-store-gc.timer enabled"
+else
+  sudo systemctl enable nix-store-gc.timer >/dev/null
+  say "DONE  enabled nix-store-gc.timer"
+  changed=1
+fi
+if sudo systemctl is-active --quiet nix-store-gc.timer; then
+  say "OK    nix-store-gc.timer active"
+else
+  sudo systemctl start nix-store-gc.timer
+  say "DONE  started nix-store-gc.timer"
+  changed=1
 fi
 
 printf '\n'

@@ -130,6 +130,24 @@ These are already applied in this checkout:
   hosts inherit a correct PATH from `pam_env`, and overriding it there would
   drop `/run/current-system/sw/bin`, where `ddcutil` lives for DMS's DDC/CI
   brightness control.
+- Nix store garbage collection is managed at the Ubuntu system boundary by
+  `just bootstrap-ubuntu-system`. It installs and enables a root-owned weekly
+  `nix-store-gc.timer`, which runs
+  `nix-collect-garbage --delete-older-than 30d`. This is intentionally not a
+  Home Manager user timer: the multi-user Nix store is root-owned, and the
+  timer must not require a broad passwordless `sudo` rule for the desktop user.
+
+Run the bootstrap once after pulling this change, then inspect or run the job:
+
+```bash
+just bootstrap-ubuntu-system
+systemctl list-timers nix-store-gc.timer
+sudo systemctl start nix-store-gc.service
+```
+
+The 30-day retention keeps rollback generations available. Do not change the
+service to `nix-collect-garbage -d` unless deleting every old generation is
+intentional.
 
 The normal activation command is:
 

@@ -157,6 +157,7 @@ These live outside every Home Manager generation. `scripts/bootstrap-ubuntu-syst
 | `/etc/tmpfiles.d/nix-opengl-driver.conf` | tmpfs rule: `/run/opengl-driver → /home/knirski/.nix-profile`, giving every Nix GL process a working EGL vendor (Nixpkgs' libglvnd searches this path first; Ubuntu's libglvnd has no such path, so Ubuntu binaries never see it) | every Nix GL program fails with `Failed to create EGL display` |
 | `/usr/share/wayland-sessions/sway-nix.desktop` | GDM session entry, `Exec=/home/knirski/.local/bin/sway-ubuntu-session` | Sway is absent from the GDM session list |
 | `/etc/shells` + `/etc/passwd` (optional) | registers `~/.nix-profile/bin/zsh` so `chsh` accepts it as login shell | `chsh` refuses; zsh config still works from any interactive shell |
+| `/etc/systemd/system/nix-store-gc.{service,timer}` | weekly root-owned collection of unused Nix paths, retaining 30 days | `/nix` grows indefinitely; old Home Manager generations remain in the store |
 
 Apt packages Home Manager *depends on* (installed by the operator once; they
 are never Nix outputs):
