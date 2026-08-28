@@ -23,6 +23,19 @@
           export GH_TOKEN="$GITHUB_TOKEN"
         fi
       '';
+      # Wrapper around `nix flake update` that passes the GitHub token for
+      # authenticated API requests (avoids the 60 req/h unauthenticated rate
+      # limit). Falls back to plain `nix flake update` when the secret is
+      # absent (e.g. soyo, or before first deploy).
+      nfuWithToken = lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+        nfu() {
+          if [ -n "''${GITHUB_TOKEN:-}" ]; then
+            NIX_CONFIG="access-tokens = github.com=$GITHUB_TOKEN" nix flake update "$@"
+          else
+            nix flake update "$@"
+          fi
+        }
+      '';
       # Keep the IDE and SDK separate: the IDE is a Linux-only binary, while
       # the SDK is also useful to Gradle and command-line Android tooling.
       # The host assemblers explicitly accept the SDK license where this
@@ -165,10 +178,10 @@
           '';
         };
 
-        bash.initExtra = githubTokenShellInit;
+        bash.initExtra = githubTokenShellInit + nfuWithToken;
         # Home Manager's zsh module concatenates every module's initContent
         # into ~/.zshrc, same as bash.initExtra above.
-        zsh.initContent = githubTokenShellInit;
+        zsh.initContent = githubTokenShellInit + nfuWithToken;
       };
     };
 }
