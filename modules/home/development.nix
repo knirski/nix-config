@@ -55,6 +55,9 @@
           # Rust Token Killer — CLI proxy that filters git/grep/find output
           # before it reaches an AI coding agent's context.
           rtk
+          # Browser automation for AI agents (CDP + a11y tree, sessions, auth
+          # vault). Nixpkgs build embeds dashboard/skills next to bin/.
+          agent-browser
           # Nix language servers
           nil
           nixd
