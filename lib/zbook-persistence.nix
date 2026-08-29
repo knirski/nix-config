@@ -13,6 +13,8 @@ rec {
     ".commandcode"
     ".codex"
     ".claude"
+    ".local/share/opencode"
+    ".local/state/opencode"
     ".local/state/wireplumber"
     ".local/share/atuin"
     ".local/share/zed"
