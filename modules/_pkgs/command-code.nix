@@ -38,11 +38,11 @@
 
 buildNpmPackage rec {
   pname = "command-code";
-  version = "1.32.1";
+  version = "1.38.2";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/command-code/-/command-code-${version}.tgz";
-    hash = "sha512-4HKj7qO/YcYec9aknd6FM3nYm1o/mYTsLTVddaN6chgkE5zXByeEZsWgpXE9npzXfMOVVBsdAguKz4/+0A52yw==";
+    hash = "sha512-Ijsy8V4t8/GX+txrUdp36iYiKIVHHqXHA1FXUuuvZKf/NJhP5EpOPHDwEW8fku17ZIGF9WklX2vN52evIkcYog==";
   };
 
   dontNpmBuild = true;
@@ -59,7 +59,7 @@ buildNpmPackage rec {
     sed -i '$s/^}$/,\n  "overrides": {"@opentelemetry\/core":"2.10.0","@opentelemetry\/propagator-jaeger":"2.10.0"}\n}/' package.json
   '';
 
-  npmDepsHash = "sha256-zfDTOQnTgJXqyjWutzVvhEL5c3RscWTWMVa7v1Ay68s=";
+  npmDepsHash = "sha256-NB5Icwilo2WvLlJ6pZdm2ozLtKF9WAqSbkfq/ZVxyNA=";
 
   nativeBuildInputs = [
     makeWrapper
