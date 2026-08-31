@@ -67,6 +67,7 @@
           typescript-language-server
           rust-analyzer
           gopls
+          metals
           # Used by AI coding agents (claude-code, codex, opencode, command-code)
           # for script execution — not an interactive admin shell.
           nushell
@@ -155,6 +156,7 @@
             typescript-language-server
             rust-analyzer
             gopls
+            metals
           ];
           initLua = ''
             -- LSP using the new vim.lsp.config API (nvim-lspconfig 2.10+, Neovim 0.11+)
@@ -168,6 +170,7 @@
             vim.lsp.config.ts_ls = { capabilities = capabilities }    -- TypeScript/JavaScript
             vim.lsp.config.rust_analyzer = { capabilities = capabilities }  -- Rust
             vim.lsp.config.gopls = { capabilities = capabilities }    -- Go
+            vim.lsp.config.metals = { capabilities = capabilities }   -- Scala
 
             -- Enable all configured LSP servers
             vim.lsp.enable({
@@ -177,6 +180,7 @@
               'ts_ls',
               'rust_analyzer',
               'gopls',
+              'metals',
             })
           '';
         };

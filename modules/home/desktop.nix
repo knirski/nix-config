@@ -35,10 +35,10 @@
         packages =
           with pkgs;
           [
-            vlc
             spotify
           ]
           ++ lib.optionals stdenv.hostPlatform.isLinux [
+            vlc
             bitwarden-desktop
             bitwarden-cli
             rbw
