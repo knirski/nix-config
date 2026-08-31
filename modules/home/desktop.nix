@@ -36,6 +36,7 @@
           with pkgs;
           [
             spotify
+            localsend
           ]
           ++ lib.optionals stdenv.hostPlatform.isLinux [
             vlc
