@@ -126,6 +126,21 @@ sudo nmcli device reapply <interface>
 sudo resolvectl flush-caches
 ```
 
+### Recurrent s2idle Wedges on zbook
+
+**Symptom**: Resume from suspend succeeds but the system later wedges with no
+kernel log, or wakes with `nvme … VPD access failed` and shortly hangs. Drives
+into btrfs read-only remount or a cold shutdown.
+
+**Current mitigation**: avoid suspend on the XPG S70 Blade, run
+`disable-aspm.service` and `disable-nvme-apst.service`, and rely on btrfs
+scrub + restic for integrity signals. See `AGENTS.md` (zbook known issues,
+recurrent wedge entry) for the full list.
+
+**Active investigation**: [zbook s2idle debugging plan](zbook-s2idle-debugging-plan.md)
+— controlled A/B tests, a `suspend-debug` boot specialisation and an RTC-armed
+`pm_trace` workflow to identify the next-worst component.
+
 ## Input Devices
 
 ### Logitech Receiver Stutter

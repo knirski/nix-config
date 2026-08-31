@@ -48,6 +48,9 @@ enforcement belongs to the documentation-check layer.
 - [Set up a workstation](workstation-setup.md) — recommended tooling and CLI setup.
 - [Windows on USB SSD (win-usb)](win-usb.md) — boot the USB Windows in a VM, snapshot and restore it.
 - [Troubleshooting](troubleshooting.md) — common issues and debugging steps.
+- [zbook s2idle debugging plan](zbook-s2idle-debugging-plan.md) — active
+  investigation into recurrent suspend wedges on zbook; controlled A/B tests
+  and an RTC-armed `pm_trace` workflow.
 - [Update and roll back](update-and-rollback.md) — input updates, deployment
   checks and rollback paths.
 - [Router recommendations](architecture/router-recommendation.md) — DHCP cutover and router
