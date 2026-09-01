@@ -9,7 +9,23 @@
       plugins = [ pkgs.networkmanager-openvpn ];
     };
     dhcpcd.enable = false;
-    firewall.enable = true;
+    firewall = {
+      enable = true;
+
+      # LocalSend uses the same port for its HTTP transfer endpoint and UDP
+      # discovery announcements. Keep the exception limited to zbook's
+      # physical LAN interfaces; tailscale0 is already trusted separately.
+      interfaces = {
+        enp0s13f0u3 = {
+          allowedTCPPorts = [ 53317 ];
+          allowedUDPPorts = [ 53317 ];
+        };
+        wlp0s20f3 = {
+          allowedTCPPorts = [ 53317 ];
+          allowedUDPPorts = [ 53317 ];
+        };
+      };
+    };
 
     # Prepend local LAN search domain ahead of Tailscale MagicDNS so
     # unqualified lookups like 'soyo' resolve to the LAN IP first.
