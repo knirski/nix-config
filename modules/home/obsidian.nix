@@ -5,7 +5,8 @@
       ...
     }:
     let
-      vaultPath = "~/Documents/Obsidian/obsidian-personal";
+      # Home Manager file targets are relative to $HOME; `~` is literal here.
+      vaultPath = "Documents/Obsidian/obsidian-personal";
       pluginDir = "${vaultPath}/.obsidian/plugins/hybrid-git-sync";
 
       plugin = pkgs.fetchFromGitHub {
