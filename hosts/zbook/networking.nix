@@ -17,11 +17,17 @@
       # physical LAN interfaces; tailscale0 is already trusted separately.
       interfaces = {
         enp0s13f0u3 = {
-          allowedTCPPorts = [ 53317 ];
+          allowedTCPPorts = [
+            53317
+            8081
+          ];
           allowedUDPPorts = [ 53317 ];
         };
         wlp0s20f3 = {
-          allowedTCPPorts = [ 53317 ];
+          allowedTCPPorts = [
+            53317
+            8081
+          ];
           allowedUDPPorts = [ 53317 ];
         };
       };
