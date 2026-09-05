@@ -28,11 +28,11 @@ let
     "ramoops.record_size=0x100000"
   ];
 
-  suspendDebugSuspend = pkgs.writeShellScriptBin "suspend-debug-suspend" ''
+  suspendDebugArm = pkgs.writeShellScriptBin "suspend-debug-arm" ''
     set -euo pipefail
 
     if [ "''${EUID:-$(id -u)}" -ne 0 ]; then
-      printf '%s\n' "Run this command with sudo from the suspend-debug boot." >&2
+      printf '%s\n' "Run this command as root from the suspend-debug boot." >&2
       exit 1
     fi
 
@@ -53,6 +53,12 @@ let
     # remains available after a cold reset. It also disables async suspend,
     # making this a deliberate diagnostic run rather than a normal cycle.
     printf '%s\n' 1 > "$pm_trace"
+  '';
+
+  suspendDebugSuspend = pkgs.writeShellScriptBin "suspend-debug-suspend" ''
+    set -euo pipefail
+
+    ${suspendDebugArm}/bin/suspend-debug-arm
 
     exec ${pkgs.systemd}/bin/systemctl suspend
   '';
@@ -125,12 +131,42 @@ in
         commonKernelParams
         ++ debugRamoopsParams
         ++ [
+          # Preserve the laptop aspect's receiver reset and dock wake quirks;
+          # mkForce replaces the merged kernel parameter list for this entry.
+          "intel_pstate=active"
+          "usbcore.quirks=046d:c52b:b,046d:c532:b,0bda:8153:j"
+          "nvme_core.default_ps_max_latency_us=0"
+          "pcie_aspm=off"
+          # Preserve base/NixOS-generated parameters that mkForce would
+          # otherwise replace, including crash diagnostics and boot behavior.
+          "keyboard.delay=0"
+          "keyboard.rate=50"
+          "root=fstab"
+          "loglevel=4"
+          "lsm=landlock,yama,bpf"
+          "crashkernel=256M"
+          "nmi_watchdog=panic"
+          "softlockup_panic=1"
           "no_console_suspend"
         ]
       );
     };
 
     environment.systemPackages = [ suspendDebugSuspend ];
+
+    # DMS/logind idle timeout, lid handling, and an explicit `systemctl
+    # suspend` all converge on this unit. Arm diagnostics before the actual
+    # transition without making systemd-suspend invoke the suspend helper
+    # recursively.
+    systemd.services.suspend-debug-arm = {
+      description = "Arm suspend diagnostics before every debug suspend";
+      before = [ "systemd-suspend.service" ];
+      wantedBy = [ "sleep.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${suspendDebugArm}/bin/suspend-debug-arm";
+      };
+    };
   };
 
   zramSwap.enable = true;
