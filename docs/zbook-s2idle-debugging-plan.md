@@ -1,8 +1,7 @@
 # ZBook s2idle debugging plan
 
-> Status: investigation plan based on the repeated suspend failures observed on
-> 2026-08-26. This document does not establish the XPG GAMMIX S70 Blade as the
-> definitive cause.
+> Status: debug boot implemented; controlled testing remains outstanding. This
+> document does not establish the XPG GAMMIX S70 Blade as the definitive cause.
 
 The optimal path is to treat s2idle as temporarily unsafe, instrument one
 dedicated debug boot, and isolate components one at a time. Replacing the ADATA
@@ -21,10 +20,42 @@ not prove that it caused these particular hangs.
   resume—the exact transition that hangs here. See the
   [Linux iTCO watchdog source](https://github.com/torvalds/linux/blob/master/drivers/watchdog/iTCO_wdt.c).
 
-## 2. Add a diagnostic boot specialisation
+## 2. Diagnostic boot specialisation
 
-Keep the normal kernel unchanged and add a `suspend-debug` boot entry in
-[`hosts/zbook/boot.nix`](../hosts/zbook/boot.nix) containing:
+The `suspend-debug` Limine entry is defined in
+[`hosts/zbook/boot.nix`](../hosts/zbook/boot.nix). It keeps the normal entry
+unchanged and builds a targeted kernel with `PSTORE_CONSOLE`, `PSTORE_FTRACE`,
+and `PSTORE_PMSG`, loads `ramoops` in the initrd, reserves 8 MiB for it, and
+preserves `/var/lib/systemd/pstore` across the impermanent-root reboot.
+
+After deploying and rebooting, select `suspend-debug` from Limine. Confirm the
+following before testing:
+
+```sh
+test -e /sys/module/ramoops
+mount | grep pstore
+cat /sys/power/pm_trace
+```
+
+The controlled suspend helper arms the tracepoints and `pm_trace` immediately
+before suspending:
+
+```sh
+sudo suspend-debug-suspend
+```
+
+After a cold reboot, inspect both the live pstore directory and the archived
+copies:
+
+```sh
+sudo find /sys/fs/pstore /var/lib/systemd/pstore -maxdepth 1 -type f -print
+sudo journalctl -b 0 -k | grep -E 'PM:|pstore|ramoops|suspend|resume'
+```
+
+`pm_trace` deliberately disables asynchronous suspend for that run, so this
+helper is diagnostic only and should not be used as the normal suspend path.
+
+The implementation deliberately keeps the normal kernel unchanged and uses:
 
 - `ramoops` in `boot.initrd.kernelModules`;
 - targeted `PSTORE_CONSOLE=y` and `PSTORE_FTRACE=y` kernel configuration;

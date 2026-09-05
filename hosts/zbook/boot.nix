@@ -1,23 +1,68 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
+let
+  commonKernelParams = [
+    "nvidia_drm.modeset=1"
+  ];
+
+  normalRamoopsParams = [
+    # Keep the existing normal-boot reservation unchanged. The debug
+    # specialisation below replaces this with a larger region.
+    "memmap=1M$16M"
+    "ramoops.mem_address=0x01000000"
+    "ramoops.mem_size=0x100000"
+    "ramoops.console_size=0x10000"
+    "ramoops.ftrace_size=0x10000"
+    "ramoops.pmsg_size=0x10000"
+    "ramoops.record_size=0x10000"
+  ];
+
+  debugRamoopsParams = [
+    # The region is below the crashkernel reservation and large enough to
+    # retain useful console/ftrace records across an unclean reboot.
+    "memmap=8M$16M"
+    "ramoops.mem_address=0x01000000"
+    "ramoops.mem_size=0x800000"
+    "ramoops.console_size=0x200000"
+    "ramoops.ftrace_size=0x200000"
+    "ramoops.pmsg_size=0x100000"
+    "ramoops.record_size=0x100000"
+  ];
+
+  suspendDebugSuspend = pkgs.writeShellScriptBin "suspend-debug-suspend" ''
+    set -euo pipefail
+
+    if [ "''${EUID:-$(id -u)}" -ne 0 ]; then
+      printf '%s\n' "Run this command with sudo from the suspend-debug boot." >&2
+      exit 1
+    fi
+
+    trace=/sys/kernel/tracing
+    pm_trace=/sys/power/pm_trace
+
+    # Keep the trace focused on suspend ordering. PSTORE_FTRACE writes the
+    # ftrace ring to ramoops if the kernel dies before it can resume.
+    printf '%s\n' 0 > "$trace/tracing_on"
+    printf '%s\n' nop > "$trace/current_tracer"
+    : > "$trace/trace"
+    printf '%s\n' power:suspend_resume > "$trace/set_event"
+    printf '%s\n' power:device_pm_callback_start >> "$trace/set_event"
+    printf '%s\n' power:device_pm_callback_end >> "$trace/set_event"
+    printf '%s\n' 1 > "$trace/tracing_on"
+
+    # pm_trace stores the last suspend/resume fingerprint in the RTC, so it
+    # remains available after a cold reset. It also disables async suspend,
+    # making this a deliberate diagnostic run rather than a normal cycle.
+    printf '%s\n' 1 > "$pm_trace"
+
+    exec ${pkgs.systemd}/bin/systemctl suspend
+  '';
+in
 {
   boot = {
     # Follow the current kernel for newer graphics and suspend fixes on this
     # workstation; the NVIDIA package is selected from this kernel set too.
     kernelPackages = pkgs.linuxPackages_latest;
-    kernelParams = [
-      "nvidia_drm.modeset=1"
-      # ramoops/pstore: preserve panic, console, and ftrace logs across
-      # unclean reboots. 1 MiB buffer at physical address 16 MiB — lowest
-      # safe address in System RAM (above BIOS reservations at 1 MiB,
-      # below the crash kernel at 608 MiB).
-      "memmap=1M$16M"
-      "ramoops.mem_address=0x01000000"
-      "ramoops.mem_size=0x100000"
-      "ramoops.console_size=0x10000"
-      "ramoops.ftrace_size=0x10000"
-      "ramoops.pmsg_size=0x10000"
-      "ramoops.record_size=0x10000"
-    ];
+    kernelParams = commonKernelParams ++ normalRamoopsParams;
     crashDump = {
       enable = true;
       reservedMemory = "256M";
@@ -52,6 +97,37 @@
         crypttabExtraOpts = [ "tpm2-device=auto" ];
       };
     };
+  };
+
+  # Keep the expensive custom kernel and altered suspend behavior out of the
+  # daily boot. Select this entry from Limine only for controlled experiments.
+  specialisation.suspend-debug.configuration = {
+    boot = {
+      # These backends are disabled in the stock kernel config. A targeted
+      # patch avoids changing the normal kernel while enabling ramoops to
+      # retain console, pmsg, and ftrace data for this entry.
+      kernelPatches = [
+        {
+          name = "suspend-debug-pstore";
+          patch = null;
+          extraConfig = ''
+            PSTORE_CONSOLE y
+            PSTORE_FTRACE y
+            PSTORE_PMSG y
+          '';
+        }
+      ];
+      initrd.kernelModules = [ "ramoops" ];
+      kernelParams = lib.mkForce (
+        commonKernelParams
+        ++ debugRamoopsParams
+        ++ [
+          "no_console_suspend"
+        ]
+      );
+    };
+
+    environment.systemPackages = [ suspendDebugSuspend ];
   };
 
   zramSwap.enable = true;
