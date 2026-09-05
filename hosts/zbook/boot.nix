@@ -114,6 +114,9 @@ in
             PSTORE_CONSOLE y
             PSTORE_FTRACE y
             PSTORE_PMSG y
+            # efi_pstore otherwise claims the single pstore backend before
+            # ramoops is probed, leaving the reserved RAM region unused.
+            EFI_VARS_PSTORE n
           '';
         }
       ];
