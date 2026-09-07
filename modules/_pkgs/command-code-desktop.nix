@@ -50,11 +50,11 @@ in
 
 stdenv.mkDerivation rec {
   pname = "command-code-desktop";
-  version = "0.1.21";
+  version = "0.1.28";
 
   src = fetchurl {
     url = "https://github.com/CommandCodeAI/desktop/releases/download/v${version}/CommandCode-${version}-amd64.deb";
-    hash = "sha256-sj/Qh0szQO6ukiFlKWNHQZL27tCXFhtLnvbyv7HXdYw=";
+    hash = "sha256-sZeBZniu7B01B/INFwNUbFuSEbqs7klCJckQYV9styo=";
   };
 
   nativeBuildInputs = [
