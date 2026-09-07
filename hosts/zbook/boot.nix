@@ -167,6 +167,13 @@ in
         ExecStart = "${suspendDebugArm}/bin/suspend-debug-arm";
       };
     };
+
+    # pm_trace deliberately perturbs the RTC while diagnosing suspend. Restart
+    # timesyncd after the sleep operation returns so the resumed system repairs
+    # the wall clock once networking is available again.
+    systemd.services.systemd-suspend.serviceConfig.ExecStartPost = [
+      "${pkgs.systemd}/bin/systemctl restart systemd-timesyncd.service"
+    ];
   };
 
   zramSwap.enable = true;
