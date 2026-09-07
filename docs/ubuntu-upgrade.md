@@ -28,7 +28,7 @@ a failure.
 | `/usr/share/wayland-sessions/sway-nix.desktop` | Yes | not owned by any package; dpkg does not clean unowned files |
 | `/etc/gdm3/custom.conf` | Yes, with a prompt | a conffile of `gdm3`; the upgrader (ucf) may ask whether to replace it — **keep the local version** |
 | apt packages (`dbus-user-session`, `xdg-desktop-portal*`, `swaylock`, `tailscale`) | Yes | still in the 26.04 archive; third-party apt sources may be *disabled* by the upgrader (see below) |
-| Removed snaps | Yes | the upgrade does not reinstall `slack`/`code`/`intellij-idea`/`spotify`/`bitwarden` |
+| Removed snaps | Yes | the upgrade does not reinstall `slack`/`code`/`spotify`/`bitwarden` |
 | `~/.envvars`, SSH keys, browser profiles | Yes | plain home-directory data |
 | Kernel, Mesa/libglvnd, GDM/GNOME, systemd | Replaced | new release versions — this is the surface to verify |
 

@@ -20,13 +20,14 @@ These are already applied in this checkout:
 - `pkgs.mesa` is in `home.packages` so the profile carries an EGL vendor for
   the `/run/opengl-driver` symlink described under "Required Ubuntu-level
   setup" below. Nothing is wrapped and no GL variables are exported.
-- Desktop applications come from nixpkgs rather than snaps. Slack, VS Code and
-  IntelliJ IDEA are declared in `modules/parts/ubuntu.nix`; Spotify and
-  Bitwarden already arrive through `aspects.homeManager.desktop`. Once
-  activated, remove the redundant snaps:
+- Desktop applications come from nixpkgs rather than snaps. Slack and VS Code
+  are declared through the shared development aspect; IntelliJ IDEA is not
+  installed on Ubuntu because its nixpkgs package lags behind, even on
+  nixpkgs-unstable. Spotify and Bitwarden arrive through
+  `aspects.homeManager.desktop`. Once activated, remove any redundant snaps:
 
   ```bash
-  sudo snap remove slack code intellij-idea spotify bitwarden
+  sudo snap remove slack code spotify bitwarden
   ```
 
   This is not only tidiness. Snap-packaged Electron applications get their GL

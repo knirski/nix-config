@@ -224,7 +224,7 @@ Symptom → surface point → fix:
 | Git signing: `agent refused operation` | gcr vs gpg-agent split | `gitSshSign` in `modules/parts/ubuntu.nix` |
 | GTK4 apps hang; portal answers `Failed to ReadAll() from Settings implementation: Timeout was reached` | portal backend selection | `~/.config/xdg-desktop-portal/sway-portals.conf` (HM) + apt portal packages |
 | WARP re-authentication opens nothing or selects the wrong browser | Ubuntu WARP GUI + user MIME cache + systemd service environment | `just deploy ubuntu`; verify plain `firefox.desktop`, then restart `warp-taskbar.service` |
-| Snap Electron apps never map a window under Sway | snap sandbox GL | operator: `sudo snap remove slack code intellij-idea spotify bitwarden` (one-time) |
+| Snap Electron apps never map a window under Sway | snap sandbox GL | operator: `sudo snap remove slack code spotify bitwarden` (one-time) |
 
 ## What guarantees the surface
 

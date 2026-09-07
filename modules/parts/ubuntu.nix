@@ -80,6 +80,11 @@ in
       config.aspects.homeManager.base
       config.aspects.homeManager.python
       config.aspects.homeManager.development
+      {
+        # Ubuntu keeps the shared development tooling but does not install
+        # IntelliJ IDEA: its nixpkgs package lags behind, even on nixpkgs-unstable.
+        development.enableIntellijIdea = false;
+      }
       config.aspects.homeManager.desktop
       config.aspects.homeManager.ssh
       config.aspects.homeManager.sway
