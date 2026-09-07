@@ -107,9 +107,7 @@
         # --- timesyncd: IP-based NTP servers ---
         # --- smartd: disk self-tests ---
         services = {
-          journald.extraConfig = ''
-            SystemMaxUse=500M
-          '';
+          journald.settings.Journal.SystemMaxUse = "500M";
           timesyncd.enable = true;
           smartd = {
             enable = true;
