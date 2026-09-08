@@ -146,21 +146,19 @@
       # claims. zbook/ubuntu/macbook Home Manager closures are compared by
       # package name (pname falling back to name).
       #
-      # Firefox now comes from programs.firefox in the shared HM desktop
+      # Firefox Developer Edition now comes from programs.firefox in the shared HM desktop
       # aspect, so every host has it. zbook is still checked against
       # environment.systemPackages because aspects.nixos.desktop enables the
-      # NixOS module too, and macbook is checked for firefox-bin: the shared
-      # aspect gives darwin that build, since nixpkgs' firefox is not cached
-      # for aarch64-darwin.
+      # NixOS module too; all three profiles are checked for Developer Edition.
       zbookHome = zbookConfig.home-manager.users.krzysiek;
       zbookSystemPackageNames = packageNames zbookConfig.environment.systemPackages;
       hasPkg = home: name: builtins.elem name (packageNames home.home.packages);
 
       evaluatedMatrix = {
         Firefox = {
-          zbook = builtins.elem "firefox" zbookSystemPackageNames;
-          macbook = hasPkg macbookHome "firefox-bin";
-          ubuntu = hasPkg ubuntuHome "firefox";
+          zbook = builtins.elem "firefox-devedition" zbookSystemPackageNames;
+          macbook = hasPkg macbookHome "firefox-devedition";
+          ubuntu = hasPkg ubuntuHome "firefox-devedition";
         };
         Bitwarden = {
           zbook = hasPkg zbookHome "bitwarden-desktop";

@@ -235,16 +235,16 @@ in
 
           # WARP is launched by a vendor systemd service whose PATH does not
           # include the Nix profile.  Give the plain Firefox handler an
-          # absolute binary path so the browser handoff works without any
-          # NVIDIA-specific wrapper.
+          # absolute Developer Edition binary path so the browser handoff
+          # works without any NVIDIA-specific wrapper.
           home.file.".local/share/applications/firefox.desktop" = {
             force = true;
             source = "${
               pkgs.makeDesktopItem {
                 name = "firefox";
-                desktopName = "Firefox";
-                exec = "${config.home.homeDirectory}/.nix-profile/bin/firefox --name firefox %U";
-                icon = "firefox";
+                desktopName = "Firefox Developer Edition";
+                exec = "${config.home.homeDirectory}/.nix-profile/bin/firefox-devedition --name firefox-devedition %U";
+                icon = "firefox-devedition";
                 categories = [
                   "Network"
                   "WebBrowser"
@@ -258,7 +258,7 @@ in
                   "x-scheme-handler/http"
                   "x-scheme-handler/https"
                 ];
-                extraConfig.StartupWMClass = "firefox";
+                extraConfig.StartupWMClass = "firefox-devedition";
               }
             }/share/applications/firefox.desktop";
           };

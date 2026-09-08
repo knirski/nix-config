@@ -116,11 +116,10 @@ hardware needs one of them and this repo doesn't manage it, install the
 regular macOS app yourself (App Store/`.dmg`) — it is operator-installed,
 not Nix-managed, on that host.
 
-Firefox is managed on all three. `programs.firefox` in the shared
-`modules/home/desktop.nix` covers every host, with darwin taking
-`firefox-bin`: nixpkgs' `firefox` evaluates for aarch64-darwin but is not in
-the binary cache, so macbook would otherwise compile the browser from source
-on every bump. zbook additionally enables NixOS's `programs.firefox` in
+Firefox Developer Edition is managed on all three. `programs.firefox` in the
+shared `modules/home/desktop.nix` covers every host with the
+`firefox-devedition` package. zbook additionally enables NixOS's
+`programs.firefox` in
 `modules/nixos/desktop.nix`, so it carries the browser in both the system and
 user profile — duplication rather than conflict, since it is the same
 derivation.

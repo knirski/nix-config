@@ -50,7 +50,10 @@
       # the `policies` and `nativeMessagingHosts` options become available
       # declaratively when we need them (e.g. Bitwarden desktop <-> browser
       # extension bridge).
-      programs.firefox.enable = true;
+      programs.firefox = {
+        enable = true;
+        package = pkgs.firefox-devedition;
+      };
 
       # System-wide default-browser associations (`/etc/xdg/mimeapps.list`).
       # The per-user mimeapps.list written by the HM desktop aspect only
@@ -68,7 +71,7 @@
       };
 
       # $BROWSER fallback for CLI tools that don't speak xdg-open.
-      environment.sessionVariables.BROWSER = "firefox";
+      environment.sessionVariables.BROWSER = "firefox-devedition";
 
       environment.systemPackages = with pkgs; [
         simple-scan # scanning GUI
