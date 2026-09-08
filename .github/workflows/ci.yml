@@ -83,7 +83,11 @@ jobs:
     if: needs.changes.outputs.non-taste == 'true'
     needs: [changes]
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # Cold runs after a nixpkgs bump fetch multi-GB closures (Android
+    # Studio/SDK archives download silently inside fixed-output builders)
+    # that no cache has yet; 45 min timed out twice mid-download. One long
+    # run finishes, pushes to Cachix, and makes later runs fast again.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
