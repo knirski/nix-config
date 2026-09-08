@@ -132,12 +132,9 @@
       # build: Finder is the default file manager there and `open` resolves
       # folders natively.
       # Firefox on every desktop host, through the module rather than a bare
-      # package so profiles and policies can be declared later. It supports
-      # darwin (it knows the Library/Application Support layout and the
-      # defaults id), but `package` defaults to pkgs.firefox on every
-      # platform, and that is not in the binary cache for aarch64-darwin --
-      # macbook would compile the browser from source on every bump. Give
-      # darwin firefox-bin, which repackages Mozilla's official build.
+      # package so profiles and policies can be declared later. Ubuntu
+      # overrides this package in its host assembler to use Developer Edition;
+      # zbook and macbook retain the ordinary Firefox package.
       #
       # zbook additionally enables NixOS's programs.firefox in
       # modules/nixos/desktop.nix, so it ends up with the browser in both the

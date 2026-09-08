@@ -86,6 +86,14 @@ in
         development.enableIntellijIdea = false;
       }
       config.aspects.homeManager.desktop
+      (
+        { lib, pkgs, ... }:
+        {
+          # Developer Edition is intentionally Ubuntu-only; the shared
+          # desktop aspect keeps the ordinary Firefox package elsewhere.
+          programs.firefox.package = lib.mkForce pkgs.firefox-devedition;
+        }
+      )
       config.aspects.homeManager.ssh
       config.aspects.homeManager.sway
       config.aspects.homeManager.deskSwitch
@@ -235,16 +243,16 @@ in
 
           # WARP is launched by a vendor systemd service whose PATH does not
           # include the Nix profile.  Give the plain Firefox handler an
-          # absolute binary path so the browser handoff works without any
-          # NVIDIA-specific wrapper.
+          # absolute Developer Edition binary path so the browser handoff
+          # works without any NVIDIA-specific wrapper.
           home.file.".local/share/applications/firefox.desktop" = {
             force = true;
             source = "${
               pkgs.makeDesktopItem {
                 name = "firefox";
-                desktopName = "Firefox";
-                exec = "${config.home.homeDirectory}/.nix-profile/bin/firefox --name firefox %U";
-                icon = "firefox";
+                desktopName = "Firefox Developer Edition";
+                exec = "${config.home.homeDirectory}/.nix-profile/bin/firefox-devedition -P default --name firefox-devedition %U";
+                icon = "firefox-devedition";
                 categories = [
                   "Network"
                   "WebBrowser"
@@ -258,9 +266,23 @@ in
                   "x-scheme-handler/http"
                   "x-scheme-handler/https"
                 ];
-                extraConfig.StartupWMClass = "firefox";
+                extraConfig.StartupWMClass = "firefox-devedition";
               }
             }/share/applications/firefox.desktop";
+          };
+
+          # The Developer Edition package also installs
+          # firefox-devedition.desktop into the Nix profile. Hide that
+          # duplicate from DMS; the custom firefox.desktop above remains the
+          # single launcher and is required by the vendor WARP service.
+          home.file.".local/share/applications/firefox-devedition.desktop" = {
+            force = true;
+            text = ''
+              [Desktop Entry]
+              Type=Application
+              Name=Firefox Developer Edition
+              Hidden=true
+            '';
           };
 
           # The unmanaged cache kept advertising the old MIME claims after
