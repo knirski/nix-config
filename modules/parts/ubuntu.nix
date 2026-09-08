@@ -86,6 +86,14 @@ in
         development.enableIntellijIdea = false;
       }
       config.aspects.homeManager.desktop
+      (
+        { lib, pkgs, ... }:
+        {
+          # Developer Edition is intentionally Ubuntu-only; the shared
+          # desktop aspect keeps the ordinary Firefox package elsewhere.
+          programs.firefox.package = lib.mkForce pkgs.firefox-devedition;
+        }
+      )
       config.aspects.homeManager.ssh
       config.aspects.homeManager.sway
       config.aspects.homeManager.deskSwitch
@@ -261,6 +269,20 @@ in
                 extraConfig.StartupWMClass = "firefox-devedition";
               }
             }/share/applications/firefox.desktop";
+          };
+
+          # The Developer Edition package also installs
+          # firefox-devedition.desktop into the Nix profile. Hide that
+          # duplicate from DMS; the custom firefox.desktop above remains the
+          # single launcher and is required by the vendor WARP service.
+          home.file.".local/share/applications/firefox-devedition.desktop" = {
+            force = true;
+            text = ''
+              [Desktop Entry]
+              Type=Application
+              Name=Firefox Developer Edition
+              Hidden=true
+            '';
           };
 
           # The unmanaged cache kept advertising the old MIME claims after

@@ -52,7 +52,7 @@
       # extension bridge).
       programs.firefox = {
         enable = true;
-        package = pkgs.firefox-devedition;
+        package = pkgs.firefox;
       };
 
       # System-wide default-browser associations (`/etc/xdg/mimeapps.list`).
@@ -71,7 +71,7 @@
       };
 
       # $BROWSER fallback for CLI tools that don't speak xdg-open.
-      environment.sessionVariables.BROWSER = "firefox-devedition";
+      environment.sessionVariables.BROWSER = "firefox";
 
       environment.systemPackages = with pkgs; [
         simple-scan # scanning GUI

@@ -131,10 +131,10 @@
       # stock Ubuntu GNOME base (ubuntu). Darwin (macbook) has no nautilus
       # build: Finder is the default file manager there and `open` resolves
       # folders natively.
-      # Firefox Developer Edition on every desktop host, through the module
-      # rather than a bare package so profiles and policies can be declared
-      # later. The pinned nixpkgs provides this package on Linux and Darwin,
-      # keeping the browser channel consistent across workstation profiles.
+      # Firefox on every desktop host, through the module rather than a bare
+      # package so profiles and policies can be declared later. Ubuntu
+      # overrides this package in its host assembler to use Developer Edition;
+      # zbook and macbook retain the ordinary Firefox package.
       #
       # zbook additionally enables NixOS's programs.firefox in
       # modules/nixos/desktop.nix, so it ends up with the browser in both the
@@ -142,7 +142,7 @@
       # precedence on PATH, so this is duplication rather than conflict.
       programs.firefox = {
         enable = true;
-        package = pkgs.firefox-devedition;
+        package = if pkgs.stdenv.hostPlatform.isDarwin then pkgs.firefox-bin else pkgs.firefox;
       };
 
       # Firefox rewrites ~/.config/mimeapps.list itself whenever it decides it
