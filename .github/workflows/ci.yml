@@ -112,14 +112,26 @@ jobs:
             --option allow-import-from-derivation false
       - name: Build pure invariants and software integration
         run: |
-          nix build --no-link \
+          set -euo pipefail
+          # Build in small groups and push each group immediately. Cold
+          # runners (fresh nixpkgs revisions, empty Cachix) time out before
+          # the multi-GB closures finish, but every finished group stays
+          # warm in Cachix, so the next attempt resumes where this one died
+          # instead of starting over. Pushes only happen on main (the
+          # Cachix token is only configured there); PR runs just build.
+          build_and_push() {
+            echo "### building group: $*"
+            nix build --no-link --print-build-logs "$@"
+            if [ "${GITHUB_EVENT_NAME:-}" = push ] && [ "${GITHUB_REF:-}" = refs/heads/main ]; then
+              nix copy --to 'https://knirski-nix-config.cachix.org' "$@"
+            fi
+          }
+          build_and_push \
             .#checks.x86_64-linux.backup-restic-integration \
             .#checks.x86_64-linux.boot-generation-invariants \
             .#checks.x86_64-linux.btrfs-alert-metric-contract \
             .#checks.x86_64-linux.dashboard-renderer \
             .#checks.x86_64-linux.dendritic-options \
-            .#checks.x86_64-linux.deploy-activate \
-            .#checks.x86_64-linux.deploy-schema \
             .#checks.x86_64-linux.dns-dhcp-config \
             .#checks.x86_64-linux.failure-notification-invariants \
             .#checks.x86_64-linux.home-manager-channel-invariants \
@@ -135,35 +147,16 @@ jobs:
             .#checks.x86_64-linux.service-aspect-invariants \
             .#checks.x86_64-linux.soyo-guest-coverage \
             .#checks.x86_64-linux.soyo-guest-isolation \
-            .#checks.x86_64-linux.systemd-hardening-invariants \
-            .#checks.x86_64-linux.ubuntu-desktop-invariants
-      - name: Push evaluation artifacts to Cachix
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          nix copy --to 'https://knirski-nix-config.cachix.org' \
-            .#checks.x86_64-linux.backup-restic-integration \
-            .#checks.x86_64-linux.boot-generation-invariants \
-            .#checks.x86_64-linux.btrfs-alert-metric-contract \
-            .#checks.x86_64-linux.dashboard-renderer \
-            .#checks.x86_64-linux.dendritic-options \
-            .#checks.x86_64-linux.deploy-activate \
-            .#checks.x86_64-linux.deploy-schema \
-            .#checks.x86_64-linux.dns-dhcp-config \
-            .#checks.x86_64-linux.failure-notification-invariants \
-            .#checks.x86_64-linux.home-manager-channel-invariants \
-            .#checks.x86_64-linux.host-role-invariants \
-            .#checks.x86_64-linux.impermanence-missing-early-persist \
-            .#checks.x86_64-linux.initrd-recovery-invariants \
-            .#checks.x86_64-linux.lan-inventory \
-            .#checks.x86_64-linux.macbook-desktop-invariants \
-            .#checks.x86_64-linux.maintenance-paths \
-            .#checks.x86_64-linux.nixpkgs-policy-invariants \
-            .#checks.x86_64-linux.persistence-invariants \
-            .#checks.x86_64-linux.reservation-validation \
-            .#checks.x86_64-linux.service-aspect-invariants \
-            .#checks.x86_64-linux.soyo-guest-coverage \
-            .#checks.x86_64-linux.soyo-guest-isolation \
-            .#checks.x86_64-linux.systemd-hardening-invariants \
+            .#checks.x86_64-linux.systemd-hardening-invariants
+          # Each heavyweight group below realizes a full multi-GB closure
+          # (deploy checks: both host systems; ubuntu invariants: the whole
+          # Home Manager activation incl. Android Studio/SDK). They get
+          # their own group so a timeout still banks the others in Cachix.
+          build_and_push \
+            .#checks.x86_64-linux.deploy-activate
+          build_and_push \
+            .#checks.x86_64-linux.deploy-schema
+          build_and_push \
             .#checks.x86_64-linux.ubuntu-desktop-invariants
 
   build:
