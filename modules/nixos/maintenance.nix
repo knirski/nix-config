@@ -3,6 +3,7 @@
     {
       lib,
       config,
+      options,
       pkgs,
       ...
     }:
@@ -107,7 +108,22 @@
         # --- timesyncd: IP-based NTP servers ---
         # --- smartd: disk self-tests ---
         services = {
-          journald.settings.Journal.SystemMaxUse = "500M";
+          # nixpkgs is mid-migration on the journald interface: unstable
+          # exposes the structured services.journald.settings.Journal
+          # submodule (and removed extraConfig), while stable 26.05 only
+          # has the extraConfig string. soyo (stable) and zbook (unstable)
+          # share this aspect, so pick the representation the running
+          # nixpkgs declares. Both render the same journald.conf(5)
+          # SystemMaxUse key under [Journal].
+          journald =
+            if options.services.journald ? settings then
+              {
+                settings.Journal.SystemMaxUse = "500M";
+              }
+            else
+              {
+                extraConfig = "SystemMaxUse=500M";
+              };
           timesyncd.enable = true;
           smartd = {
             enable = true;

@@ -28,51 +28,74 @@ let
     "ramoops.record_size=0x100000"
   ];
 
-  suspendDebugArm = pkgs.writeShellScriptBin "suspend-debug-arm" ''
-    set -euo pipefail
+  # Checked writeShellApplication (not writeShellScriptBin) with explicit
+  # runtimeInputs: the shell-boundaries CI invariant rejects unchecked
+  # helpers. Callees resolve through PATH from runtimeInputs, so the
+  # store paths stay out of the script bodies.
+  suspendDebugArm = pkgs.writeShellApplication {
+    name = "suspend-debug-arm";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      set -euo pipefail
 
-    if [ "''${EUID:-$(id -u)}" -ne 0 ]; then
-      printf '%s\n' "Run this command as root from the suspend-debug boot." >&2
-      exit 1
-    fi
+      if [ "''${EUID:-$(id -u)}" -ne 0 ]; then
+        printf '%s\n' "Run this command as root from the suspend-debug boot." >&2
+        exit 1
+      fi
 
-    trace=/sys/kernel/tracing
-    pm_trace=/sys/power/pm_trace
+      trace=/sys/kernel/tracing
+      pm_trace=/sys/power/pm_trace
 
-    # Keep the trace focused on suspend ordering. PSTORE_FTRACE writes the
-    # ftrace ring to ramoops if the kernel dies before it can resume.
-    printf '%s\n' 0 > "$trace/tracing_on"
-    printf '%s\n' nop > "$trace/current_tracer"
-    : > "$trace/trace"
-    printf '%s\n' power:suspend_resume > "$trace/set_event"
-    printf '%s\n' power:device_pm_callback_start >> "$trace/set_event"
-    printf '%s\n' power:device_pm_callback_end >> "$trace/set_event"
-    printf '%s\n' 1 > "$trace/tracing_on"
+      # Keep the trace focused on suspend ordering. PSTORE_FTRACE writes the
+      # ftrace ring to ramoops if the kernel dies before it can resume.
+      printf '%s\n' 0 > "$trace/tracing_on"
+      printf '%s\n' nop > "$trace/current_tracer"
+      : > "$trace/trace"
+      printf '%s\n' power:suspend_resume > "$trace/set_event"
+      printf '%s\n' power:device_pm_callback_start >> "$trace/set_event"
+      printf '%s\n' power:device_pm_callback_end >> "$trace/set_event"
+      printf '%s\n' 1 > "$trace/tracing_on"
 
-    # pm_trace stores the last suspend/resume fingerprint in the RTC, so it
-    # remains available after a cold reset. It also disables async suspend,
-    # making this a deliberate diagnostic run rather than a normal cycle.
-    printf '%s\n' 1 > "$pm_trace"
-  '';
+      # pm_trace stores the last suspend/resume fingerprint in the RTC, so it
+      # remains available after a cold reset. It also disables async suspend,
+      # making this a deliberate diagnostic run rather than a normal cycle.
+      printf '%s\n' 1 > "$pm_trace"
+    '';
+  };
 
-  suspendDebugSuspend = pkgs.writeShellScriptBin "suspend-debug-suspend" ''
-    set -euo pipefail
+  suspendDebugSuspend = pkgs.writeShellApplication {
+    name = "suspend-debug-suspend";
+    runtimeInputs = [
+      suspendDebugArm
+      pkgs.systemd
+    ];
+    text = ''
+      set -euo pipefail
 
-    ${suspendDebugArm}/bin/suspend-debug-arm
+      suspend-debug-arm
 
-    exec ${pkgs.systemd}/bin/systemctl suspend
-  '';
+      exec systemctl suspend
+    '';
+  };
 
-  suspendDebugResyncTime = pkgs.writeShellScriptBin "suspend-debug-resync-time" ''
-    set -euo pipefail
+  suspendDebugResyncTime = pkgs.writeShellApplication {
+    name = "suspend-debug-resync-time";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.networkmanager
+      pkgs.systemd
+    ];
+    text = ''
+      set -euo pipefail
 
-    # Resume hooks race NetworkManager's link recovery. Wait for a usable
-    # connection before restarting timesyncd; it will still retry if the link
-    # is not ready within the bounded wait.
-    ${pkgs.networkmanager}/bin/nm-online --quiet --timeout=30 || true
-    ${pkgs.systemd}/bin/systemctl restart systemd-timesyncd.service
-    ${pkgs.coreutils}/bin/sleep 2
-  '';
+      # Resume hooks race NetworkManager's link recovery. Wait for a usable
+      # connection before restarting timesyncd; it will still retry if the link
+      # is not ready within the bounded wait.
+      nm-online --quiet --timeout=30 || true
+      systemctl restart systemd-timesyncd.service
+      sleep 2
+    '';
+  };
 in
 {
   boot = {
