@@ -251,7 +251,7 @@ in
               pkgs.makeDesktopItem {
                 name = "firefox";
                 desktopName = "Firefox Developer Edition";
-                exec = "${config.home.homeDirectory}/.nix-profile/bin/firefox-devedition --name firefox-devedition %U";
+                exec = "${config.home.homeDirectory}/.nix-profile/bin/firefox-devedition -P default --name firefox-devedition %U";
                 icon = "firefox-devedition";
                 categories = [
                   "Network"
