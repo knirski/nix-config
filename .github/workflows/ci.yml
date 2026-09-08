@@ -83,11 +83,13 @@ jobs:
     if: needs.changes.outputs.non-taste == 'true'
     needs: [changes]
     runs-on: ubuntu-24.04
-    # Cold runs after a nixpkgs bump fetch multi-GB closures (Android
-    # Studio/SDK archives download silently inside fixed-output builders)
-    # that no cache has yet; 45 min timed out twice mid-download. One long
-    # run finishes, pushes to Cachix, and makes later runs fast again.
-    timeout-minutes: 120
+    # Cold runs after a nixpkgs bump fetch ~50 GB of closures (Android
+    # Studio/SDK archives download silently inside fixed-output builders,
+    # and the suspend-debug specialisation kernel compiles locally because
+    # no cache will ever have it) that no cache has yet. Warm runs finish
+    # in ~20 min; this ceiling only binds worst-case cold runs, which
+    # converge via the per-group pushes below.
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -150,14 +152,33 @@ jobs:
             .#checks.x86_64-linux.systemd-hardening-invariants
           # Each heavyweight group below realizes a full multi-GB closure
           # (deploy checks: both host systems; ubuntu invariants: the whole
-          # Home Manager activation incl. Android Studio/SDK). They get
-          # their own group so a timeout still banks the others in Cachix.
+          # Home Manager activation incl. Android Studio/SDK). They run in
+          # parallel on the shared store: the silent custom-kernel compile
+          # overlaps the silent multi-GB downloads instead of adding to
+          # them, and each group still pushes independently so a timeout
+          # banks whatever finished in Cachix.
           build_and_push \
-            .#checks.x86_64-linux.deploy-activate
+            .#checks.x86_64-linux.deploy-activate &
+          heavy_pids="$!"
           build_and_push \
-            .#checks.x86_64-linux.deploy-schema
+            .#checks.x86_64-linux.deploy-schema &
+          heavy_pids="$heavy_pids $!"
           build_and_push \
-            .#checks.x86_64-linux.ubuntu-desktop-invariants
+            .#checks.x86_64-linux.ubuntu-desktop-invariants &
+          heavy_pids="$heavy_pids $!"
+          # Heartbeat: the heavy builders (kernel compile, fixed-output
+          # fetches) print nothing for tens of minutes; this proves the
+          # job is alive and shows store growth while they run.
+          (while true; do date -u; du -sh /nix/store 2>/dev/null; sleep 300; done) &
+          heartbeat_pid="$!"
+          heavy_failed=0
+          # $heavy_pids is intentionally a space-separated pid list.
+          # shellcheck disable=SC2086
+          for pid in $heavy_pids; do
+            wait "$pid" || heavy_failed=1
+          done
+          kill "$heartbeat_pid" 2>/dev/null || true
+          exit "$heavy_failed"
 
   build:
     name: Build ${{ matrix.host }} closure
