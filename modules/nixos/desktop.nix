@@ -50,7 +50,10 @@
       # the `policies` and `nativeMessagingHosts` options become available
       # declaratively when we need them (e.g. Bitwarden desktop <-> browser
       # extension bridge).
-      programs.firefox.enable = true;
+      programs.firefox = {
+        enable = true;
+        package = pkgs.firefox;
+      };
 
       # System-wide default-browser associations (`/etc/xdg/mimeapps.list`).
       # The per-user mimeapps.list written by the HM desktop aspect only

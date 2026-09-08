@@ -117,10 +117,10 @@ regular macOS app yourself (App Store/`.dmg`) — it is operator-installed,
 not Nix-managed, on that host.
 
 Firefox is managed on all three. `programs.firefox` in the shared
-`modules/home/desktop.nix` covers every host, with darwin taking
-`firefox-bin`: nixpkgs' `firefox` evaluates for aarch64-darwin but is not in
-the binary cache, so macbook would otherwise compile the browser from source
-on every bump. zbook additionally enables NixOS's `programs.firefox` in
+`modules/home/desktop.nix` covers every host; Ubuntu overrides it with
+Firefox Developer Edition, while macbook uses `firefox-bin` to avoid building
+ordinary Firefox from source on aarch64-darwin. zbook additionally enables NixOS's
+`programs.firefox` in
 `modules/nixos/desktop.nix`, so it carries the browser in both the system and
 user profile — duplication rather than conflict, since it is the same
 derivation.
