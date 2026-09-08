@@ -62,6 +62,17 @@ let
 
     exec ${pkgs.systemd}/bin/systemctl suspend
   '';
+
+  suspendDebugResyncTime = pkgs.writeShellScriptBin "suspend-debug-resync-time" ''
+    set -euo pipefail
+
+    # Resume hooks race NetworkManager's link recovery. Wait for a usable
+    # connection before restarting timesyncd; it will still retry if the link
+    # is not ready within the bounded wait.
+    ${pkgs.networkmanager}/bin/nm-online --quiet --timeout=30 || true
+    ${pkgs.systemd}/bin/systemctl restart systemd-timesyncd.service
+    ${pkgs.coreutils}/bin/sleep 2
+  '';
 in
 {
   boot = {
@@ -169,11 +180,12 @@ in
     };
 
     # pm_trace deliberately perturbs the RTC while diagnosing suspend. Restart
-    # timesyncd after the sleep operation returns so the resumed system repairs
-    # the wall clock once networking is available again.
+    # timesyncd after the debug sleep operation returns so only this
+    # specialisation repairs the wall clock.
     systemd.services.systemd-suspend.serviceConfig.ExecStartPost = [
-      "${pkgs.systemd}/bin/systemctl restart systemd-timesyncd.service"
+      "${suspendDebugResyncTime}/bin/suspend-debug-resync-time"
     ];
+
   };
 
   zramSwap.enable = true;
