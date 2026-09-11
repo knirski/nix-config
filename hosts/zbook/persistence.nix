@@ -31,8 +31,10 @@ in
       # default for plain-string entries is root ownership.
       "/var/lib/btrbk-zbook"
       "/var/lib/restic-backups-zbook"
-      # systemd-pstore archives ramoops records here after boot. Keep them
-      # outside the impermanent root so a later reboot does not erase evidence.
+      # systemd-pstore archives pstore records here after boot (EFI pstore on
+      # the normal boot; ramoops records once the deferred suspend-debug
+      # runbook is rebuilt). Keep them outside the impermanent root so a later
+      # reboot does not erase evidence.
       "/var/lib/systemd/pstore"
       "/var/log"
       "/etc/NetworkManager/system-connections"

@@ -18,10 +18,14 @@ Two s2idle failure modes have been observed on zbook:
    the hang happened before any device-suspend callback, i.e. in the
    `dpm_prepare`/early-entry window, not in the NVMe/GPU/PCI callbacks.
 
-The normal boot keeps general crash capture regardless of this runbook: a 1 MiB
-ramoops region (`normalRamoopsParams`), `boot.crashDump` (kdump,
-`crashkernel=256M`), and the preserved `/var/lib/systemd/pstore` archive. The
-specialisation below only enlarges and instruments that on a dedicated entry.
+The normal boot keeps general crash capture regardless of this runbook:
+`boot.crashDump` (kdump, `crashkernel=256M`, lockup detectors) and the
+preserved `/var/lib/systemd/pstore` archive (EFI pstore records on the normal
+boot; ramoops records once the specialisation below is rebuilt). There is no
+normal-boot ramoops reservation: the stock kernel leaves the pstore
+console/pmsg/ftrace frontends disabled and never loads the `ramoops` module, so
+the former 1 MiB reservation captured nothing. The specialisation below
+reserves and instruments its own region on a dedicated entry.
 
 ## 1. Rebuild the instrumented boot
 

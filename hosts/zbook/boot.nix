@@ -4,26 +4,13 @@ let
     "nvidia_drm.modeset=1"
   ];
 
-  normalRamoopsParams = [
-    # A permanent 1 MiB crash-log region for the normal boot (ramoops
-    # console/pmsg/ftrace zones). The deferred suspend-debug runbook rebuilds a
-    # larger region in a temporary specialisation when a suspend hang needs
-    # diagnosing; see docs/zbook-s2idle-debugging-plan.md.
-    "memmap=1M$16M"
-    "ramoops.mem_address=0x01000000"
-    "ramoops.mem_size=0x100000"
-    "ramoops.console_size=0x10000"
-    "ramoops.ftrace_size=0x10000"
-    "ramoops.pmsg_size=0x10000"
-    "ramoops.record_size=0x10000"
-  ];
 in
 {
   boot = {
     # Follow the current kernel for newer graphics and suspend fixes on this
     # workstation; the NVIDIA package is selected from this kernel set too.
     kernelPackages = pkgs.linuxPackages_latest;
-    kernelParams = commonKernelParams ++ normalRamoopsParams;
+    kernelParams = commonKernelParams;
     crashDump = {
       enable = true;
       reservedMemory = "256M";
