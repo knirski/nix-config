@@ -132,18 +132,20 @@ sudo resolvectl flush-caches
 kernel log, or wakes with `nvme … VPD access failed` and shortly hangs. Drives
 into btrfs read-only remount or a cold shutdown. A second mode observed
 2026-09-11 hangs on s2idle *entry* (last line `Filesystems sync`, no VPD
-warning, RTC `pm_trace` says the prepare phase was never left); both modes are
-tracked in the debugging plan's field log.
+warning, RTC `pm_trace` says the prepare phase was never left).
 
 **Current mitigation**: avoid suspend on the XPG S70 Blade, run
 `disable-aspm.service` and `disable-nvme-apst.service`, and rely on btrfs
 scrub + restic for integrity signals. See `AGENTS.md` (zbook known issues,
 recurrent wedge entry) for the full list.
 
-**Active investigation**: [zbook s2idle debugging plan](zbook-s2idle-debugging-plan.md)
-— controlled A/B tests, a `suspend-debug` boot specialisation with
-forced-panic capture (unarmed `pm_trace` prints are collision-prone; only a
-`hash matches <file>:<line>` line is a real fingerprint).
+**Investigation status**: deferred 2026-09-11. The instrumented
+`suspend-debug` boot specialisation was removed from `hosts/zbook/boot.nix`
+after the entry-path hang stopped reproducing. The
+[zbook s2idle debugging runbook](zbook-s2idle-debugging-plan.md) keeps the
+complete rebuild recipe, the `pm_trace` interpretation rules (only a
+`hash matches <file>:<line>` line is a real fingerprint), and the A/B plan for
+when it returns.
 
 ## Input Devices
 
