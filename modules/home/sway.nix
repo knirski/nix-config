@@ -527,7 +527,10 @@
         # xrandr, so the docked iiyama can be re-marked primary by name. A
         # dock/undock or DPMS cycle recreates the XWayland outputs and drops
         # the flag, so stay subscribed to sway output events instead of setting
-        # it once at startup. No-op while undocked.
+        # it once at startup. Undocked, the marker falls back to the laptop
+        # panel so X11 apps never lose a primary output (sway itself already
+        # moves focus and workspaces back on unplug, and onto the iiyama on
+        # replug).
         xwayland-primary = {
           Unit = {
             Description = "Keep the iiyama as the XWayland primary output";
@@ -546,18 +549,27 @@
                   pkgs.xrandr
                 ];
                 text = ''
-                  identifier=${lib.escapeShellArg iiyama}
+                    identifier=${lib.escapeShellArg iiyama}
 
                   # Resolve the connector from the make/model/serial identifier
                   # (DP-* is not stable across docks), then mark it primary.
-                  # The bounded retry covers XWayland still enumerating outputs.
+                  # Undocked, prefer the laptop panel; any active output beats
+                  # none. The bounded retry covers XWayland still enumerating
+                  # outputs after the sway event that woke us.
                   set_primary() {
                     attempt=0
                     while [ "$attempt" -lt 20 ]; do
                       if outputs=$(swaymsg -t get_outputs 2>/dev/null); then
                         connector=$(printf '%s' "$outputs" | jq -r --arg id "$identifier" \
-                          '.[] | select("\(.make) \(.model) \(.serial)" == $id) | .name' | head -n 1)
-                        # Undocked: nothing to mark, nothing to wait for.
+                          '.[] | select(.active and ("\(.make) \(.model) \(.serial)" == $id)) | .name' | head -n 1)
+                        if [ -z "$connector" ]; then
+                          connector=$(printf '%s' "$outputs" | jq -r \
+                            '[.[] | select(.active and .name == "eDP-1")][0].name // empty')
+                        fi
+                        if [ -z "$connector" ]; then
+                          connector=$(printf '%s' "$outputs" | jq -r \
+                            '[.[] | select(.active)][0].name // empty')
+                        fi
                         [ -n "$connector" ] || return 0
                         if xrandr --output "$connector" --primary 2>/dev/null; then
                           return 0
@@ -569,10 +581,10 @@
                     return 0
                   }
 
-                  set_primary
-                  swaymsg -t subscribe -m '["output"]' | while read -r _; do
                     set_primary
-                  done
+                    swaymsg -t subscribe -m '["output"]' | while read -r _; do
+                      set_primary
+                    done
                 '';
               }
             }/bin/xwayland-primary";
