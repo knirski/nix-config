@@ -46,8 +46,12 @@ let
       trace=/sys/kernel/tracing
       pm_trace=/sys/power/pm_trace
 
-      # Keep the trace focused on suspend ordering. PSTORE_FTRACE writes the
-      # ftrace ring to ramoops if the kernel dies before it can resume.
+      # Keep the trace focused on suspend ordering. These tracepoints are
+      # low-volume, so they still hold the pre-hang history when khungtaskd
+      # panics 120 s later; pstore's function recorder (record_ftrace) would
+      # have been overwritten by other-CPU noise in the meantime. The
+      # specialisation's panic_print=16 dumps this ring into the panic log,
+      # which kmsg_dump then stores in ramoops.
       printf '%s\n' 0 > "$trace/tracing_on"
       printf '%s\n' nop > "$trace/current_tracer"
       : > "$trace/trace"
@@ -182,8 +186,42 @@ in
           "nmi_watchdog=panic"
           "softlockup_panic=1"
           "no_console_suspend"
+          # A silent s2idle-entry hang never reaches kmsg_dump, so ramoops
+          # stays empty. Force blocking hangs to panic instead (see the
+          # kernel.sysctl block below) and make the panic path write its
+          # evidence *before* kdump takes over: kmsg_dump_desc stores the
+          # console log in ramoops and panic_print's FTRACE_INFO bit appends
+          # the power tracepoints to that same log. Without
+          # crash_kexec_post_notifiers=1 the crash kernel runs first and both
+          # records are never written.
+          "crash_kexec_post_notifiers=1"
+          # Print the suspend ordering to the framebuffer console while the
+          # machine is still alive; the same messages stay in the kernel log
+          # for the ramoops panic dump.
+          "initcall_debug"
+          "pm_debug_messages"
+          "ignore_loglevel"
         ]
       );
+      # Turn silent freezes into panics that kdump and ramoops can capture:
+      # khungtaskd catches an uninterruptible (D-state) wait, while
+      # panic_on_rcu_stall catches a CPU that stopped reporting. The
+      # panic_print bit PANIC_PRINT_FTRACE_INFO (0x10) dumps the tracefs ring
+      # into the panic log so the power tracepoints survive in ramoops.
+      kernel.sysctl = {
+        "kernel.hung_task_panic" = 1;
+        "kernel.panic_on_rcu_stall" = 1;
+        "kernel.panic_print" = 16;
+      };
+      # The crash/rescue kernel boots from the same kernel and initrd. Give it
+      # the same ramoops reservation, otherwise it treats the reserved region
+      # as free RAM and overwrites the evidence before it can be read. The
+      # first two entries repeat boot.crashDump's defaults.
+      crashDump.kernelParams = [
+        "1"
+        "boot.shell_on_fail"
+      ]
+      ++ debugRamoopsParams;
     };
 
     environment.systemPackages = [ suspendDebugSuspend ];
