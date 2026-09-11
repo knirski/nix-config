@@ -84,11 +84,10 @@ jobs:
     needs: [changes]
     runs-on: ubuntu-24.04
     # Cold runs after a nixpkgs bump fetch ~50 GB of closures (Android
-    # Studio/SDK archives download silently inside fixed-output builders,
-    # and the suspend-debug specialisation kernel compiles locally because
-    # no cache will ever have it) that no cache has yet. Warm runs finish
-    # in ~20 min; this ceiling only binds worst-case cold runs, which
-    # converge via the per-group pushes below.
+    # Studio/SDK archives download silently inside fixed-output builders)
+    # that no cache has yet. Warm runs finish in ~20 min; this ceiling only
+    # binds worst-case cold runs, which converge via the per-group pushes
+    # below.
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
