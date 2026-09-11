@@ -40,6 +40,13 @@
       };
 
       dmsPinnedFile = (pkgs.formats.json { }).generate "dms-pinned.json" dmsPinnedSettings;
+
+      # Sway/wlroots has no primary-output setting -- X11 got one from
+      # xrandr, Wayland never did. This make/model/serial identifier is the
+      # closest thing to an identity for the docked iiyama: it survives DP
+      # connector renumbering and is shared by the workspace assignments,
+      # the login focus, and the XWayland primary watcher below.
+      iiyama = "Iiyama North America PL2792Q 1152194804219";
     in
     {
       # DankMaterialShell owns its own settings.json. It used to be generated
@@ -85,6 +92,7 @@
         pavucontrol # PulseAudio volume control GUI
         nwg-displays # display configuration GUI
         nwg-look # GTK theme manager
+        xrandr # X11 (XWayland) output control: sets the primary output
       ];
 
       wayland.windowManager.sway = {
@@ -100,63 +108,63 @@
             {
               workspace = "1";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
             {
               workspace = "2";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
             {
               workspace = "3";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
             {
               workspace = "4";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
             {
               workspace = "5";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
             {
               workspace = "6";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
             {
               workspace = "7";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
             {
               workspace = "8";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
             {
               workspace = "9";
               output = [
-                "Iiyama North America PL2792Q 1152194804219"
+                iiyama
                 "eDP-1"
               ];
             }
@@ -183,9 +191,15 @@
               pointer_accel = "0.3";
             };
           };
-          # DMS owns the regular clipboard and its rich MIME types. PRIMARY
-          # remains compositor/application-owned for middle-click pasting.
-          startup = [ ];
+          # Sway has no primary output; focusing the docked monitor at login
+          # makes new windows and the DMS launcher open there. The command is
+          # a harmless error in the sway log when undocked.
+          startup = [
+            {
+              command = "swaymsg 'focus output \"${iiyama}\"'";
+              always = false;
+            }
+          ];
           bars = [ ];
           keybindings = {
             "${modifier}+Return" = "exec ${terminal}";
@@ -458,53 +472,114 @@
       # playback is detected, and kills it when playback stops.  This avoids
       # the race window of the per-iteration pattern where the inhibitor
       # lock is briefly released between polling cycles.
-      systemd.user.services.media-sleep-inhibit = {
-        Unit = {
-          Description = "Inhibit sleep while MPRIS media is playing";
-          After = [ "graphical-session.target" ];
-          PartOf = [ "graphical-session.target" ];
-          ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
-        };
-        Service = {
-          ExecStart = "${
-            pkgs.writeShellApplication {
-              name = "media-sleep-inhibit";
-              runtimeInputs = [
-                pkgs.playerctl
-                pkgs.systemd
-              ];
-              text = ''
-                INTERVAL=15
-                inhibitor_pid=""
+      systemd.user.services = {
+        media-sleep-inhibit = {
+          Unit = {
+            Description = "Inhibit sleep while MPRIS media is playing";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+            ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
+          };
+          Service = {
+            ExecStart = "${
+              pkgs.writeShellApplication {
+                name = "media-sleep-inhibit";
+                runtimeInputs = [
+                  pkgs.playerctl
+                  pkgs.systemd
+                ];
+                text = ''
+                  INTERVAL=15
+                  inhibitor_pid=""
 
-                cleanup() {
-                  if [ -n "$inhibitor_pid" ]; then
-                    kill "$inhibitor_pid" 2>/dev/null || true
-                  fi
-                }
-                trap cleanup EXIT
-
-                while true; do
-                  if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
-                    if [ -z "$inhibitor_pid" ]; then
-                      systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
-                      inhibitor_pid=$!
-                    fi
-                  else
+                  cleanup() {
                     if [ -n "$inhibitor_pid" ]; then
                       kill "$inhibitor_pid" 2>/dev/null || true
-                      wait "$inhibitor_pid" 2>/dev/null || true
-                      inhibitor_pid=""
                     fi
-                  fi
-                  sleep "$INTERVAL"
-                done
-              '';
-            }
-          }/bin/media-sleep-inhibit";
-          Restart = "on-failure";
+                  }
+                  trap cleanup EXIT
+
+                  while true; do
+                    if playerctl --all-players status 2>/dev/null | grep -q "Playing"; then
+                      if [ -z "$inhibitor_pid" ]; then
+                        systemd-inhibit --what=sleep --who="media-playback" --why="Media playing" sleep infinity &
+                        inhibitor_pid=$!
+                      fi
+                    else
+                      if [ -n "$inhibitor_pid" ]; then
+                        kill "$inhibitor_pid" 2>/dev/null || true
+                        wait "$inhibitor_pid" 2>/dev/null || true
+                        inhibitor_pid=""
+                      fi
+                    fi
+                    sleep "$INTERVAL"
+                  done
+                '';
+              }
+            }/bin/media-sleep-inhibit";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
         };
-        Install.WantedBy = [ "graphical-session.target" ];
+
+        # Sway/wlroots has no primary output, but X11 apps and games still ask
+        # XWayland for one. XWayland 24.1+ exposes Wayland connector names to
+        # xrandr, so the docked iiyama can be re-marked primary by name. A
+        # dock/undock or DPMS cycle recreates the XWayland outputs and drops
+        # the flag, so stay subscribed to sway output events instead of setting
+        # it once at startup. No-op while undocked.
+        xwayland-primary = {
+          Unit = {
+            Description = "Keep the iiyama as the XWayland primary output";
+            After = [ "sway-session.target" ];
+            PartOf = [ "sway-session.target" ];
+            ConditionEnvironment = "XDG_SESSION_TYPE=wayland";
+          };
+          Service = {
+            ExecStart = "${
+              pkgs.writeShellApplication {
+                name = "xwayland-primary";
+                runtimeInputs = [
+                  pkgs.coreutils
+                  pkgs.jq
+                  pkgs.sway
+                  pkgs.xrandr
+                ];
+                text = ''
+                  identifier=${lib.escapeShellArg iiyama}
+
+                  # Resolve the connector from the make/model/serial identifier
+                  # (DP-* is not stable across docks), then mark it primary.
+                  # The bounded retry covers XWayland still enumerating outputs.
+                  set_primary() {
+                    attempt=0
+                    while [ "$attempt" -lt 20 ]; do
+                      if outputs=$(swaymsg -t get_outputs 2>/dev/null); then
+                        connector=$(printf '%s' "$outputs" | jq -r --arg id "$identifier" \
+                          '.[] | select("\(.make) \(.model) \(.serial)" == $id) | .name' | head -n 1)
+                        # Undocked: nothing to mark, nothing to wait for.
+                        [ -n "$connector" ] || return 0
+                        if xrandr --output "$connector" --primary 2>/dev/null; then
+                          return 0
+                        fi
+                      fi
+                      attempt=$((attempt + 1))
+                      sleep 0.5
+                    done
+                    return 0
+                  }
+
+                  set_primary
+                  swaymsg -t subscribe -m '["output"]' | while read -r _; do
+                    set_primary
+                  done
+                '';
+              }
+            }/bin/xwayland-primary";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "sway-session.target" ];
+        };
       };
 
       services.wlsunset = {
