@@ -11,7 +11,7 @@
 # see docs/security/supply-chain.md's "Dependency automation decisions" for
 # how it's reviewed, updated and scanned. The lockfile is refreshed by the
 # repository's command-code update script (which also injects the
-# OpenTelemetry overrides — see postPatch below) and scanned as-is.
+# vulnerability overrides — see postPatch below) and scanned as-is.
 #
 # Ref: https://nixos.org/manual/nixpkgs/stable/#buildNpmPackage
 #
@@ -38,11 +38,11 @@
 
 buildNpmPackage rec {
   pname = "command-code";
-  version = "1.50.0";
+  version = "1.53.1";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/command-code/-/command-code-${version}.tgz";
-    hash = "sha512-eeO/Ip7kKCQH3RPyqa4+xSxAh7a8JF+57NTpy2Ex2ZQ0RQjSJbSFnGIYmF1ck7kFGmhJXSmKzd5loqBfKQkfRg==";
+    hash = "sha512-vjBqxjX8I/TDE4BvPxni3kUXG5w7V/4le3N6A/NVtSwcAObXWviIy/4asbIlE9qXH5NkekTtzNtCOfbDEHcDRg==";
   };
 
   dontNpmBuild = true;
@@ -57,9 +57,14 @@ buildNpmPackage rec {
     # same overrides applied (see scripts/update-command-code.sh); keeping
     # them in package.json too keeps npm ci's consistency check happy.
     sed -i '$s/^}$/,\n  "overrides": {"@opentelemetry\/core":"2.10.0","@opentelemetry\/propagator-jaeger":"2.10.0"}\n}/' package.json
+    # Pin js-yaml to the 4.3.2 patch (GHSA-2883-xcg3-v3hh: empty merge
+    # sources bypass maxTotalMergeKeys). js-yaml is a direct dependency here,
+    # so an npm override triggers EOVERRIDE — pin the declared spec instead.
+    # The vendored lockfile is generated with this same pin.
+    sed -i 's/"js-yaml": "[^"]*"/"js-yaml": "4.3.2"/' package.json
   '';
 
-  npmDepsHash = "sha256-LPtKKodFF3I97EYpxjnec8Cx1gC0KvYJ3D6p3k0J3Oc=";
+  npmDepsHash = "sha256-hDKBgviQotpWzLPr9NFn+nmH38KH3ai3vfSQW+dcn6k=";
 
   nativeBuildInputs = [
     makeWrapper

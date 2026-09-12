@@ -89,12 +89,17 @@ pkg_dir="$extract_dir/package"
 # state. This is what makes a same-version re-run idempotent.
 cp "$LOCKFILE" "$pkg_dir/package-lock.json"
 sed -i '/^  "devDependencies": {/,/^  }/d' "$pkg_dir/package.json"
-# Same OpenTelemetry override injection as command-code.nix's postPatch:
-# sdk-node pins propagator-jaeger at exactly 2.7.1 and otel-cf-workers'
-# nested exporters pin core at 2.0.0/2.7.1 — all vulnerable
-# (GHSA-45rx-2jwx-cxfr, GHSA-8988-4f7v-96qf). Without this, npm preserves
-# the vulnerable pins because they still satisfy the declared ranges.
+# Same override injection as command-code.nix's postPatch: sdk-node pins
+# propagator-jaeger at exactly 2.7.1 and otel-cf-workers' nested exporters
+# pin core at 2.0.0/2.7.1 — all vulnerable (GHSA-45rx-2jwx-cxfr,
+# GHSA-8988-4f7v-96qf). Without this, npm preserves the vulnerable pins
+# because they still satisfy the declared ranges.
 sed -i '$s/^}$/,\n  "overrides": {"@opentelemetry\/core":"2.10.0","@opentelemetry\/propagator-jaeger":"2.10.0"}\n}/' "$pkg_dir/package.json"
+# Pin js-yaml to the 4.3.2 patch (GHSA-2883-xcg3-v3hh: empty merge sources
+# bypass maxTotalMergeKeys); as a direct dependency it cannot use an override
+# (npm EOVERRIDE), so pin the declared spec as command-code.nix's postPatch
+# also does.
+sed -i 's/"js-yaml": "[^"]*"/"js-yaml": "4.3.2"/' "$pkg_dir/package.json"
 
 (cd "$pkg_dir" && "$NPM_BIN" install --package-lock-only --ignore-scripts >&2)
 cp "$pkg_dir/package-lock.json" "$LOCKFILE"
