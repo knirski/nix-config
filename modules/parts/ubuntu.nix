@@ -84,6 +84,10 @@ in
         # Ubuntu keeps the shared development tooling but does not install
         # IntelliJ IDEA: its nixpkgs package lags behind, even on nixpkgs-unstable.
         development.enableIntellijIdea = false;
+        # Docker's config is maintained outside Nix and exposed through the
+        # existing ~/.docker/config.json symlink; do not let Home Manager
+        # replace that symlink with a generated file.
+        development.manageDockerConfig = false;
       }
       config.aspects.homeManager.desktop
       (

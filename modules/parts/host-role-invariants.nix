@@ -106,14 +106,14 @@
         !(home.programs.claude-code.enable or false)
         && !(home.programs.codex.enable or false)
         && !(home.programs.opencode.enable or false)
-        && !(home.programs.docker-cli.enable or false)
+        && !(home.development.manageDockerConfig or false)
         && !(home.programs.lazydocker.enable or false);
       developmentProgramsEnabled =
         home:
         (home.programs.claude-code.enable or false)
         && (home.programs.codex.enable or false)
         && (home.programs.opencode.enable or false)
-        && (home.programs.docker-cli.enable or false)
+        && (home.development.manageDockerConfig or false)
         && (home.programs.lazydocker.enable or false);
 
       # Name of a package option value that may legitimately be null

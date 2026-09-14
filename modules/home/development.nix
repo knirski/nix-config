@@ -51,6 +51,12 @@ _: {
         description = "Whether to install IntelliJ IDEA in the development profile.";
       };
 
+      options.development.manageDockerConfig = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Whether Home Manager should manage Docker's config.json.";
+      };
+
       config = {
         home.packages =
           with pkgs;
@@ -105,7 +111,10 @@ _: {
             nix-direnv.enable = true;
           };
 
-          docker-cli.enable = true;
+          # Ubuntu keeps an operator-managed ~/.docker/config.json symlink for
+          # credentials. Home Manager's docker-cli module writes config.json,
+          # so the Ubuntu assembler disables this management explicitly.
+          docker-cli.enable = config.development.manageDockerConfig;
           lazydocker.enable = true;
           lazygit = {
             enable = true;
