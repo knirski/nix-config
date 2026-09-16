@@ -202,8 +202,8 @@
 
         zbook-has-android-studio = homeHasPackage zbookHome "android-studio";
         zbook-has-android-sdk = homeHasPackage zbookHome "android-sdk-cmdline-tools";
-        ubuntu-has-android-studio = homeHasPackage ubuntuHome "android-studio";
-        ubuntu-has-android-sdk = homeHasPackage ubuntuHome "android-sdk-cmdline-tools";
+        ubuntu-no-android-studio = !(homeHasPackage ubuntuHome "android-studio");
+        ubuntu-no-android-sdk = !(homeHasPackage ubuntuHome "android-sdk-cmdline-tools");
         macbook-no-android-studio = !(homeHasPackage macbookHome "android-studio");
         macbook-no-android-sdk = !(homeHasPackage macbookHome "android-sdk-cmdline-tools");
         android-sdk-has-x86_64-image =

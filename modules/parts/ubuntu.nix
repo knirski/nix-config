@@ -52,20 +52,9 @@ let
       google-chrome = withLibsecret "google-chrome" [ "google-chrome-stable" ];
     };
 
-  nixpkgsArgs =
-    let
-      args = import ../../lib/mk-nixpkgs-args.nix {
-        permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
-      };
-    in
-    args
-    // {
-      config = args.config // {
-        # Android Studio's separate SDK is installed by the shared
-        # development aspect on this Linux workstation.
-        android_sdk.accept_license = true;
-      };
-    };
+  nixpkgsArgs = import ../../lib/mk-nixpkgs-args.nix {
+    permittedInsecurePackages = map (e: e.package) insecurePackageExceptions;
+  };
 in
 {
   flake.homeConfigurations.ubuntu = inputs.home-manager.lib.homeManagerConfiguration {
@@ -83,11 +72,16 @@ in
       {
         # Ubuntu keeps the shared development tooling but does not install
         # IntelliJ IDEA: its nixpkgs package lags behind, even on nixpkgs-unstable.
-        development.enableIntellijIdea = false;
-        # Docker's config is maintained outside Nix and exposed through the
-        # existing ~/.docker/config.json symlink; do not let Home Manager
-        # replace that symlink with a generated file.
-        development.manageDockerConfig = false;
+        development = {
+          enableIntellijIdea = false;
+          # Ubuntu does not need Android Studio, the Android SDK, or their
+          # command-line tools.
+          enableAndroidTools = false;
+          # Docker's config is maintained outside Nix and exposed through the
+          # existing ~/.docker/config.json symlink; do not let Home Manager
+          # replace that symlink with a generated file.
+          manageDockerConfig = false;
+        };
       }
       config.aspects.homeManager.desktop
       (

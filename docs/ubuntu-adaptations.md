@@ -38,7 +38,9 @@ These are already applied in this checkout:
 - Desktop applications come from nixpkgs rather than snaps. Slack and VS Code
   are declared through the shared development aspect; IntelliJ IDEA is not
   installed on Ubuntu because its nixpkgs package lags behind, even on
-  nixpkgs-unstable. Spotify and Bitwarden arrive through
+  nixpkgs-unstable. Android Studio, the Android SDK, and Android command-line
+  tools are also disabled because this machine does not use Android
+  development. Spotify and Bitwarden arrive through
   `aspects.homeManager.desktop`. Once activated, remove any redundant snaps:
 
   ```bash

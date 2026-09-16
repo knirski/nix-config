@@ -45,16 +45,26 @@ _: {
       androidSdk = androidSdkComposition.androidsdk;
     in
     {
-      options.development.enableIntellijIdea = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Whether to install IntelliJ IDEA in the development profile.";
-      };
+      options = {
+        development = {
+          enableIntellijIdea = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether to install IntelliJ IDEA in the development profile.";
+          };
 
-      options.development.manageDockerConfig = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Whether Home Manager should manage Docker's config.json.";
+          enableAndroidTools = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether to install Android Studio and the Android SDK.";
+          };
+
+          manageDockerConfig = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether Home Manager should manage Docker's config.json.";
+          };
+        };
       };
 
       config = {
@@ -91,15 +101,17 @@ _: {
             # AWS command-line client for workstation cloud administration.
             awscli2
           ]
-          ++ lib.optionals stdenv.hostPlatform.isLinux [
+          ++ lib.optionals (stdenv.hostPlatform.isLinux && config.development.enableAndroidTools) [
             android-studio
             androidSdk
           ];
 
-        home.sessionVariables = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-          ANDROID_HOME = "${androidSdk}/libexec/android-sdk";
-          ANDROID_SDK_ROOT = "${androidSdk}/libexec/android-sdk";
-        };
+        home.sessionVariables =
+          lib.optionalAttrs (pkgs.stdenv.hostPlatform.isLinux && config.development.enableAndroidTools)
+            {
+              ANDROID_HOME = "${androidSdk}/libexec/android-sdk";
+              ANDROID_SDK_ROOT = "${androidSdk}/libexec/android-sdk";
+            };
 
         programs = {
           claude-code.enable = true;
