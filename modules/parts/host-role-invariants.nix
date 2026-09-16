@@ -115,6 +115,12 @@
         && (home.programs.opencode.enable or false)
         && (home.development.manageDockerConfig or false)
         && (home.programs.lazydocker.enable or false);
+      developmentAgentProgramsEnabled =
+        home:
+        (home.programs.claude-code.enable or false)
+        && (home.programs.codex.enable or false)
+        && (home.programs.opencode.enable or false)
+        && (home.programs.lazydocker.enable or false);
 
       # Name of a package option value that may legitimately be null
       # (services.gpg-agent.pinentry.package is nullable — unset on hosts/
@@ -187,7 +193,10 @@
           macbookHome.programs.aerospace.enable && !macbookHome.wayland.windowManager.sway.enable;
 
         ubuntu-has-development-packages = homeHasDevelopmentPackages ubuntuHome;
-        ubuntu-has-development-programs = developmentProgramsEnabled ubuntuHome;
+        # Ubuntu keeps the development/agent programs but deliberately leaves
+        # Docker's config.json under external ownership (see ubuntu.nix).
+        ubuntu-has-development-programs =
+          developmentAgentProgramsEnabled ubuntuHome && !(ubuntuHome.development.manageDockerConfig or false);
         ubuntu-selects-sway-not-aerospace =
           ubuntuHome.wayland.windowManager.sway.enable && !ubuntuHome.programs.aerospace.enable;
 
