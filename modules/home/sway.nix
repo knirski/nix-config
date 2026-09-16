@@ -47,6 +47,10 @@
       # connector renumbering and is shared by the workspace assignments,
       # the login focus, and the XWayland primary watcher below.
       iiyama = "Iiyama North America PL2792Q 1152194804219";
+      # Sway exposes the same EDID under its own manufacturer string.  Keep
+      # this separate because kanshi and Sway do not normalize EDID names the
+      # same way.
+      iiyamaSway = "iiyama Corporation PL2792Q 1152194804219";
     in
     {
       # DankMaterialShell owns its own settings.json. It used to be generated
@@ -549,7 +553,7 @@
                   pkgs.xrandr
                 ];
                 text = ''
-                    identifier=${lib.escapeShellArg iiyama}
+                    identifier=${lib.escapeShellArg iiyamaSway}
 
                   # Resolve the connector from the make/model/serial identifier
                   # (DP-* is not stable across docks), then mark it primary.
@@ -571,6 +575,14 @@
                             '[.[] | select(.active)][0].name // empty')
                         fi
                         [ -n "$connector" ] || return 0
+
+                        # Wayland has no primary-output property: the focused
+                        # output is the practical equivalent for native Sway
+                        # clients.  kanshi may announce the output after the
+                        # one-shot Sway startup command has already run, so
+                        # keep focus aligned with the same connector used for
+                        # the XWayland primary marker.
+                        swaymsg "focus output \"$connector\"" 2>/dev/null || true
                         if xrandr --output "$connector" --primary 2>/dev/null; then
                           return 0
                         fi
