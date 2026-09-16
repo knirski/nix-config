@@ -11,6 +11,21 @@ LTS upgrade, see [`docs/ubuntu-upgrade.md`](ubuntu-upgrade.md).
 
 ## Repository-side adaptations
 
+### Ghostty terminfo for `sudo`
+
+Ghostty sets `TERM=xterm-ghostty`. The terminfo entry is available in the
+Home Manager profile, but `sudo` runs programs as root and root searches the
+system terminfo directories. Install the current entry into Ubuntu's
+system-wide database once:
+
+```bash
+infocmp -x xterm-ghostty | sudo tic -x -o /etc/terminfo -
+```
+
+This makes terminal applications such as `sudo ncdu` work without changing
+Ghostty's native terminal type. Re-run the command after a Ghostty upgrade if
+its terminfo definition changes.
+
 These are already applied in this checkout:
 
 - `modules/parts/ubuntu.nix` targets `knirski` and `/home/knirski`.
