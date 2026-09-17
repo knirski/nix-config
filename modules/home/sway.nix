@@ -105,72 +105,45 @@
         config = rec {
           modifier = "Mod4";
           terminal = "ghostty";
-          # Prefer the docked monitor for every workspace except 8. The
-          # make/model/serial identifier survives DP connector renumbering;
-          # eDP-1 is the fallback for the docked workspaces when undocked.
+          # Put workspaces 1-9 on the docked monitor. The output watcher below
+          # moves existing workspaces to an active output when undocked and
+          # moves them back when the iiyama is reconnected.
           workspaceOutputAssign = [
             {
               workspace = "1";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "2";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "3";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "4";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "5";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "6";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "7";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "8";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "9";
-              output = [
-                iiyama
-                "eDP-1"
-              ];
+              output = iiyama;
             }
             {
               workspace = "10";
@@ -575,6 +548,22 @@
                             '[.[] | select(.active)][0].name // empty')
                         fi
                         [ -n "$connector" ] || return 0
+
+                        # Output assignment only affects a workspace when it
+                        # is created.  Move already-existing numbered
+                        # workspaces as well, so reconnecting the dock repairs
+                        # the layout instead of leaving old workspaces on eDP.
+                        if workspaces=$(swaymsg -t get_workspaces 2>/dev/null); then
+                          for workspace in $(printf '%s' "$workspaces" | jq -r \
+                            '.[] | .num as $n | select($n >= 1 and $n <= 9) | .name'); do
+                            case "$workspace" in
+                              1|2|3|4|5|6|7|8|9)
+                                swaymsg "workspace number $workspace; move workspace to output \"$connector\"" \
+                                  2>/dev/null || true
+                                ;;
+                            esac
+                          done
+                        fi
 
                         # Wayland has no primary-output property: the focused
                         # output is the practical equivalent for native Sway
