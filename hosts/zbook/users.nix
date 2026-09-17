@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 {
   users.users.root.hashedPasswordFile = config.age.secrets.root-password.path;
 
@@ -21,8 +26,10 @@
     ];
   };
 
-  # Virtualisation (for gaming/development VMs)
-  virtualisation.libvirtd.enable = true;
+  # Keep the virt-manager client available, but stop libvirtd while diagnosing
+  # the NVMe/PCIe suspend issue. mkForce overrides the workstation aspect's
+  # default so the daemon cannot be restarted by the shared role module.
+  virtualisation.libvirtd.enable = lib.mkForce false;
   virtualisation.podman = {
     enable = true;
     dockerCompat = true;
