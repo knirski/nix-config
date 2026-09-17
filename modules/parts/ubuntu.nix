@@ -94,6 +94,39 @@ in
       )
       config.aspects.homeManager.ssh
       config.aspects.homeManager.sway
+      config.aspects.homeManager.kanshi
+      {
+        services.kanshi.settings = [
+          # Ubuntu uses the same desk as zbook, but the external belongs on
+          # the left.  Keep the laptop panel to the right so the iiyama is
+          # the focused/main side of the desk when docked.
+          {
+            profile.name = "docked";
+            profile.outputs = [
+              {
+                criteria = "iiyama Corporation PL2792Q 1152194804219";
+                status = "enable";
+                position = "0,0";
+              }
+              {
+                criteria = "eDP-1";
+                status = "enable";
+                position = "2560,0";
+              }
+            ];
+          }
+          {
+            profile.name = "alone";
+            profile.outputs = [
+              {
+                criteria = "eDP-1";
+                status = "enable";
+                position = "0,0";
+              }
+            ];
+          }
+        ];
+      }
       config.aspects.homeManager.deskSwitch
       inputs.dms.homeModules.dank-material-shell
       inputs.dcal.homeModules.dank-calendar
