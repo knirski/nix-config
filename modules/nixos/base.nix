@@ -29,10 +29,9 @@ in
       ];
       environment.variables.EDITOR = "nvim";
 
-      # Shared nixpkgs config (allowUnfree, permittedInsecurePackages, overlays)
+      # Shared nixpkgs config (allowUnfree, permittedInsecurePackages)
       # sourced from lib/mk-nixpkgs-args.nix — single source of truth.
       nixpkgs.config = sharedNixpkgsArgs.config;
-      nixpkgs.overlays = sharedNixpkgsArgs.overlays;
 
       nix.settings = {
         # Pull pre-built closures from the public project cache before building

@@ -98,9 +98,8 @@ must not receive `security-events: write` merely to improve a badge.
 ## Nixpkgs unfree and insecure package policy
 
 `lib/mk-nixpkgs-args.nix` centralizes `nixpkgs.config` (`allowUnfree`,
-`permittedInsecurePackages`) and the `rtk` package overlay so
-they can't drift between the NixOS, darwin, and standalone Home Manager host
-assemblers.
+`permittedInsecurePackages`) so it can't drift between the NixOS, darwin, and
+standalone Home Manager host assemblers.
 
 - **`allowUnfree = true`** stays global, unconditional, and identical on
   every host, including Soyo. This is a licensing acknowledgment, not a
@@ -110,6 +109,10 @@ assemblers.
   unconditionally by `aspects.homeManager.base` on every Linux host
   (`modules/home/base.nix`), including Soyo. The repository no longer carries
   a custom package or overlay for it.
+- **`rtk` comes from the locked unstable nixpkgs input.** It is installed by
+  `aspects.homeManager.development` on zbook, macbook, and ubuntu, which all
+  track `nixpkgs-unstable`. The repository no longer carries a custom package
+  or overlay for it.
 - **`permittedInsecurePackages`** is scoped per host. Unlike the two
   policies above, an insecure-package allowance is genuinely
   host-specific: only bitwarden-desktop (pulled in by

@@ -62,7 +62,7 @@ in
       nixpkgsArgs
       // {
         system = "x86_64-linux";
-        overlays = nixpkgsArgs.overlays ++ [ chromiumSecretStoreOverlay ];
+        overlays = [ chromiumSecretStoreOverlay ];
       }
     );
     # The development aspect reads inputs.opencode-v2 for the v2 CLI package

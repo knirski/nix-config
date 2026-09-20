@@ -12,9 +12,9 @@ in
 
       nixpkgs = {
         hostPlatform = "aarch64-darwin";
-        # Shared nixpkgs config (allowUnfree, permittedInsecurePackages, overlays)
+        # Shared nixpkgs config (allowUnfree, permittedInsecurePackages)
         # sourced from lib/mk-nixpkgs-args.nix — single source of truth.
-        inherit (sharedNixpkgsArgs) config overlays;
+        inherit (sharedNixpkgsArgs) config;
       };
 
       nix.settings = {

@@ -80,7 +80,18 @@ _: {
             antigravity-ide
             antigravity-cli
             # Rust Token Killer — CLI proxy that filters git/grep/find output
-            # before it reaches an AI coding agent's context.
+            # before it reaches an AI coding agent's context. Sourced from
+            # nixpkgs-unstable (every development host tracks it); no custom
+            # package or version pin.
+            #
+            # OpenCode v2 plugin: rtk's released `rtk init -g --opencode`
+            # still installs the v1 plugin shape, which OpenCode >= 2.0.x
+            # refuses to load. A hand-migrated v2 plugin lives outside this
+            # repo at ~/.config/opencode/plugins/rtk.ts. When a released rtk
+            # installs a v2-native plugin, delete that local file and
+            # regenerate it with `rtk init -g --opencode`.
+            #   https://github.com/rtk-ai/rtk/pull/3899
+            #   https://github.com/rtk-ai/rtk/issues/3463
             rtk
             # Browser automation for AI agents (CDP + a11y tree, sessions, auth
             # vault). Nixpkgs build embeds dashboard/skills next to bin/.

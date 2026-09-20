@@ -153,7 +153,10 @@ in
           recover-secrets
           set-tailscale-keys
           ;
-        rtk = pkgs.callPackage ../../modules/_pkgs/rtk.nix { };
+        # rtk is packaged on nixpkgs-unstable, which every development host
+        # tracks; the stable nixpkgs behind `pkgs` here lags. Expose the same
+        # revision so `nix build .#rtk` matches what hosts install.
+        rtk = inputs.nixpkgs-unstable.legacyPackages.${system}.rtk;
       };
 
       apps = {

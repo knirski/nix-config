@@ -1,6 +1,6 @@
 # Common args for `import nixpkgs { ... }`. Centralizes allowUnfree and the
-# rtk package overlay so it can't drift between NixOS, darwin, and standalone
-# HM host assemblers.
+# per-host insecure-package allowance so they can't drift between NixOS,
+# darwin, and standalone HM host assemblers.
 #
 # allowUnfree stays global and unconditional on every host: it's a licensing
 # acknowledgment, not a security boundary, and per-host scoping would add
@@ -36,9 +36,4 @@
     allowUnfree = true;
   }
   // (if permittedInsecurePackages == [ ] then { } else { inherit permittedInsecurePackages; });
-  overlays = [
-    (final: _: {
-      rtk = final.callPackage ../modules/_pkgs/rtk.nix { };
-    })
-  ];
 }
