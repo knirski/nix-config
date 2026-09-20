@@ -79,18 +79,22 @@ jobs:
       - name: Build pure invariants and software integration
         run: |
           set -euo pipefail
-          # Build in small groups and push each group immediately. Cold
-          # runners (fresh nixpkgs revisions, empty Cachix) time out before
-          # the multi-GB closures finish, but every finished group stays
-          # warm in Cachix, so the next attempt resumes where this one died
-          # instead of starting over. Pushes only happen on main (the
-          # Cachix token is only configured there); PR runs just build.
+          # Build in small groups so a cold-run timeout still banks the groups
+          # that finished. Cachix pushes are handled entirely by the setup-nix
+          # cachix-action: it authenticates the cache, and with useDaemon it
+          # pushes every locally built output through its post-build-hook and
+          # flushes the daemon on cleanup, so each group lands in Cachix as it
+          # finishes. It only pushes when it was given a token (main pushes;
+          # PR runs just build). Do NOT add an explicit
+          #   nix copy --to 'https://<cache>.cachix.org'
+          # here: that HTTP endpoint is unauthenticated for `nix copy`, so it
+          # answers the PUT with "HTTP error 405 Method not supported" and
+          # fails the job. It only appeared to work while the daemon had
+          # already uploaded the path first; when the upload raced ahead of
+          # the daemon it failed (CI run 35499570393, job 106048791263).
           build_and_push() {
             echo "### building group: $*"
             nix build --no-link --print-build-logs "$@"
-            if [ "${GITHUB_EVENT_NAME:-}" = push ] && [ "${GITHUB_REF:-}" = refs/heads/main ]; then
-              nix copy --to 'https://knirski-nix-config.cachix.org' "$@"
-            fi
           }
           build_and_push \
             .#checks.x86_64-linux.backup-restic-integration \
