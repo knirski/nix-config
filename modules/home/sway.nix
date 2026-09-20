@@ -348,7 +348,11 @@
           };
           plugins = {
             dankActions.enable = true;
-            dankBatteryAlerts.enable = true;
+            # dankBatteryAlerts was dropped from dms-plugin-registry in the
+            # 2026-09 update (low-battery alerts are built into the shell now:
+            # settings.json `batteryNotifyLow`, off by default). Keeping the
+            # enable would leave the required `src` option undefined and
+            # break eval.
             calculator.enable = true;
             emojiLauncher.enable = true;
             dankBitwarden = {
