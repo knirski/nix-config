@@ -5,6 +5,15 @@
 # Not in nixpkgs (checked 2026-08-13; upstream ships no flake), so this
 # builds the crate straight from the GitHub tag via buildRustPackage.
 #
+# NOTE: OpenCode v2 plugin port (temporary — delete when upstream ships it)
+#   OpenCode >= 2.0.x refuses to load the v1 OpenCode plugin that this rtk
+#   version's `rtk init -g --opencode` generates, so a hand-migrated v2 plugin
+#   lives outside this repo at ~/.config/opencode/plugins/rtk.ts (under
+#   /persist). When bumping rtk to a release that installs a v2-native plugin,
+#   delete that local file and regenerate it with `rtk init -g --opencode`.
+#   Upstream v2 port: https://github.com/rtk-ai/rtk/pull/3899
+#   Tracking issue:   https://github.com/rtk-ai/rtk/issues/3463
+#
 # Updating to a newer version:
 #   1. Bump `version` and `hash` (get via: nix-prefetch-url --unpack
 #      https://github.com/rtk-ai/rtk/archive/refs/tags/v<version>.tar.gz).
