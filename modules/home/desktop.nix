@@ -1,6 +1,19 @@
 {
   aspects.homeManager.desktop =
-    { pkgs, lib, ... }:
+    {
+      pkgs,
+      lib,
+      inputs,
+      ...
+    }:
+    let
+      # OpenCode v2 (nixpkgs still packages v1.x). Hosts get `inputs` through
+      # home-manager.extraSpecialArgs; see lib/opencode-v2.nix for the
+      # desktop workaround.
+      opencodeV2 = import ../../lib/opencode-v2.nix {
+        opencodeV2 = inputs.opencode-v2.packages.${pkgs.stdenv.hostPlatform.system};
+      };
+    in
     {
       home = {
         sessionVariables = lib.mkMerge [
@@ -70,8 +83,7 @@
             # action instead of writing every shortcut invocation to disk.
             flameshot
             # AI coding agent desktop apps
-            command-code-desktop
-            opencode-desktop
+            opencodeV2.opencode-desktop
             # Communication and media
             thunderbird
             obs-studio

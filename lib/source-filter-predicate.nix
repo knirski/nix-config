@@ -8,7 +8,6 @@ let
   excluded = [
     ".git"
     ".claude"
-    ".commandcode/settings.json"
     ".direnv"
     ".mypy_cache"
     ".pytest_cache"

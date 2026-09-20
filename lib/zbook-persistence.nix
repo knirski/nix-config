@@ -10,7 +10,6 @@ rec {
     ".local/state/DankMaterialShell"
     ".local/share/dankcalendar"
     ".config"
-    ".commandcode"
     ".codex"
     ".claude"
     ".local/share/opencode"

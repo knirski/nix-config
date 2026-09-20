@@ -18,34 +18,8 @@ permissions:
   contents: read
 
 jobs:
-  # Fast lane: runs on every PR including taste-only changes.
-  # Heavy downstream jobs gate on non-taste changes via dorny/paths-filter.
-  changes:
-    name: Detect changed paths
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      non-taste: ${{ steps.filter.outputs.non-taste }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v3
-        id: filter
-        with:
-          filters: |
-            non-taste:
-              - '**/*'
-              - '!.commandcode/taste/**'
-
   static:
     name: Static and repository policy
-    if: needs.changes.outputs.non-taste == 'true'
-    needs: [changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -70,18 +44,9 @@ jobs:
             .#checks.x86_64-linux.topology-freshness
       - name: Scan current source for credentials
         run: nix run .#gitleaks -- detect --source . --no-git --redact --verbose
-      - name: Check command-code dependency review freshness
-        # Deliberately a plain script, not a `checks.*` derivation: see
-        # tests/security/check_command_code_freshness.py's docstring for why
-        # a cached Nix check would silently stop re-evaluating staleness.
-        run: |
-          python3 tests/security/check_command_code_freshness.py \
-            modules/_pkgs/command-code-lock/last-reviewed.json
 
   evaluation:
     name: Evaluation and pure invariants
-    if: needs.changes.outputs.non-taste == 'true'
-    needs: [changes]
     runs-on: ubuntu-24.04
     # Cold runs after a nixpkgs bump fetch ~50 GB of closures (Android
     # Studio/SDK archives download silently inside fixed-output builders)
@@ -181,8 +146,7 @@ jobs:
 
   build:
     name: Build ${{ matrix.host }} closure
-    if: needs.changes.outputs.non-taste == 'true'
-    needs: [evaluation, changes]
+    needs: [evaluation]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -206,8 +170,7 @@ jobs:
 
   build-ubuntu:
     name: Build ubuntu HM activation package
-    if: needs.changes.outputs.non-taste == 'true'
-    needs: [evaluation, changes]
+    needs: [evaluation]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -228,8 +191,7 @@ jobs:
   build-macbook:
     name: Build macbook darwin closure
     # macbook requires aarch64-darwin, which can only be evaluated on macOS.
-    if: needs.changes.outputs.non-taste == 'true'
-    needs: [evaluation, changes]
+    needs: [evaluation]
     runs-on: macos-latest
     timeout-minutes: 120
     steps:
@@ -249,8 +211,7 @@ jobs:
 
   resilience:
     name: Strict KVM behavior tests
-    if: needs.changes.outputs.non-taste == 'true'
-    needs: [evaluation, changes]
+    needs: [evaluation]
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -273,8 +234,7 @@ jobs:
 
   topology:
     name: Publish sanitized topology
-    if: needs.changes.outputs.non-taste == 'true'
-    needs: [evaluation, changes]
+    needs: [evaluation]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

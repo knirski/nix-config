@@ -1,5 +1,5 @@
 # Common args for `import nixpkgs { ... }`. Centralizes allowUnfree and the
-# command-code overlay so it can't drift between NixOS, darwin, and standalone
+# rtk package overlay so it can't drift between NixOS, darwin, and standalone
 # HM host assemblers.
 #
 # allowUnfree stays global and unconditional on every host: it's a licensing
@@ -38,10 +38,7 @@
   // (if permittedInsecurePackages == [ ] then { } else { inherit permittedInsecurePackages; });
   overlays = [
     (final: _: {
-      command-code = final.callPackage ../modules/_pkgs/command-code.nix { };
-      command-code-desktop = final.callPackage ../modules/_pkgs/command-code-desktop.nix { };
       rtk = final.callPackage ../modules/_pkgs/rtk.nix { };
     })
-
   ];
 }

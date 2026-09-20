@@ -628,8 +628,8 @@ Dependencies: R1
 
 Likely files:
 
-- [`modules/_pkgs/command-code.nix`](../../../modules/_pkgs/command-code.nix)
-- `modules/_pkgs/command-code-lock/package-lock.json`
+- `modules/_pkgs/command-code.nix` (removed 2026-09-19)
+- `modules/_pkgs/command-code-lock/package-lock.json` (removed 2026-09-19)
 - [`renovate.json`](../../../renovate.json)
 - [`docs/security/supply-chain.md`](../../security/supply-chain.md)
 - a package/update helper under `scripts/` or a `justfile` recipe

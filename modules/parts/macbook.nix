@@ -28,6 +28,9 @@ in
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
+            # The development aspect reads inputs.opencode-v2 for the v2 CLI
+            # package (nixpkgs still packages v1.x — see flake.nix).
+            extraSpecialArgs = { inherit inputs; };
             users.krzysiek.imports = [
               config.aspects.homeManager.base
               config.aspects.homeManager.python
@@ -66,7 +69,7 @@ in
           };
 
           # TODO: uncomment and create secrets once macbook hardware is available.
-          # See plan: ~/.commandcode/plans/add-macbook-nix-darwin.md
+          # See docs/install-macbook.md and docs/secrets.md.
           # age.rekey = {
           #   hostPubkey = ../../secrets/macbook.pub;
           #   masterIdentities = [

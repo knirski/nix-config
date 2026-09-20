@@ -15,15 +15,11 @@ fmt:
 bootstrap-ubuntu-system:
     ./scripts/bootstrap-ubuntu-system.sh
 
-# Static analysis: all pre-commit hooks (deadnix, statix, typos, shellcheck, ruff, markdownlint, treefmt, ...), gitleaks, and command-code freshness. No special prerequisites (pure Nix build).
+# Static analysis: all pre-commit hooks (deadnix, statix, typos, shellcheck, ruff, markdownlint, treefmt, ...) plus gitleaks. No special prerequisites (pure Nix build).
 lint:
     nix build path:.#checks.x86_64-linux.pre-commit --no-link
     # Unlike the staged pre-commit hook, a manual lint scans the whole tree.
     nix run path:.#gitleaks -- detect --source . --no-git --redact --verbose
-    # Offline, time-based: deliberately not a nix check (see that script's
-    # docstring for why a checks.* derivation would cache this forever).
-    python3 tests/security/check_command_code_freshness.py \
-      modules/_pkgs/command-code-lock/last-reviewed.json
 
 # Evaluate the whole flake and build every checks.x86_64-linux.* derivation (lints, invariants, KVM tests) via `nix flake check`; does NOT build host closures -- see `build`/`build-ubuntu`/`build-macbook`. Requires /dev/kvm readable and writable.
 check:
@@ -93,14 +89,6 @@ recover-secrets *args:
 # Replace Tailscale key secrets from protected files; never auto-commits.
 set-tailscale-keys *args:
     nix run .#set-tailscale-keys -- {{args}}
-
-# Fetch a command-code version, regenerate its vendored lockfile, and print fetchurl/npmDepsHash values to paste into command-code.nix by hand; never edits command-code.nix/flake.lock, never commits.
-update-command-code version:
-    nix run .#update-command-code -- {{version}}
-
-# Fetch a command-code-desktop version from GitHub releases and print the hash to paste into command-code-desktop.nix; never edits the file or commits.
-update-command-code-desktop *args:
-    nix run .#update-command-code-desktop -- {{args}}
 
 # Run dendritic option-namespace tests (wired into nix flake check, also runs there).
 test:

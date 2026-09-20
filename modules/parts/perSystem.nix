@@ -20,12 +20,6 @@ in
       ...
     }:
     let
-      # PerSystem pkgs with unfree allowed (needed for packages.command-code).
-      pkgs' = import inputs.nixpkgs {
-        localSystem = { inherit system; };
-        config.allowUnfree = true;
-        overlays = [ ];
-      };
       healthcheck = pkgs.writeShellApplication {
         name = "healthcheck";
         # The source-level directive documents the same intentional remote
@@ -65,30 +59,6 @@ in
           rage
         ];
         text = builtins.readFile ../../scripts/set-tailscale-keys.sh;
-      };
-      update-command-code = pkgs.writeShellApplication {
-        name = "update-command-code";
-        runtimeInputs = with pkgs; [
-          coreutils
-          git
-          gnused
-          gnutar
-          jq
-          nix
-          nodejs
-        ];
-        text = builtins.readFile ../../scripts/update-command-code.sh;
-      };
-      update-command-code-desktop = pkgs.writeShellApplication {
-        name = "update-command-code-desktop";
-        runtimeInputs = with pkgs; [
-          coreutils
-          curl
-          git
-          jq
-          nix
-        ];
-        text = builtins.readFile ../../scripts/update-command-code-desktop.sh;
       };
       sourceFilter = import ../../lib/source-filter.nix { inherit (pkgs) lib; };
       sourceFilterPredicate = import ../../lib/source-filter-predicate.nix { inherit (pkgs) lib; };
@@ -136,7 +106,6 @@ in
               MD032 = false;
             };
             excludes = [
-              "\.commandcode"
               "\.agents/skills"
             ];
           };
@@ -178,19 +147,13 @@ in
         # Expose the scanner from this flake's locked nixpkgs input. Using the
         # registry shorthand `nixpkgs#gitleaks` would select the caller's
         # registry revision instead of the reviewed flake.lock revision.
-        # Exposed from this flake's locked nixpkgs for the same reason as
-        # gitleaks/deadnix above: the scheduled security-scan workflow must
-        # scan with the reviewed nixpkgs revision, not the caller's registry.
-        inherit (pkgs) deadnix gitleaks osv-scanner;
+        inherit (pkgs) deadnix gitleaks;
         inherit
           healthcheck
           recover-secrets
           set-tailscale-keys
-          update-command-code
-          update-command-code-desktop
           ;
-        command-code = pkgs'.callPackage ../../modules/_pkgs/command-code.nix { };
-        rtk = pkgs'.callPackage ../../modules/_pkgs/rtk.nix { };
+        rtk = pkgs.callPackage ../../modules/_pkgs/rtk.nix { };
       };
 
       apps = {
@@ -198,11 +161,6 @@ in
           type = "app";
           program = pkgs.lib.getExe pkgs.gitleaks;
           meta.description = "Scan repository content for credentials and secrets";
-        };
-        osv-scanner = {
-          type = "app";
-          program = pkgs.lib.getExe pkgs.osv-scanner;
-          meta.description = "Scan a lockfile for disclosed vulnerabilities (network required; see .github/workflows/security-scan.yml)";
         };
         healthcheck = {
           type = "app";
@@ -218,16 +176,6 @@ in
           type = "app";
           program = pkgs.lib.getExe set-tailscale-keys;
           meta.description = "Encrypt per-host Tailscale keys and run agenix-rekey";
-        };
-        update-command-code = {
-          type = "app";
-          program = pkgs.lib.getExe update-command-code;
-          meta.description = "Fetch a command-code version, regenerate its vendored lockfile, and print hashes to paste into command-code.nix";
-        };
-        update-command-code-desktop = {
-          type = "app";
-          program = pkgs.lib.getExe update-command-code-desktop;
-          meta.description = "Fetch a command-code-desktop version from GitHub releases and print the hash to paste into command-code-desktop.nix";
         };
       };
 
@@ -268,21 +216,26 @@ in
         # false`) so it can't reappear as an unfiltered duplicate.
         formatting = config.treefmt.build.check filteredSource;
 
+        # Contract check for the checkout-artifact filter that pre-commit,
+        # formatting, and docs checks run on (`path:.` includes local metadata
+        # Git would ignore). Proves, against the real filtered source and
+        # synthetic paths, that a tracked file survives while the `.git`
+        # pointer, the `.claude` agent tree, and nested worktree metadata are
+        # excluded.
         source-filter-contract =
           let
             syntheticRoot = "/source-filter-contract";
-            nestedWorktreeMetadata = "${syntheticRoot}/.commandcode/agent/.git/worktrees/example";
-            nestedTasteFile = "${syntheticRoot}/.commandcode/taste/taste.md";
+            nestedWorktreeMetadata = "${syntheticRoot}/.agents/agent/.git/worktrees/example";
+            trackedFile = "${syntheticRoot}/flake.nix";
             nestedMetadataExcluded = !(sourceFilterPredicate syntheticRoot nestedWorktreeMetadata "directory");
-            nestedTastePreserved = sourceFilterPredicate syntheticRoot nestedTasteFile "regular";
+            trackedFilePreserved = sourceFilterPredicate syntheticRoot trackedFile "regular";
           in
           pkgs.runCommand "source-filter-contract" { } ''
-            test -f ${filteredSource}/.commandcode/taste/taste.md
+            test -f ${filteredSource}/flake.nix
             test ! -e ${filteredSource}/.git
-            test ! -e ${filteredSource}/.commandcode/settings.json
             test ! -e ${filteredSource}/.claude
             test "${if nestedMetadataExcluded then "true" else "false"}" = true
-            test "${if nestedTastePreserved then "true" else "false"}" = true
+            test "${if trackedFilePreserved then "true" else "false"}" = true
             touch "$out"
           '';
 

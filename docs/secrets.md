@@ -45,7 +45,7 @@ In this repo secrets are:
 - **Hashed passwords** — `mkpasswd -m sha-512` output (never the raw password)
 - **Restic repo password** — the passphrase for the backup repository
 - **ntfy authentication token** — for push notification alerts
-- **GitHub token** — used by `gh`/`command-code`/other development tooling;
+- **GitHub token** — used by `gh`/other development tooling;
   declared and rekeyed only for hosts that enable the development/workstation
   capability (currently zbook), never for the soyo appliance
 
@@ -317,7 +317,7 @@ encrypted for a specific host's SSH key instead of your master key.
 | `secrets/grafana-secret-key.age` | Grafana session signing key | master identity |
 | `secrets/tailscale-auth-key-soyo.age` | Tailscale pre-auth key for soyo | master identity |
 | `secrets/tailscale-auth-key-zbook.age` | Tailscale pre-auth key for zbook | master identity |
-| `secrets/github-token.age` | GitHub token for `gh`/`command-code`/development tooling | master identity |
+| `secrets/github-token.age` | GitHub token for `gh`/development tooling | master identity |
 | `secrets/zbook-ntfy-token.age` | zbook's own ntfy.sh access token (zbook-alerts-* topic) | master identity |
 | `secrets/zbook-ntfy-topic.age` | zbook's own ntfy.sh topic URL (zbook-alerts-* topic) | master identity |
 | `secrets/agenix-master.pub` | Master/operator SSH public key (plaintext) | n/a — recipient metadata for the master identity |
@@ -332,7 +332,7 @@ encrypted for a specific host's SSH key instead of your master key.
 Unlike the other secrets above, `github-token` is **not** declared in the
 shared `aspects.nixos.users` aspect (`modules/nixos/users.nix`), because that
 aspect is imported by both soyo and zbook. It is only useful for GitHub-aware
-development tooling (`gh`, `command-code`, and friends — see
+development tooling (`gh` and friends — see
 `aspects.homeManager.development` in `modules/home/development.nix`), and soyo
 is a headless appliance with no GitHub workflow and no docker.
 

@@ -12,9 +12,8 @@ This assessment was updated on **2026-08-01** after the
 [repository remediation plan](../superpowers/plans/2026-08-01-repository-remediation.md)
 closed the actionable CI, portability, source-hygiene, and observability gaps.
 The table below replaces unqualified star ratings with dated evidence and
-named residual risks. Hardware deployment, TPM drills, and the upstream
-command-code dependency release remain explicit operational boundaries rather
-than silently claimed fixes.
+named residual risks. Hardware deployment and TPM drills remain explicit operational
+boundaries rather than silently claimed fixes.
 
 | Dimension | Dated evidence | Residual risk (as of 2026-08-01) |
 |-----------|----------------|-----------------------------------|
@@ -24,7 +23,7 @@ than silently claimed fixes.
 | **Secrets management** | agenix-rekey two-layer flow unchanged. Task R1 (2026-07-23) found and fixed a role-separation defect: Soyo (an LAN appliance with no development role) received a GitHub token and workstation/agent tooling via the shared Home Manager base; that credential surface is now isolated to workstation hosts. | Single-operator bus factor and master-key-compromise risk are unchanged (§6.1) — accepted, not newly discovered. |
 | **Testing pyramid** | Four KVM checks — `dns-dhcp-vm`, `backup-unit-vm`, `impermanence-vm`, `clipboard-protocols` — plus static/evaluation/unit tiers (§4). Task C4 (2026-07-23) fixed `clipboard-protocols`' nondeterministic PRIMARY-selection race (two concurrent `wl-copy` processes racing on `wlroots`' data-control handling) and added it to the enforced KVM set; `modules/parts/kvm-gate-drift-check.nix` now proves the four-check set can't silently drift from `ci.yml`/`just test-resilience`. | The active GitHub `Protect main` ruleset now requires static, evaluation, both Linux closures, Ubuntu, macbook, topology, and strict KVM contexts (re-verified 2026-08-01). |
 | **Documentation** | This 2026-07-23 pass reconciled `docs/status.json` lifecycle metadata, `docs/README.md` discoverability, and this document against actual evaluated/tested state; `checks.docs-correctness` (`modules/parts/docs-checks.nix`) verifies links, anchors, lifecycle status, and discoverability mechanically. | Documentation drift is only checked mechanically for links/anchors/lifecycle, not for factual accuracy — this kind of narrative reconciliation is manual and periodic, not continuously enforced. |
-| **Operational maturity** | Tasks O1–O3 (2026-07-23) completed operational failure-alert coverage (`OnFailure=ntfy-failure@` wired onto all reviewed units plus a new `smartd` notification hook), bounded retained Limine boot generations, and made the healthcheck prove backup freshness and every probe, not just service-active state. | The vendored `command-code` npm tree remains subject to upstream OSV advisories until its next dependency update. No repository-local OpenTelemetry override is carried by design; the scheduled scan remains visible and must be re-run after the upstream update. See [`docs/security/supply-chain.md`](../security/supply-chain.md#dependency-automation-decisions). |
+| **Operational maturity** | Tasks O1–O3 (2026-07-23) completed operational failure-alert coverage (`OnFailure=ntfy-failure@` wired onto all reviewed units plus a new `smartd` notification hook), bounded retained Limine boot generations, and made the healthcheck prove backup freshness and every probe, not just service-active state. | OpenCode v2 is consumed from the upstream v2 branch (`opencode-v2` input) because nixpkgs still packages v1.x; its fixed-output dependency hash is tied to the bun version in that input's own lock, so a branch bump must be validated by a build rather than assumed safe. See [`docs/security/supply-chain.md`](../security/supply-chain.md#dependency-automation-decisions). |
 
 Deliberate, accepted-risk deferrals — not defects, and not tracked as open
 gaps — are recorded in the canonical design's
@@ -305,7 +304,7 @@ have the NixOS systemd, DNS/DHCP, or appliance NIC checks.
 | **restic repository corruption** | Low | Backup loss | `restic check --read-data` and local snapshot restore in the VM test; weekly check timer; NAS-side snapshots; production restore remains a manual drill |
 | **agenix master key compromise** | Low | All secrets exposed | Master key = operator SSH key (hardware-backed, e.g., YubiKey); rotation procedure in `secrets.md` |
 | **Single-person bus factor** | High | Knowledge loss | All procedures documented; learning path teaches architecture |
-| **Upstream `command-code` dependency advisories** (tracked, 2026-08-01) | Medium | Vulnerable transitive dependencies remain in the PR Agent toolchain until upstream publishes a fixed release | The scheduled OSV scan keeps the exposure visible. Do not add a local OpenTelemetry override; run `just update-command-code <version>`, rebuild, and re-run OSV when upstream publishes the dependency update. Details: [`docs/security/supply-chain.md`](../security/supply-chain.md#dependency-automation-decisions). |
+| **OpenCode v2 follows an upstream branch** | Medium | A branch bump whose `hashes.json` is out of sync with the input's bun pin fails the fixed-output build, leaving the CLI stale on workstations until the next update | `opencode-v2` is pinned in `flake.lock`; `nix flake update opencode-v2` plus a local `nix build .#...`/deploy validates the hash before rollout. Details: [`docs/security/supply-chain.md`](../security/supply-chain.md#dependency-automation-decisions). |
 
 ### 6.2 Technical Debt / Improvement Opportunities
 
@@ -410,4 +409,4 @@ scope):
 
 ---
 
-*Last updated: 2026-08-01 (repository remediation work) — reconciled the dependency policy with the explicit decision to rely on the next upstream `command-code` update rather than carry a local OpenTelemetry advisory override. This assessment should be reviewed after each milestone (M1–M4), after each future remediation plan, and before major architectural changes.*
+*Last updated: 2026-09-19 (command-code removal and OpenCode v2 adoption) — replaced the vendored `command-code` npm tree (and its OSV/freshness pipeline) with the upstream `opencode-v2` flake input. This assessment should be reviewed after each milestone (M1–M4), after each future remediation plan, and before major architectural changes.*

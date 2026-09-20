@@ -46,6 +46,18 @@
     deploy-rs.url = "github:serokell/deploy-rs";
     deploy-rs.inputs.nixpkgs.follows = "nixpkgs";
 
+    # OpenCode v2. nixpkgs (even unstable) still packages v1.x, and v2 ships
+    # a different CLI (`@opencode/cli`) plus its own source-built package.
+    # Deliberately does NOT follow nixpkgs-unstable: the node_modules
+    # fixed-output hash in upstream's nix/hashes.json is computed against the
+    # bun version pinned in the input's own flake.lock, and bun changes its
+    # install layout between versions (1.3.x vs 1.4.x hash the same lockfile
+    # differently). Following our nixpkgs would make the FOD hash mismatch on
+    # every build. Consumed through lib/opencode-v2.nix by the development
+    # (CLI) and desktop (app) aspects; `nix flake update opencode-v2` bumps
+    # the branch (upstream keeps hashes.json in sync on the branch).
+    opencode-v2.url = "github:anomalyco/opencode/v2";
+
     dms = {
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs-unstable";

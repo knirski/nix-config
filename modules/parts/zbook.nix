@@ -48,6 +48,9 @@ in
             useGlobalPkgs = true;
             useUserPackages = true;
             backupFileExtension = ".hm-backup";
+            # The development aspect reads inputs.opencode-v2 for the v2 CLI
+            # package (nixpkgs still packages v1.x — see flake.nix).
+            extraSpecialArgs = { inherit inputs; };
             users.krzysiek = {
               imports = [
                 config.aspects.homeManager.base
@@ -120,7 +123,7 @@ in
             zbook-restic-password = {
               rekeyFile = ../../secrets/zbook-restic-password.age;
             };
-            # Workstation-only: gh/command-code/development tooling. Declared
+            # Workstation-only: gh/development tooling. Declared
             # here (not in the shared aspects.nixos.users aspect) so soyo
             # never gets this secret rekeyed for it. See docs/secrets.md.
             github-token = {

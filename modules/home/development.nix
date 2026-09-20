@@ -11,6 +11,7 @@ _: {
       config,
       pkgs,
       lib,
+      inputs,
       ...
     }:
     let
@@ -43,6 +44,9 @@ _: {
       # package is enabled.
       androidSdkComposition = import ../../lib/android-sdk.nix { inherit pkgs; };
       androidSdk = androidSdkComposition.androidsdk;
+      opencodeV2 = import ../../lib/opencode-v2.nix {
+        opencodeV2 = inputs.opencode-v2.packages.${pkgs.stdenv.hostPlatform.system};
+      };
     in
     {
       options = {
@@ -75,7 +79,6 @@ _: {
             vscode
             antigravity-ide
             antigravity-cli
-            command-code
             # Rust Token Killer — CLI proxy that filters git/grep/find output
             # before it reaches an AI coding agent's context.
             rtk
@@ -92,7 +95,7 @@ _: {
             rust-analyzer
             gopls
             metals
-            # Used by AI coding agents (claude-code, codex, opencode, command-code)
+            # Used by AI coding agents (claude-code, codex, opencode)
             # for script execution — not an interactive admin shell.
             nushell
             # github
@@ -116,7 +119,13 @@ _: {
         programs = {
           claude-code.enable = true;
           codex.enable = true;
-          opencode.enable = true;
+          opencode = {
+            enable = true;
+            # OpenCode v2, built by the upstream v2 flake rather than nixpkgs
+            # (which still packages v1.x) — see lib/opencode-v2.nix. Hosts get
+            # `inputs` through home-manager.extraSpecialArgs.
+            package = opencodeV2.opencode;
+          };
 
           direnv = {
             enable = true;

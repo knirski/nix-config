@@ -72,7 +72,6 @@
       # workflow. Checked against the evaluated `home.packages` names (pname
       # falling back to name) so this survives version bumps.
       developmentPackageNames = [
-        "command-code"
         "rtk"
         "nil"
         "nixd"

@@ -65,6 +65,9 @@ in
         overlays = nixpkgsArgs.overlays ++ [ chromiumSecretStoreOverlay ];
       }
     );
+    # The development aspect reads inputs.opencode-v2 for the v2 CLI package
+    # (nixpkgs still packages v1.x — see flake.nix).
+    extraSpecialArgs = { inherit inputs; };
     modules = [
       config.aspects.homeManager.base
       config.aspects.homeManager.python

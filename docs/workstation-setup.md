@@ -254,8 +254,7 @@ Full IDE-like configuration with:
 
 - **claude-code**: Claude CLI
 - **codex**: OpenAI Codex CLI
-- **opencode**: OpenCode CLI
-- **command-code**: Command Code CLI
+- **opencode**: OpenCode v2 CLI and desktop app (built by the upstream v2 flake; see `lib/opencode-v2.nix`)
 
 ## Desktop Environment
 
