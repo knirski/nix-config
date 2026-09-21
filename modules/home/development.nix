@@ -45,6 +45,7 @@ _: {
       androidSdkComposition = import ../../lib/android-sdk.nix { inherit pkgs; };
       androidSdk = androidSdkComposition.androidsdk;
       opencodeV2 = import ../../lib/opencode-v2.nix {
+        inherit pkgs;
         opencodeV2 = inputs.opencode-v2.packages.${pkgs.stdenv.hostPlatform.system};
       };
     in

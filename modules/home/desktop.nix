@@ -11,6 +11,7 @@
       # home-manager.extraSpecialArgs; see lib/opencode-v2.nix for the
       # desktop workaround.
       opencodeV2 = import ../../lib/opencode-v2.nix {
+        inherit pkgs;
         opencodeV2 = inputs.opencode-v2.packages.${pkgs.stdenv.hostPlatform.system};
       };
     in

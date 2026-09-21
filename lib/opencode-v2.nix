@@ -29,16 +29,47 @@
 # for --version), but nix/desktop.nix only copies `bin/opencode`. Stage the
 # manifest in preBuild — before buildPhase's own mkdir/cp — until upstream
 # fixes its derivation.
-{ opencodeV2 }:
+#
+# Electron drift (second upstream bug): nix/electron.nix pins the Electron
+# release hashes next to the version read from packages/desktop/package.json.
+# As of opencode-v2 cd39063 the two disagree — the file still carries Electron
+# 42.10.1 hashes while the manifest asks for 44.4.3 — so the desktop build
+# dies in the `electron-v44.4.3-linux-x64.zip` fixed-output derivation with a
+# hash mismatch (this is what broke `just deploy zbook` on 2026-09-21).
+# Rebuilding 44.4.3 with the real hashes is not enough: Electron 44 dropped
+# the ANGLE libraries (libEGL.so/libGLESv2.so) that nixpkgs' generic.nix
+# patchelf step globs for, and stdenv's nullglob turns the non-match into a
+# fatal `patchelf: missing filename`. Use nixpkgs' electron_44 (44.3.0, same
+# major, Hydra-built) instead: desktop.nix only ever hands the dist directory
+# to electron-builder, so the patch release does not matter. Delete this
+# override once upstream's nix/electron.nix matches its package.json again;
+# when upstream bumps Electron past 44, bump this attribute to match.
+{ opencodeV2, pkgs }:
 let
+  electron = pkgs.electron_44;
+
   opencode = opencodeV2.opencode.overrideAttrs (old: {
     env = old.env // {
       OPENCODE_CHANNEL = "latest";
     };
+    # Upstream's postInstall runs `opencode completion` to generate shell
+    # completions, a v1/yargs-era subcommand the v2 CLI no longer has: it
+    # parses the argument as the directory to start in and dies with
+    # `chdir ... -> 'completion'`. Before this lock bump the build survived
+    # because the error went to stdout and installShellCompletion happily
+    # installed that error text as the completion script; the current CLI
+    # writes nothing to stdout, so the step now fails the build. Drop it
+    # until upstream provides completions for the v2 CLI.
+    postInstall = "";
   });
 
   opencode-desktop =
-    (opencodeV2.opencode-desktop.override { inherit opencode; }).overrideAttrs
+    (opencodeV2.opencode-desktop.override {
+      inherit opencode;
+      # desktop.nix's only callPackage use is `callPackage ./electron.nix { }`,
+      # which builds the stale-hash electron described above; hand it ours.
+      callPackage = _file: _args: electron;
+    }).overrideAttrs
       (old: {
         preBuild = old.preBuild + ''
           export OPENCODE_CLI_DIST="$TMPDIR/desktop-cli"
