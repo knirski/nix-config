@@ -593,8 +593,10 @@ systemctl --user status dms.service dcal.service
 ## What remains outside this configuration
 
 Standalone Home Manager does not manage Ubuntu updates, kernel settings, GPU
-drivers, display-manager configuration, system services, `/persist`,
-restic/btrbk backups, or NixOS-only aspects such as gaming.
+drivers, display-manager configuration, system services, `/persist`, backups
+(manual on this host — see
+[backup-and-restore.md](backup-and-restore.md#ubuntu-standalone-home-manager-manual-backup)),
+or NixOS-only aspects such as gaming.
 
 Three items are system-level and must be reapplied by hand if this machine is
 rebuilt — none of them is captured by a Home Manager generation:

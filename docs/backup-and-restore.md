@@ -161,6 +161,84 @@ sudo restic -r <repo> -p /run/agenix/<password-file> restore latest --target /
 
 Run this after provisioning a fresh install (see [recovery.md](./recovery.md)). On a Secure Boot host, confirm that `/var/lib/sbctl/keys` is present after the restore; if not, return firmware to Setup Mode and regenerate + re-enroll the keys before the next Limine update.
 
+## Ubuntu (standalone Home Manager): manual backup
+
+ubuntu is a work laptop and deliberately does not back up to the Synology NAS
+or any other personal infrastructure. There is **no automated backup** and no
+Nix-managed unit for one: the 2026-09-22 decision is a manual procedure, run by
+the operator when it is due. Unlike soyo and zbook, nothing warns when a backup
+is overdue — `just healthcheck ubuntu` checks only the Nix installation, the
+Home Manager profile, SSH config and `.zshrc`. The 24.04→26.04 upgrade
+runbook's pre-flight "take a fresh backup" step
+([ubuntu-upgrade.md](ubuntu-upgrade.md)) means this procedure.
+
+### What must be backed up
+
+Everything below lives in the home directory and cannot be regenerated from
+this repository or Ubuntu:
+
+| Path | Why it matters |
+| --- | --- |
+| `~/.ssh` | private keys; only the public halves are in the repo |
+| `~/.gnupg` | GPG keys and agent state (also signs git commits) |
+| `~/.envvars` | machine-local secrets (tokens, endpoints) — never in the Nix store |
+| `~/.local/share/keyrings` | gnome-keyring login keyring, PAM-unlocked and holding app tokens such as `gh auth` |
+| `~/.config` | app state Home Manager does not manage: browser profiles (`~/.mozilla`, `~/.config/google-chrome`), WARP, DMS `settings.json`, desktop entries |
+| `~/.local/share` (selected) | DMS/dcal/atuin state and other app data; exclude caches and containers |
+| `~/Documents`, `~/Pictures`, `~/Downloads`, … | work products |
+
+Regenerable — do not back up: `/nix` and `~/.nix-profile`
+(`home-manager switch --flake .#ubuntu`), the repository itself (GitHub), and
+the three Ubuntu system files (re-applied by `just bootstrap-ubuntu-system`,
+see [ubuntu-adaptations.md](ubuntu-adaptations.md)).
+
+### One workable manual procedure (restic to an external disk)
+
+Any tool works. This is the one this repository already uses elsewhere, and
+restic encrypts both contents and file names, so the disk itself needs no
+encryption (an encrypted disk is still reasonable for metadata hygiene).
+
+One-time setup:
+
+1. Mount a dedicated disk, e.g. at `/media/knirski/backup`.
+2. Create a repository password file (mode 600) **and store the password in
+   your password manager** — a repository without its password is unreadable:
+
+   ```sh
+   install -m 600 /dev/null ~/.config/restic/password
+   ${EDITOR:-vi} ~/.config/restic/password
+   restic -r /media/knirski/backup/restic -p ~/.config/restic/password init
+   ```
+
+3. `restic` is not in the Ubuntu Home Manager profile; run it via
+   `nix shell nixpkgs#restic -c restic …` or install it with apt.
+
+Each backup, with the disk attached:
+
+```sh
+restic -r /media/knirski/backup/restic -p ~/.config/restic/password backup \
+  --exclude-caches \
+  --exclude "$HOME/.cache" \
+  --exclude "$HOME/.local/share/Trash" \
+  --exclude "$HOME/.local/share/containers" \
+  "$HOME"
+restic -r /media/knirski/backup/restic -p ~/.config/restic/password check
+```
+
+Periodically also prove a restore, exactly as the NixOS drill above does
+(restore a known file to a scratch directory and compare) — `check` alone does
+not demonstrate restorability.
+
+### Rebuild after a wipe
+
+1. Follow [install-ubuntu.md](install-ubuntu.md) (Nix, repo clone, first
+   `home-manager switch`).
+2. Restore home data from the backup, then re-run
+   `home-manager switch --flake .#ubuntu` so generated files win again.
+3. Re-apply the Ubuntu system files: `just bootstrap-ubuntu-system`.
+4. Re-authenticate anything whose token lived only in the keyring if it was
+   not restored (`gh auth login`, WARP).
+
 ## Failure notifications
 
 If a restic backup or prune operation fails, ntfy sends an alert. Check:

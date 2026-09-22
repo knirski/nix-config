@@ -34,9 +34,10 @@ a failure.
 
 ## Before — pre-flight checklist
 
-1. **Take a fresh backup** with the machine's usual mechanism. There is no
-   in-place downgrade for an OS upgrade; if anything goes wrong, restoring
-   means a backup restore. This is the one non-negotiable step.
+1. **Take a fresh backup** — on this host that is the manual procedure in
+   [backup-and-restore.md](backup-and-restore.md#ubuntu-standalone-home-manager-manual-backup).
+   There is no in-place downgrade for an OS upgrade; if anything goes wrong,
+   restoring means a backup restore. This is the one non-negotiable step.
 2. **Free disk space.** `df -h /` — the upgrader needs several GB for the new
    packages and the archive cache. Clean with `sudo apt autoremove` first if
    tight.
