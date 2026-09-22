@@ -93,14 +93,29 @@ Copy the public key output and add it to the corresponding Synology user's autho
 
 The `ssh-key` file and host key fingerprint are persisted under `/persist/etc/restic/` and survive reboots.
 
-### List restic snapshots
+### Host-specific values
 
-The password file at runtime depends on the host:
+| Host | Repository | Password file | SSH identity / known_hosts |
+| --- | --- | --- | --- |
+| soyo | `sftp:soyo-backup@czworaczki:/backup/soyo` | `/run/agenix/restic-password` | `/persist/etc/restic/ssh-key`, `/persist/etc/restic/known_hosts` |
+| zbook | `sftp:zbook-backup@czworaczki:/backup/zbook` | `/run/agenix/zbook-restic-password` | `/persist/etc/restic/ssh-key`, `/persist/etc/restic/known_hosts` |
 
-- **Soyo**: `config.age.secrets.restic-password.path` → `/run/agenix/restic-password`
-- **zbook**: `config.age.secrets.zbook-restic-password.path` → `/run/agenix/zbook-restic-password`
+The systemd units build the SFTP invocation from these values (and the
+`restic.sftp.*` options in the host assembler). A manual `restic` call must
+pass the same command; for zbook, and run as root (the key and the agenix
+secret are root-only):
 
-Replace `<password-file>` and `<repo>` in the commands below with the host-specific values.
+```sh
+sudo restic -r sftp:zbook-backup@czworaczki:/backup/zbook \
+  -p /run/agenix/zbook-restic-password \
+  -o sftp.command="ssh zbook-backup@czworaczki.home.arpa -i /persist/etc/restic/ssh-key -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/persist/etc/restic/known_hosts -s sftp" \
+  snapshots --latest 3
+```
+
+Soyo's command differs only in the repository, password file and SFTP user.
+`restic` is not in the system `PATH` on NixOS hosts — run it from nixpkgs
+(`nix shell nixpkgs#restic -c restic …`) or take the store path from
+`systemctl cat restic-backups-<host>`.
 
 ```sh
 sudo restic -r <repo> -p /run/agenix/<password-file> snapshots
@@ -152,6 +167,19 @@ sudo rm -rf /tmp/restic-restore-test
 ```
 
 Add `/persist/var/lib/sbctl` to an occasional restore drill as well. Those keys are needed for future Secure Boot bootloader updates, so restoring them matters even though the already-signed current generation may still boot without them.
+
+### Drill log
+
+Redacted, non-sensitive outcomes only (record with a
+`docs(operations): record resilience drill results` commit).
+
+| Date | Host | Scope | Result |
+| --- | --- | --- | --- |
+| 2026-09-22 | zbook | `snapshots --latest 3` + `check` (metadata); restore latest to scratch with `--include /persist/etc/restic --include /persist/var/lib/sbctl`; sha256 compare against live | PASS — snapshot `5dc396c8` (2026-09-21 07:48), 12 snapshots checked with no errors, all 11 restored files (3 restic, 8 sbctl) hash-matched |
+
+This proves the SFTP transport, the agenix password, NAS availability and a
+selective restore for zbook. It does not prove a full `/persist` disaster
+restore; that remains the destructive, separately authorized drill.
 
 ## Full disaster restore
 
