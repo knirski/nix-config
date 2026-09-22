@@ -368,7 +368,6 @@
             nrs = "sudo nixos-rebuild switch --flake .";
             nrt = "sudo nixos-rebuild test --flake .";
             hms = "home-manager switch --flake .";
-            nfu = "nix flake update";
             ndv = "nix develop";
 
             # System
