@@ -1,9 +1,4 @@
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ config, pkgs, ... }:
 {
   users.users.root.hashedPasswordFile = config.age.secrets.root-password.path;
 
@@ -26,10 +21,9 @@
     ];
   };
 
-  # Keep the virt-manager client available, but stop libvirtd while diagnosing
-  # the NVMe/PCIe suspend issue. mkForce overrides the workstation aspect's
-  # default so the daemon cannot be restarted by the shared role module.
-  virtualisation.libvirtd.enable = lib.mkForce false;
+  # libvirtd comes from the workstation aspect (modules/nixos/workstation.nix);
+  # it was disabled temporarily while diagnosing the NVMe/PCIe suspend issue,
+  # but that made no difference to the hangs.
   virtualisation.podman = {
     enable = true;
     dockerCompat = true;
