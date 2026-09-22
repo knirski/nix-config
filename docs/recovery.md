@@ -1,6 +1,8 @@
 # Recovery
 
-Consolidated runbook for every failure mode. Start here when Soyo is down.
+Consolidated runbook for every failure mode on the NixOS hosts. Start here
+when Soyo is down; zbook's Secure Boot steps are in
+[Phase 2 → Zbook](#zbook).
 
 > **Hostname vs IP:** All examples use `soyo` (resolved via Blocky's `customDNS`
 > from `reservations.nix`). If DNS is the problem you're troubleshooting, fall
@@ -92,7 +94,7 @@ When the LAN/router is down **and** the box is headless:
 
 ### After successful unlock (Phase 2 — Secure Boot)
 
-If the cause was a PCR change (kernel/initrd/bootloader update), re-enroll against PCR 0+2+7:
+If the cause was a PCR change (kernel/initrd/bootloader update), re-enroll against PCR 0+2+7 (both soyo and zbook are bound to 0+2+7; check the current binding with `sudo cryptsetup token export --token-id 0 /dev/disk/by-partlabel/luks | grep tpm2-pcrs`):
 
 ```sh
 sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
@@ -179,9 +181,10 @@ sudo sbctl create-keys
 # 3. Enroll keys, keeping Microsoft keys so option ROMs still load.
 sudo sbctl enroll-keys -m
 
-# 4. From your workstation, deploy once more before the next reboot.
-#    This signs Limine with the newly-created keys and persists /var/lib/sbctl.
-nix develop '.#' -c deploy .#zbook
+# 4. Deploy once more before the next reboot. This signs Limine with the
+#    newly-created keys and persists /var/lib/sbctl. `just deploy zbook` works
+#    locally or from another machine (deploy-rs).
+just deploy zbook
 
 # 5. Enable Secure Boot in firmware.
 #    ZBook BIOS → Security → Secure Boot Configuration → Enable Secure Boot.
@@ -193,7 +196,10 @@ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0,2,7 /dev/disk/by-partl
 
 # 7. Verify.
 sudo sbctl status
-# Expected: Setup Mode: User, Secure Boot: enabled.
+# Expected: Secure Boot: ✓ Enabled, Setup Mode: ✓ Disabled (older sbctl
+# versions word the latter "User" — anything but an active Setup Mode is fine).
+sudo cryptsetup token export --token-id 0 /dev/disk/by-partlabel/luks | grep tpm2-pcrs
+# Expected: "tpm2-pcrs":[0,2,7]
 ```
 
 If HP firmware does not expose a "Setup Mode" toggle (some ZBook BIOS revisions hide it), you can trigger Setup Mode from Linux with `mokutil` or by enrolling `sbctl` platform-owner keys. If the above fails:
@@ -204,6 +210,20 @@ sudo sbctl enroll-keys -m --force
 ```
 
 If the BIOS shows "Secure Boot → Audit Mode" instead of "Enabled" after enrollment, the keys were accepted but the BIOS is not enforcing. Check with `sudo sbctl status` — if Secure Boot shows `enabled`, it is enforced regardless of the BIOS label.
+
+#### Zbook verification notes
+
+- `sudo sbctl status` — expect `Secure Boot: ✓ Enabled`, `Setup Mode: ✓ Disabled`, `Vendor Keys: microsoft`.
+- `sudo sbctl verify` reports `BOOTX64.EFI` (and the signed fwupd EFI copy) as signed, while the kernel `bzImage`s are **not** signed. That is expected: Limine loads the kernels and enforces their checksums (`validateChecksums` and `panicOnChecksumMismatch` are force-enabled by the nixpkgs module), so the kernel needs no signature of its own.
+- `sudo sbctl list-files` is empty on this setup: the sbctl file database is not used, and `verify` scans `/boot` directly.
+- Current production state (verified 2026-09-22): Secure Boot enabled, TPM2 token bound to PCR 0+2+7, passphrase keyslot present as fallback.
+
+#### Zbook reinstall when `/var/lib/sbctl` is empty
+
+`boot.loader.limine.secureBoot.enable = true` makes the Limine installer refuse to run without keys — it prints `There are no sbctl secure boot keys present. Please generate some.` and exits. `nixos-install` runs that step chrooted in the target root, so the path it checks is `<target>/var/lib/sbctl`, and `disko` has just wiped it. Two ways forward:
+
+1. **Restore the keys** (keeps the firmware trust anchor unchanged). They are in the restic backup: the 2026-09-22 drill restored all 8 files under `/persist/var/lib/sbctl` hash-identically ([backup-and-restore.md](backup-and-restore.md)). Restore `/persist/var/lib/sbctl` and make the keys visible at `<target>/var/lib/sbctl` before `nixos-install`; after the first boot, preservation bind-mounts the persisted copy over `/var/lib/sbctl` anyway.
+2. **Create new keys** — put firmware into Setup Mode, run `sbctl create-keys` and `sbctl enroll-keys -m`, deploy, then re-enable Secure Boot as in the steps above. This changes the trust anchor: the old signed boot path stops booting until the deploy has signed Limine with the new keys.
 
 ### Caveats
 

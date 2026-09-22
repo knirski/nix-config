@@ -10,6 +10,9 @@ as the sole operating system, replacing the existing dual-boot (Windows + Ubuntu
 - A NixOS 25.05+ live ISO (tested with 25.05 "Stoat")
 - This repo cloned on the live system
 - The operator's SSH key (for agenix rekeying)
+- If Secure Boot is already enabled on this machine (reinstall), the sbctl keys
+  or a way to create new ones — see "Secure Boot and TPM LUKS auto-unlock"
+  below
 
 ## Step 1: Boot the live ISO
 
@@ -88,9 +91,15 @@ backups survive reboots. Verify the first run, then perform the restore drill
 in [`docs/backup-and-restore.md`](../../docs/backup-and-restore.md#restore-drill-do-this-periodically)
 (host-specific commands and a drill log are there).
 
-## Optional: TPM LUKS auto-unlock
+## Secure Boot and TPM LUKS auto-unlock
 
-After first boot, enroll a TPM keyslot:
+Production zbook runs Limine Secure Boot with the LUKS TPM2 keyslot bound to
+PCR 0+2+7. The full operator sequence — firmware Setup Mode, `sbctl
+create-keys`, `sbctl enroll-keys -m`, deploy, enable Secure Boot, re-enroll —
+is in [`docs/recovery.md`](../../docs/recovery.md#zbook); follow it rather
+than improvising.
+
+Phase 1, before Secure Boot exists, enrolls PCR 7 only:
 
 ```bash
 sudo systemd-cryptenroll --tpm2-device=auto \
@@ -98,7 +107,32 @@ sudo systemd-cryptenroll --tpm2-device=auto \
   /dev/disk/by-partlabel/luks
 ```
 
-Test TPM unlock: `sudo systemd-cryptsetup attach crypted /dev/disk/by-partlabel/luks`
+Phase 2 re-enrolls after Secure Boot is enabled; the repo invariant is
+PCR 0+2+7 (never 8 or 9), with the passphrase keyslot always kept as fallback:
+
+```bash
+sudo systemd-cryptenroll --wipe-slot=tpm2 /dev/disk/by-partlabel/luks
+sudo systemd-cryptenroll --tpm2-device=auto \
+  --tpm2-pcrs=0,2,7 \
+  /dev/disk/by-partlabel/luks
+```
+
+Check the current binding and test unlock:
+
+```bash
+sudo cryptsetup token export --token-id 0 /dev/disk/by-partlabel/luks | grep tpm2-pcrs
+sudo systemd-cryptsetup attach crypted /dev/disk/by-partlabel/luks
+```
+
+## Reinstalling with Secure Boot already enabled
+
+`disko` wipes `/var/lib/sbctl` along with the rest of the disk, and the Limine
+installer refuses to run without keys (`There are no sbctl secure boot keys
+present. Please generate some.`). Restore `/persist/var/lib/sbctl` from the
+restic backup and make the keys visible at `<target>/var/lib/sbctl` (the
+installer runs chrooted in the target), or create new keys with the firmware
+in Setup Mode. Details:
+[`docs/recovery.md`](../../docs/recovery.md#zbook-reinstall-when-varlibsbctl-is-empty).
 
 ## Post-install gotchas
 
@@ -155,6 +189,7 @@ effect.
 - Suspend works with USB-C dock connected (laptop stays asleep)
 - Restic backup completes successfully (`sudo systemctl start restic-backups-zbook`)
   and the documented restore drill passes
+- Secure Boot enforced: `sudo sbctl status` shows Secure Boot enabled and Setup Mode disabled
 - TPM auto-unlock on reboot
 - Tailscale connects and provides remote access
 - Bluetooth, WiFi, USB-C docking work
