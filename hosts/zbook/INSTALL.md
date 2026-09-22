@@ -76,10 +76,17 @@ sudo ssh-keygen -t ed25519 -f /persist/etc/restic/ssh-key -N "" -C "zbook-backup
 sudo cat /persist/etc/restic/ssh-key.pub
 # → Register with the backup target (Synology DS423+)
 
-# 3. Initial backup
-sudo restic -r sftp:zbook-backup@czworaczki:/backup/zbook \
-  -p /persist/etc/restic/password backup /persist
+# 3. Initial backup (the same unit the daily timer runs; the restic password
+#    comes from agenix at /run/agenix/zbook-restic-password — there is no
+#    password file to create)
+sudo systemctl start restic-backups-zbook
+sudo journalctl -u restic-backups-zbook -f
 ```
+
+The SSH key and known_hosts live under `/persist/etc/restic/` so unattended
+backups survive reboots. Verify the first run, then perform the restore drill
+in [`docs/backup-and-restore.md`](../../docs/backup-and-restore.md#restore-drill-do-this-periodically)
+(host-specific commands and a drill log are there).
 
 ## Optional: TPM LUKS auto-unlock
 
@@ -146,7 +153,8 @@ effect.
 - GPU switching works (Intel integrated for desktop, NVIDIA on-demand)
 - Steam launches and can render with DXVK/VKD3D
 - Suspend works with USB-C dock connected (laptop stays asleep)
-- Restic backup completes successfully
+- Restic backup completes successfully (`sudo systemctl start restic-backups-zbook`)
+  and the documented restore drill passes
 - TPM auto-unlock on reboot
 - Tailscale connects and provides remote access
 - Bluetooth, WiFi, USB-C docking work
