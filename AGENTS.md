@@ -194,7 +194,8 @@ Existing examples:
   `Operation Result 0xf` — no valid test result has ever been recorded, not
   even for the tests that ran clean), so trust btrfs scrub +
   restic for integrity signals, not NVMe log pages. All mitigations therefore
-  stay in force permanently; treat s2idle on this drive as unreliable: prefer
-  `systemctl hibernate` or a full shutdown over suspend, and treat
-  `VPD access failed` in the journal as an early-warning signal that the next
-  wedge is imminent.
+  stay in force permanently; treat s2idle on this drive as unreliable.
+  Hibernation is deliberately not configured (zram only — no swap area;
+  decision 2026-09-22), so the safe alternative is a full shutdown rather
+  than suspend. Treat `VPD access failed` in the journal as an early-warning
+  signal that the next wedge is imminent.

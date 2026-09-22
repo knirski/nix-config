@@ -134,10 +134,12 @@ into btrfs read-only remount or a cold shutdown. A second mode observed
 2026-09-11 hangs on s2idle *entry* (last line `Filesystems sync`, no VPD
 warning, RTC `pm_trace` says the prepare phase was never left).
 
-**Current mitigation**: avoid suspend on the XPG S70 Blade, run
-`disable-aspm.service` and `disable-nvme-apst.service`, and rely on btrfs
-scrub + restic for integrity signals. See `AGENTS.md` (zbook known issues,
-recurrent wedge entry) for the full list.
+**Current mitigation**: keep the ASPM/APST services active, rely on btrfs
+scrub + restic for integrity signals, and use a full shutdown instead of
+suspend when practical. Hibernation is deliberately not configured (no swap
+area — zram only; decision 2026-09-22), so it is not available as an
+alternative; adding a swapfile would restore it. See `AGENTS.md` (zbook known
+issues, recurrent wedge entry) for the full list.
 
 **Investigation status**: deferred 2026-09-11. The instrumented
 `suspend-debug` boot specialisation was removed from `hosts/zbook/boot.nix`
