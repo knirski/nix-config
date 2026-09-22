@@ -9,9 +9,9 @@ A multi-host NixOS/nix-darwin/standalone-HM flake.
 | **soyo** (Intel N150) | LAN DNS + DHCP appliance, 16 GB | NixOS `release-26.05` | `modules/parts/soyo.nix` | `hosts/soyo/` | M1–M3 complete; M4 appliance items deferred |
 | **zbook** (HP ZBook Studio 16" G10) | Workstation/gaming laptop, 32 GB, NVIDIA RTX 4000 Ada | NixOS unstable | `modules/parts/zbook.nix` | `hosts/zbook/` | M4 complete |
 | **macbook** (Apple Silicon) | Professional workstation laptop | nix-darwin unstable | `modules/parts/macbook.nix` | `hosts/macbook/` | CI only; hardware deploy pending |
-| **ubuntu** (Ubuntu 24.04 LTS) | Professional work laptop | Standalone HM unstable | `modules/parts/ubuntu.nix` | *(data in assembler)* | CI only; hardware deploy pending |
+| **ubuntu** (Ubuntu 24.04 LTS) | Professional workstation laptop | Standalone HM unstable | `modules/parts/ubuntu.nix` | *(data in assembler)* | Production; manual backup |
 
-See [`docs/workstation-setup.md`](docs/workstation-setup.md) for macbook/ubuntu deploy status.
+See [`docs/workstation-setup.md`](docs/workstation-setup.md) for macbook's deploy status and the cross-host desktop/tooling matrix.
 See [`docs/ubuntu-nix-surface.md`](docs/ubuntu-nix-surface.md) for the Ubuntu/Nix boundary map and [`docs/ubuntu-upgrade.md`](docs/ubuntu-upgrade.md) for the 24.04→26.04 LTS upgrade runbook.
 See [`docs/superpowers/specs/soyo-dns-dhcp-appliance.md`](docs/superpowers/specs/soyo-dns-dhcp-appliance.md) for the canonical design doc.
 

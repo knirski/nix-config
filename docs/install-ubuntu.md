@@ -206,8 +206,7 @@ different username/home directory).
   managed by Ubuntu directly.
 - **No persistence module.** `/persist` does not exist; data is stored
   in normal home-directory paths per Ubuntu conventions.
-- **No automated backup.** ubuntu is a work laptop and is backed up manually
-  by the operator — see
+- **No automated backup.** ubuntu is backed up manually by the operator — see
   [backup-and-restore.md](backup-and-restore.md#ubuntu-standalone-home-manager-manual-backup)
   for the data inventory and a workable procedure.
 - **No gaming.** Gaming aspects are NixOS-only (Steam, NVIDIA offload, etc.).

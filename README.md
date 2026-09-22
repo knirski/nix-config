@@ -16,7 +16,7 @@ workstation—built as a practical guide to modern, readable Nix.
 | **soyo** | DNS and DHCP appliance | NixOS 26.05 | Production; Secure Boot enabled |
 | **zbook** | Desktop, gaming and backup client | nixpkgs unstable | Production; Secure Boot enabled |
 | **macbook** | Professional workstation (nix-darwin) | nixpkgs unstable | Assembler and CI evaluation/build only; hardware deploy pending |
-| **ubuntu** | Professional workstation (standalone Home Manager) | nixpkgs unstable | Assembler and CI evaluation/build only; hardware deploy pending |
+| **ubuntu** | Professional workstation (standalone Home Manager) | nixpkgs unstable | Production; manual backup |
 
 The diagram intentionally shows roles and trust flows, not a home-network
 inventory. See the [public repository data policy](docs/security/public-repository.md).

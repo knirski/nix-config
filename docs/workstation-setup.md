@@ -47,7 +47,7 @@ This configuration is shared across multiple hosts. Not all tools are available 
   in this repo's Home Manager aspects — see the matrix below; install the
   regular macOS app yourself if you need one, outside of Nix)
 
-### ubuntu (Standalone Home Manager) — Assembler + CI evaluation only; hardware deploy pending
+### ubuntu (Standalone Home Manager) — Production on hardware
 
 - **Desktop**: Sway + DMS config is Home Manager-managed (the config files
   themselves), but **not automatically startable** — Ubuntu's GDM3 discovers

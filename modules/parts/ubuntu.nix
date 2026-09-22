@@ -1,5 +1,5 @@
 # flake-parts module: assembles homeConfigurations.ubuntu
-# Professional work laptop (Ubuntu 24.04 LTS, standalone Home Manager).
+# Professional workstation laptop (Ubuntu 24.04 LTS, standalone Home Manager).
 # No NixOS or nix-darwin — only user environment managed by HM.
 { config, inputs, ... }:
 let

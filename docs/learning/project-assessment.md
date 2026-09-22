@@ -10,10 +10,13 @@ This is a **production-grade, learning-oriented NixOS/nix-darwin flake** managin
 
 This assessment was updated on **2026-08-01** after the
 [repository remediation plan](../superpowers/plans/2026-08-01-repository-remediation.md)
-closed the actionable CI, portability, source-hygiene, and observability gaps.
-The table below replaces unqualified star ratings with dated evidence and
-named residual risks. Hardware deployment and TPM drills remain explicit operational
-boundaries rather than silently claimed fixes.
+closed the actionable CI, portability, source-hygiene, and observability gaps,
+and again on **2026-09-22**, when ubuntu was confirmed deployed on its work
+laptop with a manual backup procedure
+([backup-and-restore.md](../backup-and-restore.md)). The table below replaces
+unqualified star ratings with dated evidence and named residual risks. Macbook
+hardware deployment and TPM drills remain explicit operational boundaries
+rather than silently claimed fixes.
 
 | Dimension | Dated evidence | Residual risk (as of 2026-08-01) |
 |-----------|----------------|-----------------------------------|
@@ -32,14 +35,14 @@ section: full dual-stack IPv6 DNS/DHCP, RAID1 (contingent on a second disk
 slot), off-site NAS replication, M4 guest applications (e.g. Jellyfin), and a
 second DNS/DHCP appliance for redundancy.
 
-**Bottom line:** Soyo and zbook are deployed and production-hardened per the
-dated evidence above. Macbook and ubuntu have real host assemblers, complete
-install runbooks (`docs/install-macbook.md`, `docs/install-ubuntu.md`), and
-CI-verified evaluation and build coverage (`build-macbook`, `build-ubuntu`
-jobs in `ci.yml`) as of 2026-07-23 — hardware deployment is what remains, not
+**Bottom line:** Soyo, zbook and ubuntu are deployed and production-hardened
+per the dated evidence above (ubuntu backed up manually — see
+[backup-and-restore.md](../backup-and-restore.md)). Macbook has a real host
+assembler, a complete install runbook (`docs/install-macbook.md`), and
+CI-verified evaluation and build coverage (`build-macbook` job in `ci.yml`) as
+of 2026-07-23 — hardware deployment is what remains for macbook, not
 configuration or CI coverage (see §7 for the genuinely still-open pieces:
-darwin-native `ssh`/`tailscale`/`backup` aspects and `dendritic-options` test
-coverage for macbook/ubuntu).
+darwin-native `ssh`/`tailscale`/`backup` aspects).
 
 ---
 
@@ -310,7 +313,7 @@ have the NixOS systemd, DNS/DHCP, or appliance NIC checks.
 
 | Area | Description | Effort |
 |------|-------------|--------|
-| **Macbook/Ubuntu hosts** | Assembler, CI evaluation/build, install runbooks, cross-platform healthcheck, and Darwin/Home Manager aspect namespace coverage are complete; hardware deploy remains pending, and macbook still intentionally has only its base system-level Darwin aspect | Low (hardware access) / Medium (native macOS service scope) |
+| **Macbook/Ubuntu hosts** | Assembler, CI evaluation/build, install runbooks, cross-platform healthcheck, and Darwin/Home Manager aspect namespace coverage are complete. ubuntu is deployed on hardware (manual backup, [backup-and-restore.md](../backup-and-restore.md)); macbook's hardware deploy remains pending, and macbook still intentionally has only its base system-level Darwin aspect | Low (macbook hardware access) / Medium (native macOS service scope) |
 | **Backup restore automation** | Currently manual drill only; could schedule quarterly automated test | Low |
 | **Topology diagram automation** | Public overview updated manually via `just topology`; could be CI artifact | Low |
 | **Secrets rotation schedule** | No enforced rotation; rely on manual `just rekey` | Low |
@@ -321,9 +324,9 @@ have the NixOS systemd, DNS/DHCP, or appliance NIC checks.
 
 ## 7. Recommendations for Next Phases
 
-### Phase 1: Macbook + Ubuntu Hosts (M4 Expansion) — partially complete as of 2026-07-23
+### Phase 1: Macbook + Ubuntu Hosts (M4 Expansion) — ubuntu deployed 2026-09-22; macbook pending
 
-**Done** (verified against the repository on 2026-07-23):
+**Done** (verified against the repository on 2026-07-23; ubuntu deployment verified 2026-09-22):
 
 - `hosts/macbook/` exists (`users.nix`, `INSTALL.md`); `modules/parts/macbook.nix`
   assembles `darwinConfigurations.macbook` on `aarch64-darwin`, selecting
@@ -351,6 +354,11 @@ have the NixOS systemd, DNS/DHCP, or appliance NIC checks.
   macbook's terminal is `Terminal.app`, not the Linux-only Ghostty package;
   ubuntu has no automatic Sway session registration) — see
   [`docs/workstation-setup.md`](../workstation-setup.md).
+- Ubuntu is deployed as of 2026-09-22: `home-manager switch
+  --flake .#ubuntu` runs on the machine, the session/keyring/portal/WARP
+  behavior in [`docs/ubuntu-adaptations.md`](../ubuntu-adaptations.md) is
+  live-verified, and backup is a documented manual procedure
+  ([backup-and-restore.md](../backup-and-restore.md)).
 
 **Still genuinely open** (not addressed by this remediation plan — out of its
 scope):
@@ -361,11 +369,10 @@ scope):
   aspects (see the frozen
   [`repository-gaps-and-improvements.md`](../archive/2026-07-22-repository-gaps-and-improvements.md)'s
   H1 finding, still accurate).
-- Hardware validation itself — first `darwin-rebuild switch`, first
-  `home-manager switch --flake .#ubuntu`, and confirming the documented login
-  shell/terminal/desktop-session/application matrix on real hardware — is
-  deliberately deferred to `G2` in the remediation plan (separately authorized
-  live validation), not a repository defect.
+- Macbook hardware validation — first `darwin-rebuild switch` and confirming
+  the documented login shell/terminal/desktop-session/application matrix on
+  real hardware — is deliberately deferred to `G2` in the remediation plan
+  (separately authorized live validation), not a repository defect.
 
 ### Phase 2: Observability Hardening — completed 2026-08-01
 

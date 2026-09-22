@@ -191,8 +191,8 @@ Run this after provisioning a fresh install (see [recovery.md](./recovery.md)). 
 
 ## Ubuntu (standalone Home Manager): manual backup
 
-ubuntu is a work laptop and deliberately does not back up to the Synology NAS
-or any other personal infrastructure. There is **no automated backup** and no
+ubuntu deliberately does not back up to the Synology NAS or any other
+personal infrastructure. There is **no automated backup** and no
 Nix-managed unit for one: the 2026-09-22 decision is a manual procedure, run by
 the operator when it is due. Unlike soyo and zbook, nothing warns when a backup
 is overdue — `just healthcheck ubuntu` checks only the Nix installation, the
