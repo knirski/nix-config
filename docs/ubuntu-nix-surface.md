@@ -149,7 +149,8 @@ GUI after deployment with `systemctl --user restart warp-taskbar.service`.
 ### 3. Ubuntu-owned system files that exist to serve Nix
 
 These live outside every Home Manager generation. `scripts/bootstrap-ubuntu-system.sh`
-(`just bootstrap-ubuntu-system`) applies and re-verifies them idempotently:
+(`just bootstrap-ubuntu-system`) first checks the required apt packages, then
+applies and re-verifies them idempotently:
 
 | File | Purpose | What breaks when missing |
 | --- | --- | --- |
@@ -165,6 +166,7 @@ are never Nix outputs):
 | apt package | Consumed by |
 | --- | --- |
 | `dbus-user-session` | the session bus at `$XDG_RUNTIME_DIR/bus` (item 4) |
+| `gnome-keyring` | the login-unlocked Secret Service and GCR SSH agent |
 | `xdg-desktop-portal` + `-gtk` + `-wlr` | portal backends; the *selection* is Home Manager's (`~/.config/xdg-desktop-portal/sway-portals.conf`: `default=gtk`, `Screenshot`/`ScreenCast=wlr`) |
 | `swaylock` | the only working lock path on this machine (item 4); ships `/etc/pam.d/swaylock` |
 | GPU driver packages (Intel Mesa) | Ubuntu's own programs only; Nix programs get GL via `/run/opengl-driver` |
@@ -233,8 +235,9 @@ Symptom → surface point → fix:
   built closure contains the expected packages and that the `activate` script
   still supports the stable `~/.nix-profile` zsh path the `chsh` instructions
   depend on.
-- **Ubuntu side** — `just bootstrap-ubuntu-system` applies and re-verifies the
-  three system files; it is deliberately idempotent and safe to run at any time.
+- **Ubuntu side** — `just bootstrap-ubuntu-system` checks the required apt
+  packages, then applies and re-verifies the system files; it is deliberately
+  idempotent and safe to run at any time.
 - **Whole host** — `just healthcheck ubuntu` (role `standalone-hm`) probes Nix
   installation, the Home Manager profile, SSH config and `.zshrc`.
 - **Manual boundary** — session-level behavior (GL, keyring, portals, lock,

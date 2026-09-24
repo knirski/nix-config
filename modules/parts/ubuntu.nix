@@ -261,6 +261,16 @@ in
             dcal.Service.Environment = graphicalServiceEnvironment;
           };
 
+          # logind owns the lid switch and suspends the machine.  swayidle's
+          # before-sleep hook runs during systemd's PrepareForSleep phase and
+          # waits for swaylock, so the session is locked before the display
+          # disappears.  Ubuntu's swaylock must be used: DMS's Nix-built PAM
+          # stack cannot authenticate against Ubuntu's shadow helper.
+          services.swayidle = {
+            enable = true;
+            events."before-sleep" = "/usr/bin/swaylock -f -c 14181C";
+          };
+
           # Cloudflare's vendor-installed warp-taskbar.service is started by
           # the systemd user manager rather than by Sway.  Its Re-authenticate
           # action uses $BROWSER to hand the Access refresh URL to a browser;

@@ -163,6 +163,13 @@ systemctl list-timers nix-store-gc.timer
 sudo systemctl start nix-store-gc.service
 ```
 
+The bootstrap checks these required Ubuntu packages before changing any system
+files: `dbus-user-session`, `gnome-keyring`, `xdg-desktop-portal`,
+`xdg-desktop-portal-gtk`, `xdg-desktop-portal-wlr`, and `swaylock`. If any are
+missing, it stops and prints the exact `apt install` command. GPU drivers,
+Tailscale, and optional Polkit agents remain operator-managed and are not part
+of this mandatory check.
+
 The 30-day retention keeps rollback generations available. Do not change the
 service to `nix-collect-garbage -d` unless deleting every old generation is
 intentional.
@@ -409,20 +416,24 @@ Home Manager cannot install or configure these system-level components:
    DankMaterialShell honours Lock but not Unlock. Use `dms ipc lock unlock`,
    or `pkill -x swaylock`, from a virtual console.
 
-   The repository bootstrap also configures `systemd-logind` to lock the
-   session on every lid-close path (battery, external power, and docked):
+   The repository configures `swayidle` to lock the session in its
+   `before-sleep` hook, using Ubuntu's `swaylock` and waiting for it to start.
+   The repository bootstrap configures `systemd-logind` to suspend on every
+   lid-close path (battery, external power, and docked):
 
    ```ini
    [Login]
-   HandleLidSwitch=lock
-   HandleLidSwitchExternalPower=lock
-   HandleLidSwitchDocked=lock
+   HandleLidSwitch=suspend
+   HandleLidSwitchExternalPower=suspend
+   HandleLidSwitchDocked=suspend
    ```
 
    This is a system-level setting because standalone Home Manager cannot own
    `/etc/systemd/logind.conf.d/`. Run `just bootstrap-ubuntu-system` after
    activating Home Manager; it writes
-   `/etc/systemd/logind.conf.d/60-nix-lid-lock.conf` and reloads logind.
+   `/etc/systemd/logind.conf.d/60-nix-lid-lock.conf` and reloads logind. Run
+   the Home Manager activation afterward so the `swayidle` user service is
+   installed and started.
 
 10. **Thermald**
 
