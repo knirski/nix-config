@@ -192,6 +192,7 @@ This table is the canonical index — when adding a check, add a row here.
 | `systemd-hardening-invariants` | Applicable systemd services have basic hardening (ProtectSystem, PrivateTmp, etc.) | `systemd-hardening-checks.nix` | Pure eval |
 | `topology-freshness` | Committed `docs/topology/overview.svg` matches the current stable state | `topology-checks.nix` | Pure eval |
 | `ubuntu-desktop-invariants` | Real build of `homeConfigurations.ubuntu.activationPackage`: expected packages/binaries are present in the built closure, and the built `activate` script still supports the stable `~/.nix-profile` zsh path docs/install-ubuntu.md's chsh instructions depend on | `ubuntu-desktop-checks.nix` | Pure eval + shell script |
+| `zbook-desktop-invariants` | Every Sway keybinding/startup target in zbook's evaluated Home Manager config resolves to a package in its evaluated Home Manager/system closures or a documented module-provided executable (`swaymsg`); fixtures prove the resolver rejects uninstalled commands | `zbook-desktop-checks.nix` | Pure eval |
 | `dashboard-renderer` | Python unit tests for the observability dashboard renderer | `perSystem.nix` | Pure eval + Python |
 | `formatting` | treefmt formatting check — Nix only (`nixfmt`); Python/shell/Markdown are lint-checked by the `ruff`/`shellcheck`/`markdownlint` pre-commit hooks instead, not auto-formatted. treefmt-nix's own auto-generated `checks.treefmt` is disabled (`flakeCheck = false`) so this is the repo's only treefmt check | `perSystem.nix` | Pure eval |
 

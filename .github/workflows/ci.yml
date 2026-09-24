@@ -117,7 +117,8 @@ jobs:
             .#checks.x86_64-linux.service-aspect-invariants \
             .#checks.x86_64-linux.soyo-guest-coverage \
             .#checks.x86_64-linux.soyo-guest-isolation \
-            .#checks.x86_64-linux.systemd-hardening-invariants
+            .#checks.x86_64-linux.systemd-hardening-invariants \
+            .#checks.x86_64-linux.zbook-desktop-invariants
           # Each heavyweight group below realizes a full multi-GB closure
           # (deploy checks: both host systems; ubuntu invariants: the whole
           # Home Manager activation incl. Android Studio/SDK). They run in
