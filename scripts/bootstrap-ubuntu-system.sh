@@ -24,7 +24,7 @@ needs_reboot=0
 say() { printf '  %s\n' "$*"; }
 step() { printf '\n== %s\n' "$*"; }
 
-step "1/8  GDM must run Wayland"
+step "1/9  GDM must run Wayland"
 if [ ! -f /etc/gdm3/custom.conf ]; then
   say "SKIP  /etc/gdm3/custom.conf not present (not a GDM system?)"
 elif grep -qE '^WaylandEnable=false' /etc/gdm3/custom.conf; then
@@ -35,7 +35,7 @@ else
   say "OK    Wayland already enabled"
 fi
 
-step "2/8  /run/opengl-driver for Nix OpenGL"
+step "2/9  /run/opengl-driver for Nix OpenGL"
 tmpfiles=/etc/tmpfiles.d/nix-opengl-driver.conf
 want="L+ /run/opengl-driver - - - - $USER_HOME/.nix-profile"
 if [ -f "$tmpfiles" ] && grep -qF "$want" "$tmpfiles"; then
@@ -53,7 +53,7 @@ else
   say "OK    /run/opengl-driver -> $(readlink /run/opengl-driver)"
 fi
 
-step "3/8  GDM session entry"
+step "3/9  GDM session entry"
 desktop=/usr/share/wayland-sessions/sway-nix.desktop
 launcher="$USER_HOME/.local/bin/sway-ubuntu-session"
 if [ -f "$desktop" ] && grep -qF "Exec=$launcher" "$desktop"; then
@@ -74,7 +74,29 @@ if [ ! -x "$launcher" ]; then
   say "WARN  $launcher is missing -- run the Home Manager switch first"
 fi
 
-step "4/8  Desktop wallpaper"
+step "4/9  Lock the screen when the lid closes"
+# systemd-logind owns the kernel lid-switch event.  The standalone Home
+# Manager configuration can provide the lock command and compositor session,
+# but it cannot write logind's system-level drop-in.  Use logind's native
+# "lock" action so it emits the session Lock signal; Ubuntu's swaylock-backed
+# DMS configuration handles that signal.
+logind_conf=/etc/systemd/logind.conf.d/60-nix-lid-lock.conf
+logind_contents='[Login]
+HandleLidSwitch=lock
+HandleLidSwitchExternalPower=lock
+HandleLidSwitchDocked=lock'
+if [ -f "$logind_conf" ] && printf '%s\n' "$logind_contents" | cmp -s - "$logind_conf"; then
+  say "OK    $logind_conf already locks on lid close"
+else
+  sudo install -d -m 0755 "$(dirname "$logind_conf")"
+  printf '%s\n' "$logind_contents" | sudo tee "$logind_conf" >/dev/null
+  say "DONE  wrote $logind_conf"
+  sudo systemctl reload systemd-logind
+  say "DONE  reloaded systemd-logind"
+  changed=1
+fi
+
+step "5/9  Desktop wallpaper"
 # The shell records this in session.json, which is mutable state it writes
 # itself, so it cannot be generated from Nix without freezing the whole file.
 wallpaper="$USER_HOME/.local/share/wallpapers/hive-grid.png"
@@ -93,7 +115,7 @@ else
   fi
 fi
 
-step "5/8  i2c-dev + Logitech hidraw access for desk peripherals"
+step "6/9  i2c-dev + Logitech hidraw access for desk peripherals"
 # The desk-switch keybinding (Mod4+Insert / Mod4+Home) uses ddcutil over
 # DDC/CI and solaar-cli over the Logitech receiver's hidraw node. Ubuntu's
 # kernel does not auto-load i2c-dev, the /dev/i2c-* nodes are root:root 0600
@@ -138,7 +160,7 @@ else
   changed=1
 fi
 
-step "6/8  Disable USB receiver and dock spurious suspend wakeups"
+step "7/9  Disable USB receiver and dock spurious suspend wakeups"
 # The Unifying Receiver (idVendor 046d, idProduct c52b) forwards HID++
 # battery-status pings from the ERGO K860 keyboard and MX Master mouse as USB
 # remote wakeup, waking the laptop from suspend every 10-50 min. Confirmed via
@@ -182,7 +204,7 @@ else
   say "OK    $receiver_rule already absent"
 fi
 
-step "7/8  Disable dGPU suspend wakeups + NVIDIA runtime power management"
+step "8/9  Disable dGPU suspend wakeups + NVIDIA runtime power management"
 # The RTX A1000's PCIe root port (0000:00:01.0) fires a PME during s2idle for
 # no external reason (`PM: Triggering wakeup from IRQ 122` in dmesg),
 # confirmed via the same /sys/kernel/debug/wakeup_sources diffs used for the
@@ -217,7 +239,7 @@ else
   needs_reboot=1
 fi
 
-step "8/8  Schedule Nix garbage collection"
+step "9/9  Schedule Nix garbage collection"
 # Standalone Home Manager cannot create a system-level nix.gc timer, and the
 # multi-user Nix store is root-owned. Keep this at Ubuntu's system boundary so
 # it can collect unused paths from all profiles without granting the desktop
@@ -280,8 +302,12 @@ if [ "$changed" -eq 0 ]; then
   echo "Nothing to do -- system-level setup already in place."
 else
   echo "Applied changes."
-  [ "$needs_relogin" -eq 1 ] && echo "Log out and back in to pick up the session entry."
-  [ "$needs_reboot" -eq 1 ] && echo "Reboot to pick up the kernel cmdline / NVIDIA power-management change."
+  if [ "$needs_relogin" -eq 1 ]; then
+    echo "Log out and back in to pick up the session entry."
+  fi
+  if [ "$needs_reboot" -eq 1 ]; then
+    echo "Reboot to pick up the kernel cmdline / NVIDIA power-management change."
+  fi
 fi
 
 # Apt packages are deliberately not installed here: they are a one-time

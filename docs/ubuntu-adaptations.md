@@ -409,6 +409,21 @@ Home Manager cannot install or configure these system-level components:
    DankMaterialShell honours Lock but not Unlock. Use `dms ipc lock unlock`,
    or `pkill -x swaylock`, from a virtual console.
 
+   The repository bootstrap also configures `systemd-logind` to lock the
+   session on every lid-close path (battery, external power, and docked):
+
+   ```ini
+   [Login]
+   HandleLidSwitch=lock
+   HandleLidSwitchExternalPower=lock
+   HandleLidSwitchDocked=lock
+   ```
+
+   This is a system-level setting because standalone Home Manager cannot own
+   `/etc/systemd/logind.conf.d/`. Run `just bootstrap-ubuntu-system` after
+   activating Home Manager; it writes
+   `/etc/systemd/logind.conf.d/60-nix-lid-lock.conf` and reloads logind.
+
 10. **Thermald**
 
     The nixos-hardware profile for this model enables `thermald`
