@@ -46,7 +46,7 @@
       # closest thing to an identity for the docked iiyama: it survives DP
       # connector renumbering and is shared by the workspace assignments,
       # the login focus, and the XWayland primary watcher below.
-      iiyama = "iiyama Corporation PL2792Q 1152194804219";
+      iiyama = "Iiyama North America PL2792Q 1152194804219";
     in
     {
       # DankMaterialShell owns its own settings.json. It used to be generated

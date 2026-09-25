@@ -107,7 +107,7 @@ in
             profile.name = "docked";
             profile.outputs = [
               {
-                criteria = "iiyama Corporation PL2792Q 1152194804219";
+                criteria = "Iiyama North America PL2792Q 1152194804219";
                 status = "enable";
                 position = "0,0";
               }

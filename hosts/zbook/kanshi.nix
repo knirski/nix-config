@@ -1,7 +1,7 @@
 # Kanshi output profiles for zbook.
 #
 #   eDP-1  — built-in laptop panel (1920×1200, BOE)
-#   iiyama Corporation PL2792Q — Thunderbolt dock DisplayPort to external (2560×1440)
+#   Iiyama North America PL2792Q — Thunderbolt dock DisplayPort to external (2560×1440)
 #
 #   The external is matched by EDID description (including serial) rather
 #   than connector name so that udev restarts during deploy don't break
@@ -22,7 +22,7 @@ _: {
         }
         {
           # Match by EDID description (stable across connector renames)
-          criteria = "iiyama Corporation PL2792Q 1152194804219";
+          criteria = "Iiyama North America PL2792Q 1152194804219";
           status = "enable";
           scale = 1.0;
           position = "1920,0";
