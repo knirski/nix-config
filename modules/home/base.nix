@@ -415,76 +415,69 @@
           #      to handle the race where a concurrent shell's background cp
           #      creates a read-only file between order 750 and 800.
           initContent = lib.mkMerge [
-            (lib.mkOrder 750 (
-              let
-                sharedEnv = builtins.readFile ../../lib/shared-env.zsh;
-              in
-              ''
-                __ohmyzsh_cache="${config.xdg.cacheHome}/oh-my-zsh"
-                # Remove stale read-only cached completions left by the docker
-                # plugin's background cp (which preserves 0444 permissions from
-                # the nix store). Use the (N) glob qualifier to silently expand
-                # to nothing when no files match (avoids zsh NOMATCH errors).
-                # Iterate via for loop because BSD rm (macOS) errors when called
-                # with no file arguments, unlike GNU rm (Linux).
-                if [ -d "$__ohmyzsh_cache/completions" ]; then
-                  for __f in "$__ohmyzsh_cache/completions"/_docker*(N); do
-                    [ -f "$__f" ] && rm -f "$__f"
-                  done
-                  unset __f
-                fi
-                mkdir -p "$__ohmyzsh_cache/completions"
+            (lib.mkOrder 750 ''
+              __ohmyzsh_cache="${config.xdg.cacheHome}/oh-my-zsh"
+              # Remove stale read-only cached completions left by the docker
+              # plugin's background cp (which preserves 0444 permissions from
+              # the nix store). Use the (N) glob qualifier to silently expand
+              # to nothing when no files match (avoids zsh NOMATCH errors).
+              # Iterate via for loop because BSD rm (macOS) errors when called
+              # with no file arguments, unlike GNU rm (Linux).
+              if [ -d "$__ohmyzsh_cache/completions" ]; then
+                for __f in "$__ohmyzsh_cache/completions"/_docker*(N); do
+                  [ -f "$__f" ] && rm -f "$__f"
+                done
+                unset __f
+              fi
+              mkdir -p "$__ohmyzsh_cache/completions"
 
-                # Also make the whole cache dir writable as a safety net.
-                if [ -d "$__ohmyzsh_cache" ]; then
-                  chmod -R u+w "$__ohmyzsh_cache"
-                fi
-                unset __ohmyzsh_cache
+              # Also make the whole cache dir writable as a safety net.
+              if [ -d "$__ohmyzsh_cache" ]; then
+                chmod -R u+w "$__ohmyzsh_cache"
+              fi
+              unset __ohmyzsh_cache
 
-                ${sharedEnv}
+              # Keep machine-local secrets and shell helpers out of the Nix
+              # store while making them available to every interactive zsh.
+              if [[ -r "$HOME/.envvars" ]]; then
+                source "$HOME/.envvars"
+              fi
 
-                # Keep machine-local secrets and shell helpers out of the Nix
-                # store while making them available to every interactive zsh.
-                if [[ -r "$HOME/.envvars" ]]; then
-                  source "$HOME/.envvars"
-                fi
-
-                # Custom functions (interactive shells only)
-                if [[ $- == *i* ]]; then
-                  mkcd() { mkdir -p "$1" && cd "$1"; }
-                  extract() {
-                    if [ -f "$1" ]; then
-                      case "$1" in
-                        *.tar.bz2) tar xjf "$1" ;;
-                        *.tar.gz) tar xzf "$1" ;;
-                        *.tar.xz) tar xJf "$1" ;;
-                        *.bz2) bunzip2 "$1" ;;
-                        *.rar) unrar x "$1" ;;
-                        *.gz) gunzip "$1" ;;
-                        *.tar) tar xf "$1" ;;
-                        *.tbz2) tar xjf "$1" ;;
-                        *.tgz) tar xzf "$1" ;;
-                        *.zip) unzip "$1" ;;
-                        *.Z) uncompress "$1" ;;
-                        *.7z) 7z x "$1" ;;
-                        *) echo "'$1' cannot be extracted" ;;
-                      esac
-                    else
-                      echo "'$1' is not a valid file"
-                    fi
-                  }
-                  portkill() {
-                    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                      ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill
-                    elif [[ "$OSTYPE" == "darwin"* ]]; then
-                      lsof -i tcp:"$1" -t | xargs kill
-                    fi
-                  }
-                  weather() { curl -s "wttr.in/$1?format=3"; }
-                  cheat() { curl -s "cheat.sh/$1"; }
-                fi
-              ''
-            ))
+              # Custom functions (interactive shells only)
+              if [[ $- == *i* ]]; then
+                mkcd() { mkdir -p "$1" && cd "$1"; }
+                extract() {
+                  if [ -f "$1" ]; then
+                    case "$1" in
+                      *.tar.bz2) tar xjf "$1" ;;
+                      *.tar.gz) tar xzf "$1" ;;
+                      *.tar.xz) tar xJf "$1" ;;
+                      *.bz2) bunzip2 "$1" ;;
+                      *.rar) unrar x "$1" ;;
+                      *.gz) gunzip "$1" ;;
+                      *.tar) tar xf "$1" ;;
+                      *.tbz2) tar xjf "$1" ;;
+                      *.tgz) tar xzf "$1" ;;
+                      *.zip) unzip "$1" ;;
+                      *.Z) uncompress "$1" ;;
+                      *.7z) 7z x "$1" ;;
+                      *) echo "'$1' cannot be extracted" ;;
+                    esac
+                  else
+                    echo "'$1' is not a valid file"
+                  fi
+                }
+                portkill() {
+                  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                    ss -tulnp | grep ":$1" | awk '{print $NF}' | grep -oP '\d+' | head -1 | xargs -r sudo kill
+                  elif [[ "$OSTYPE" == "darwin"* ]]; then
+                    lsof -i tcp:"$1" -t | xargs kill
+                  fi
+                }
+                weather() { curl -s "wttr.in/$1?format=3"; }
+                cheat() { curl -s "cheat.sh/$1"; }
+              fi
+            '')
             (lib.mkOrder 799 ''
               # Late chmod right before oh-my-zsh (order 800). Handles the
               # race where a concurrent shell's background cp creates a

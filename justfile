@@ -94,10 +94,6 @@ set-tailscale-keys *args:
 test:
     nix build path:.#checks.x86_64-linux.dendritic-options --no-link --print-out-paths
 
-# Run shared-env tests (needs zsh and bats installed).
-test-shared-env:
-    bats tests/shell/shared-env.bats
-
 # Re-key all agenix secrets for every host after a key change. Requires the agenix master identity at /etc/agenix-rekey/master-identity.
 rekey:
     nix develop '.#' -c agenix rekey
