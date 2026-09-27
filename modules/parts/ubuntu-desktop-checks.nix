@@ -57,6 +57,7 @@
         "signal-desktop"
         "obsidian"
         "flameshot"
+        "libreoffice"
         # sway: the Wayland compositor and its shell.
         "sway"
       ];
@@ -78,9 +79,52 @@
           ''
             homePath=$(readlink -f "$activation/home-path")
 
-            for bin in zsh bat eza jq fd rg sway ghostty dms flameshot; do
+            for bin in zsh bat eza jq fd rg sway ghostty dms flameshot soffice; do
               if [ ! -x "$homePath/bin/$bin" ]; then
                 echo "expected binary '$bin' missing from ubuntu's built home-path: $homePath" >&2
+                exit 1
+              fi
+            done
+
+            # LibreOffice's nixpkgs wrapper exports DICPATH from
+            # <profile>/share/{hunspell,hyphen}; prove the Polish
+            # dictionaries the docs promise are genuinely in the built
+            # profile, not merely in the evaluated package list.
+            for f in \
+              "$homePath/share/hunspell/pl_PL.aff" \
+              "$homePath/share/hunspell/pl_PL.dic" \
+              "$homePath/share/hyphen/hyph_pl_PL.dic"; do
+              if [ ! -e "$f" ]; then
+                echo "expected Polish dictionary file missing from ubuntu's built home-path: $f" >&2
+                exit 1
+              fi
+            done
+
+            # The desktop aspect declares LibreOffice the default handler
+            # for office documents. Both halves must survive into the built
+            # profile: the named desktop entries must exist, and the
+            # generated mimeapps.list must carry the associations.
+            for d in writer calc impress draw math; do
+              if [ ! -e "$homePath/share/applications/$d.desktop" ]; then
+                echo "expected LibreOffice desktop entry missing from ubuntu's built home-path: $d.desktop" >&2
+                exit 1
+              fi
+            done
+
+            mimeapps=$(readlink -f "$activation/home-files/.config/mimeapps.list")
+            for assoc in \
+              "application/vnd.oasis.opendocument.text=writer.desktop" \
+              "application/msword=writer.desktop" \
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document=writer.desktop" \
+              "application/vnd.oasis.opendocument.spreadsheet=calc.desktop" \
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=calc.desktop" \
+              "text/csv=calc.desktop" \
+              "application/vnd.oasis.opendocument.presentation=impress.desktop" \
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation=impress.desktop" \
+              "application/vnd.oasis.opendocument.graphics=draw.desktop" \
+              "application/vnd.oasis.opendocument.formula=math.desktop"; do
+              if ! grep -qF "$assoc" "$mimeapps"; then
+                echo "expected LibreOffice default association missing from built mimeapps.list: $assoc" >&2
                 exit 1
               fi
             done

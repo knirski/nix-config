@@ -9,14 +9,14 @@
 #     never a floating, undefined command name like the historical `kitty`
 #     binding, which was never installed anywhere for macbook.
 #   - docs/workstation-setup.md's Tool Availability Matrix rows for Firefox,
-#     Bitwarden, Signal, and Obsidian must match the real evaluated closures
-#     of all three hosts the matrix claims to describe. This parses the
-#     actual table cells out of the doc (not a hand-duplicated summary living
-#     only in this file), so an editor who changes the table without
-#     re-checking eval, or changes eval without re-checking the table, fails
-#     this check either way -- the same "documented claim vs. real evaluated
-#     state" shape as host-role-invariants.nix (R2) and
-#     nixpkgs-policy-checks.nix (S4).
+#     Bitwarden, Signal, Obsidian, Flameshot, and LibreOffice must match the
+#     real evaluated closures of all three hosts the matrix claims to
+#     describe. This parses the actual table cells out of the doc (not a
+#     hand-duplicated summary living only in this file), so an editor who
+#     changes the table without re-checking eval, or changes eval without
+#     re-checking the table, fails this check either way -- the same
+#     "documented claim vs. real evaluated state" shape as
+#     host-role-invariants.nix (R2) and nixpkgs-policy-checks.nix (S4).
 #
 # Both predicates are proven to actually reject bad input (not just to
 # trivially pass) against small inline negative fixtures, following the
@@ -142,7 +142,7 @@
         lib.filterAttrs (_: passed: !passed) docParserFixtureResults
       );
 
-      # Real evaluated presence, per host, for the four apps the matrix
+      # Real evaluated presence, per host, for the apps the matrix
       # claims. zbook/ubuntu/macbook Home Manager closures are compared by
       # package name (pname falling back to name).
       #
@@ -179,6 +179,11 @@
           zbook = hasPkg zbookHome "flameshot";
           macbook = false;
           ubuntu = hasPkg ubuntuHome "flameshot";
+        };
+        LibreOffice = {
+          zbook = hasPkg zbookHome "libreoffice";
+          macbook = false;
+          ubuntu = hasPkg ubuntuHome "libreoffice";
         };
       };
 

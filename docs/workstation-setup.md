@@ -103,18 +103,32 @@ This configuration is shared across multiple hosts. Not all tools are available 
 | **Signal** | ✓ | ✗ | ✓ |
 | **Obsidian** | ✓ | ✗ | ✓ |
 | **Flameshot** | ✓ | ✗ | ✓ |
+| **LibreOffice** | ✓ | ✗ | ✓ |
 
 Flameshot is managed by the shared Linux desktop aspect. The Sway screenshot
 bindings open `flameshot gui` for interactive capture and annotation through
 the Sway `xdg-desktop-portal-wlr` backend; no save path is configured, so each
 capture can be copied or saved only when desired.
 
-Bitwarden, Signal, and Obsidian are only declared in
+Bitwarden, Signal, Obsidian, and LibreOffice are only declared in
 `modules/home/desktop.nix`'s Linux-only `lib.optionals stdenv.isLinux [...]`
-guard, so none of the three is declaratively managed on macbook. Where real
+guard, so none of them is declaratively managed on macbook. Where real
 hardware needs one of them and this repo doesn't manage it, install the
 regular macOS app yourself (App Store/`.dmg`) — it is operator-installed,
 not Nix-managed, on that host.
+
+LibreOffice carries its Polish support in the packages themselves: the
+nixpkgs build's default `langs` list includes `pl`, so the Polish UI
+translation is part of the zbook/ubuntu closure already, while the Polish
+spell-check and hyphenation dictionaries are the separate
+`hunspellDicts.pl_PL` and `hyphenDicts.pl_PL` packages (nixpkgs does not
+fetch LibreOffice's upstream dictionaries tarball). LibreOffice discovers
+them through the `DICPATH` its nixpkgs wrapper builds from every profile's
+`share/hunspell` and `share/hyphen` directories, which is why they are
+installed into the Home Manager profile rather than into LibreOffice
+itself. LibreOffice is also the declared default handler for office
+documents in `xdg.mimeApps` — ODF and Microsoft formats for Writer, Calc,
+Impress, Draw, and Math, with `.csv` mapped to Calc.
 
 Firefox is managed on all three. `programs.firefox` in the shared
 `modules/home/desktop.nix` covers every host; Ubuntu overrides it with

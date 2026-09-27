@@ -71,6 +71,20 @@
             evince
             loupe
             file-roller
+
+            # Office suite with Polish support. nixpkgs' source build does
+            # not fetch LibreOffice's upstream dictionaries tarball, so
+            # spell-check and hyphenation are separate packages here. The
+            # nixpkgs wrapper exports DICPATH from
+            # $NIX_PROFILES/share/{hunspell,hyphen} (see its wrapper.nix),
+            # so sitting in the Home Manager profile is enough for
+            # LibreOffice to find them with no in-app configuration. The
+            # Polish UI translation is not a separate package: the build's
+            # default `langs` list already includes "pl". macbook is out of
+            # scope (Linux-only build; see docs/workstation-setup.md).
+            libreoffice
+            hunspellDicts.pl_PL
+            hyphenDicts.pl_PL
             gnome-calculator
             gnome-disk-utility
             baobab
@@ -203,6 +217,42 @@
           "application/x-7z-compressed" = "org.gnome.FileRoller.desktop";
           "application/x-bzip2" = "org.gnome.FileRoller.desktop";
           "application/x-xz" = "org.gnome.FileRoller.desktop";
+
+          # LibreOffice as the default handler for office documents. The
+          # desktop IDs are the package's own share/applications entries
+          # (Writer/Calc/Impress/Draw/Math, whose Exec lines resolve to the
+          # profile's `libreoffice`).
+          # checks.ubuntu-desktop-invariants asserts both that these
+          # entries exist in the built profile and that the generated
+          # mimeapps.list carries the associations, so a future LibreOffice
+          # desktop-entry rename fails CI instead of silently leaving
+          # documents without a handler.
+          # Writer: ODF text, Word, Rich Text
+          "application/vnd.oasis.opendocument.text" = "writer.desktop";
+          "application/vnd.oasis.opendocument.text-template" = "writer.desktop";
+          "application/msword" = "writer.desktop";
+          "application/vnd.ms-word" = "writer.desktop";
+          "application/rtf" = "writer.desktop";
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = "writer.desktop";
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.template" = "writer.desktop";
+          # Calc: ODF sheet, Excel, CSV
+          "application/vnd.oasis.opendocument.spreadsheet" = "calc.desktop";
+          "application/vnd.oasis.opendocument.spreadsheet-template" = "calc.desktop";
+          "application/vnd.ms-excel" = "calc.desktop";
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = "calc.desktop";
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.template" = "calc.desktop";
+          "text/csv" = "calc.desktop";
+          # Impress: ODF slides, PowerPoint
+          "application/vnd.oasis.opendocument.presentation" = "impress.desktop";
+          "application/vnd.oasis.opendocument.presentation-template" = "impress.desktop";
+          "application/vnd.ms-powerpoint" = "impress.desktop";
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation" = "impress.desktop";
+          "application/vnd.openxmlformats-officedocument.presentationml.template" = "impress.desktop";
+          # Draw: ODF graphics; Math: ODF formulas
+          "application/vnd.oasis.opendocument.graphics" = "draw.desktop";
+          "application/vnd.oasis.opendocument.graphics-template" = "draw.desktop";
+          "application/vnd.oasis.opendocument.formula" = "math.desktop";
+          "application/vnd.oasis.opendocument.formula-template" = "math.desktop";
 
           # Desktop login callbacks must return to the application that
           # started the browser flow. Keep these explicit in the user-level
