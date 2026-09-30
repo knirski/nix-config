@@ -31,16 +31,17 @@ in
             # The development aspect reads inputs.opencode-v2 for the v2 CLI
             # package (nixpkgs still packages v1.x — see flake.nix).
             extraSpecialArgs = { inherit inputs; };
-            users.krzysiek.imports = [
-              config.aspects.homeManager.base
-              config.aspects.homeManager.python
-              config.aspects.homeManager.development
-              config.aspects.homeManager.desktop
-              config.aspects.homeManager.ssh
-              config.aspects.homeManager.aerospace
-            ];
-            users.krzysiek.home = {
-              stateVersion = "26.11";
+            users.krzysiek = {
+              imports = [
+                config.aspects.homeManager.base
+                config.aspects.homeManager.python
+                config.aspects.homeManager.development
+                config.aspects.homeManager.desktop
+                config.aspects.homeManager.ssh
+                config.aspects.homeManager.aerospace
+              ];
+              development.enableOpenCode = false;
+              home.stateVersion = "26.11";
             };
           };
         }

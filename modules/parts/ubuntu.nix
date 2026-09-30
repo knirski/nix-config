@@ -77,6 +77,7 @@ in
         # IntelliJ IDEA: its nixpkgs package lags behind, even on nixpkgs-unstable.
         development = {
           enableIntellijIdea = false;
+          enableOpenCode = false;
           # Ubuntu does not need Android Studio, the Android SDK, or their
           # command-line tools.
           enableAndroidTools = false;

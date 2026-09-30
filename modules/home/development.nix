@@ -64,6 +64,12 @@ _: {
             description = "Whether to install Android Studio and the Android SDK.";
           };
 
+          enableOpenCode = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether to enable the OpenCode CLI.";
+          };
+
           manageDockerConfig = lib.mkOption {
             type = lib.types.bool;
             default = true;
@@ -132,7 +138,7 @@ _: {
           claude-code.enable = true;
           codex.enable = true;
           opencode = {
-            enable = true;
+            enable = config.development.enableOpenCode;
             # OpenCode v2, built by the upstream v2 flake rather than nixpkgs
             # (which still packages v1.x) — see lib/opencode-v2.nix. Hosts get
             # `inputs` through home-manager.extraSpecialArgs.

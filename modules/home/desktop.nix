@@ -4,6 +4,7 @@
       pkgs,
       lib,
       inputs,
+      config,
       ...
     }:
     let
@@ -97,8 +98,6 @@
             # configured, so Flameshot leaves saving/copying to the capture
             # action instead of writing every shortcut invocation to disk.
             flameshot
-            # AI coding agent desktop apps
-            opencodeV2.opencode-desktop
             # Communication and media
             thunderbird
             obs-studio
@@ -116,6 +115,10 @@
                   sleep infinity
               '';
             })
+          ]
+          ++ lib.optionals config.development.enableOpenCode [
+            # AI coding agent desktop app
+            opencodeV2.opencode-desktop
           ];
       };
 
